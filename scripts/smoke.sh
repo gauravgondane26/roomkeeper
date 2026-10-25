@@ -82,6 +82,20 @@ check "logout succeeds" POST /api/v1/auth/logout 204 "" "$logged_out"
 check "refresh after logout is rejected" POST /api/v1/auth/refresh 401 \
   "urn:roomkeeper:problem:invalid-refresh-token" "$logged_out"
 
+# Last, since it uses up this client's login attempts: within 11 tries the limit must hit
+limited=""
+for _ in $(seq 1 11); do
+  status=$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' \
+    -d "{\"email\":\"$email\",\"password\":\"wrong-password\"}" "$BASE_URL/api/v1/auth/login")
+  if [[ "$status" == "429" ]]; then limited=yes; break; fi
+done
+if [[ -n "$limited" ]]; then
+  echo "ok   login is rate limited"
+else
+  echo "FAIL login is rate limited: no 429 within 11 attempts"
+  failures=$((failures + 1))
+fi
+
 if (( failures > 0 )); then
   echo "$failures smoke check(s) failed"
   exit 1

@@ -4,9 +4,13 @@ import java.util.Map;
 
 import io.restassured.http.ContentType;
 import io.restassured.specification.RequestSpecification;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.lifecycle.Startables;
@@ -37,6 +41,22 @@ public abstract class AbstractIntegrationTest {
 
 	@LocalServerPort
 	private int port;
+
+	@Autowired
+	private StringRedisTemplate redis;
+
+	/**
+	 * Redis only holds short-lived state (rate-limit buckets, refresh tokens), and every
+	 * test calls from the same IP, so each test starts with an empty Redis. Postgres isn't
+	 * reset; tests stay independent there by creating their own data (unique emails).
+	 */
+	@BeforeEach
+	void resetRedis() {
+		redis.execute((RedisCallback<Void>) connection -> {
+			connection.serverCommands().flushDb();
+			return null;
+		});
+	}
 
 	/** A REST Assured request against the running app, over real HTTP. */
 	protected RequestSpecification api() {
