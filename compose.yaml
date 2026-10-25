@@ -1,9 +1,30 @@
-# Local development stack: `docker compose up -d`
-# Host ports can be overridden with POSTGRES_PORT / REDIS_PORT.
+# Whole stack, built from source:   docker compose up -d --build --wait
+# Only the services, to run the app from an IDE or `./mvnw spring-boot:run`:
+#                                   docker compose up -d postgres redis
+# Host ports can be overridden with APP_PORT / POSTGRES_PORT / REDIS_PORT.
 # Defaults (15432, 16379) avoid clashing with native Postgres or Redis installs,
 # which on Windows can bind the same port and silently take the connection.
 
 services:
+  app:
+    build: .
+    image: roomkeeper:local
+    # Runs with the prod profile (set in the image), so this also checks the
+    # production configuration: every setting comes from the environment.
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/roomkeeper
+      DATABASE_USERNAME: roomkeeper
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-roomkeeper}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   postgres:
     image: postgres:18-alpine
     environment:

@@ -21,8 +21,8 @@ Goal: an empty app that starts against real Postgres and Redis, with CI checking
 - [x] Test: the app context starts, Flyway migrates, Redis answers a ping
 - [x] `Clock` bean, plus a fixed-clock setup for tests
 - [x] REST Assured set up for black-box API tests against the real HTTP server
-- [ ] Multi-stage `Dockerfile`; add the app service to Compose
-- [ ] Smoke script that checks the running Compose stack (health endpoint now, more routes each week)
+- [x] Multi-stage `Dockerfile`; add the app service to Compose
+- [x] Smoke script that checks the running Compose stack (health endpoint now, more routes each week)
 - [ ] GitHub Actions: build, unit tests, integration tests, JaCoCo report, Docker image build
 
 **Done when:** CI is green on an empty app.
