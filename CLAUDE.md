@@ -3,8 +3,10 @@
 Java 25, Spring Boot 4, Postgres, Redis. Design: docs/Hotel Booking Backend Project Design.md. Progress: docs/roadmap.md.
 
 ## Workflow
-- TDD: write the failing test first, commit it, then the code that passes it.
-- Commit messages: `test: ...` for failing tests, `feat:` / `fix:` / `refactor:` / `build:` / `ci:` / `docs:` for the rest. Descriptive body when the why isn't obvious.
+- TDD: write the test first and watch it fail before writing the code.
+- One commit per finished task: its tests, code, config, and roadmap tick together. No single-file commits; fold small fixes into the task's commit.
+- Exception: the design doc's signature tests get their failing test committed on its own (`test: ...`) before the code that passes it.
+- Commit types: `feat:` / `fix:` / `refactor:` / `build:` / `ci:` / `docs:` / `test:`. Descriptive subject, and a body listing what's included.
 - Run `./mvnw verify` before saying a task is done. It needs Docker running (Testcontainers).
 - Tick the task in docs/roadmap.md in the same commit as the work.
 

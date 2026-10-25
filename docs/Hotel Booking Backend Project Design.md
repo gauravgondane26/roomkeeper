@@ -175,7 +175,7 @@ Cache invalidation is the subtle part. Hotel details can live in the cache for m
 
 Every feature starts as a failing test that states a business rule in plain words, like "a hold expires after 10 minutes" or "the same webhook twice confirms once."
 
-**The loop:** write the test, watch it fail for the right reason, write the least code that passes, refactor, commit. Commit the failing test on its own (`test: reject booking when sold out`) and the fix after it (`feat: lock inventory rows on init`). That way the history shows the process instead of you just claiming it.
+**The loop:** write the test, watch it fail for the right reason, write the least code that passes, refactor, commit. Most tasks land as one commit with the test and the code together. The signature tests below are the exception: commit the failing test on its own (`test: reject booking when sold out`) and the fix after it (`feat: lock inventory rows on init`). That way the history shows the process for the tests you'll talk about, without doubling every commit.
 
 | Layer | Tools | What it covers | Speed |
 | --- | --- | --- | --- |
