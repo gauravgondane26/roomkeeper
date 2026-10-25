@@ -31,10 +31,10 @@ Goal: an empty app that starts against real Postgres and Redis, with CI checking
 
 Goal: users can sign up, log in, refresh, and log out, and login can't be brute forced.
 
-- [ ] Migration: `users` table (unique email, password hash, role)
+- [x] Migration: `users` table (unique email, password hash, role)
 - [x] Error handling: RFC 9457 problem details with stable `type` values; web slice tests for the error shape
-- [ ] Test data builders, starting with `aUser()`
-- [ ] Signup: validation, BCrypt hashing, duplicate email returns 409
+- [x] Test data builders, starting with `aUser()`
+- [x] Signup: validation, BCrypt hashing, duplicate email returns 409
 - [ ] Login: issue a JWT access token; test that a bad password gets 401
 - [ ] Security config: stateless JWT filter; test that the wrong role on `/admin` gets 403
 - [ ] Refresh tokens in Redis (`refresh:{jti}`, TTL = token lifetime); `POST /auth/refresh` rotates them

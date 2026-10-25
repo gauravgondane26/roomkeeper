@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -16,7 +17,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+// Security filters are off: this tests the error shape, not access rules (see the *IT tests)
 @WebMvcTest(ProblemDetailsTest.TestController.class)
+@AutoConfigureMockMvc(addFilters = false)
 @Import(ProblemDetailsTest.TestController.class)
 class ProblemDetailsTest {
 

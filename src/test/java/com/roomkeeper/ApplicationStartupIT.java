@@ -35,11 +35,13 @@ class ApplicationStartupIT extends AbstractIntegrationTest {
 	}
 
 	@Test
-	void appliesBaselineMigration() {
-		var current = flyway.info().current();
+	void appliesEveryMigrationStartingFromTheBaseline() {
+		var info = flyway.info();
 
-		assertThat(current).as("latest applied migration").isNotNull();
-		assertThat(current.getVersion().getVersion()).isEqualTo("1");
+		assertThat(info.applied()).as("applied migrations").isNotEmpty();
+		assertThat(info.applied()[0].getVersion().getVersion()).isEqualTo("1");
+		assertThat(info.pending()).as("pending migrations").isEmpty();
+		assertThat(info.applied()).allSatisfy(migration -> assertThat(migration.getState().isFailed()).isFalse());
 	}
 
 }

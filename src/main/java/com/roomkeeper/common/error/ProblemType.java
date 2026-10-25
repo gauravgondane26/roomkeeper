@@ -10,11 +10,14 @@ import org.springframework.http.ProblemDetail;
 /**
  * Every kind of error the API returns. Clients and tests match on {@link #uri()} (the
  * problem's {@code type}), which never changes, rather than on human-readable text.
+ * <p>
+ * General types come first, one per status; specific types follow. {@link #forStatus}
+ * relies on that order.
  */
 public enum ProblemType {
 
+	// General: one per status, used for errors raised by the framework
 	BAD_REQUEST("bad-request", HttpStatus.BAD_REQUEST, "Bad request"),
-	VALIDATION("validation", HttpStatus.BAD_REQUEST, "Validation failed"),
 	UNAUTHORIZED("unauthorized", HttpStatus.UNAUTHORIZED, "Unauthorized"),
 	FORBIDDEN("forbidden", HttpStatus.FORBIDDEN, "Forbidden"),
 	NOT_FOUND("not-found", HttpStatus.NOT_FOUND, "Not found"),
@@ -22,7 +25,11 @@ public enum ProblemType {
 	CONFLICT("conflict", HttpStatus.CONFLICT, "Conflict"),
 	UNSUPPORTED_MEDIA_TYPE("unsupported-media-type", HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Unsupported media type"),
 	RATE_LIMITED("rate-limited", HttpStatus.TOO_MANY_REQUESTS, "Too many requests"),
-	INTERNAL_ERROR("internal-error", HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error");
+	INTERNAL_ERROR("internal-error", HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error"),
+
+	// Specific
+	VALIDATION("validation", HttpStatus.BAD_REQUEST, "Validation failed"),
+	EMAIL_ALREADY_REGISTERED("email-already-registered", HttpStatus.CONFLICT, "Email already registered");
 
 	private static final String URN_PREFIX = "urn:roomkeeper:problem:";
 
@@ -60,7 +67,7 @@ public enum ProblemType {
 	/** The general type for a status, used for errors raised by the framework itself. */
 	static Optional<ProblemType> forStatus(int status) {
 		return Arrays.stream(values())
-			.filter(type -> type.status.value() == status && type != VALIDATION)
+			.filter(type -> type.status.value() == status)
 			.findFirst();
 	}
 
