@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+# A newer push to the same branch cancels the run in progress
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: maven
+
+      - name: Unit tests
+        run: ./mvnw -B -ntp test
+
+      # Testcontainers uses the Docker engine on GitHub-hosted runners.
+      # Unit tests already ran; their coverage data is still in target/jacoco.exec,
+      # so the report covers both kinds of test.
+      - name: Integration tests and coverage report
+        run: ./mvnw -B -ntp verify -DskipUnitTests
+
+      - name: Upload coverage report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: jacoco-report
+          path: target/site/jacoco/
+          if-no-files-found: ignore
+
+      - name: Upload test reports on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports
+          path: |
+            target/surefire-reports/
+            target/failsafe-reports/
+          if-no-files-found: ignore
+
+      # Builds the image, starts it with Postgres and Redis using the prod
+      # profile, and runs the smoke checks against it over HTTP
+      - name: Build Docker image and smoke test it
+        run: |
+          docker compose up -d --build --wait
+          scripts/smoke.sh
+
+      - name: App logs on failure
+        if: ${{ failure() }}
+        run: docker compose logs app
