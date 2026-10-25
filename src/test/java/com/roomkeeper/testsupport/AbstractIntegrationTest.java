@@ -1,11 +1,16 @@
 package com.roomkeeper.testsupport;
 
+import io.restassured.http.ContentType;
+import io.restassured.specification.RequestSpecification;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.lifecycle.Startables;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+
+import static io.restassured.RestAssured.given;
 
 /**
  * Base class for tests that run the full application against real Postgres and Redis.
@@ -26,6 +31,14 @@ public abstract class AbstractIntegrationTest {
 
 	static {
 		Startables.deepStart(POSTGRES, REDIS).join();
+	}
+
+	@LocalServerPort
+	private int port;
+
+	/** A REST Assured request against the running app, over real HTTP. */
+	protected RequestSpecification api() {
+		return given().port(port).accept(ContentType.JSON);
 	}
 
 }
