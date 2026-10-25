@@ -19,6 +19,9 @@
 		<argLine></argLine>
 		<test.jvm.args>-Duser.timezone=UTC</test.jvm.args>
 		<rest-assured.version>6.2.0</rest-assured.version>
+		<jacoco.version>0.8.15</jacoco.version>
+		<!-- CI runs unit tests in their own step, then `verify -DskipUnitTests` for the rest -->
+		<skipUnitTests>false</skipUnitTests>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -120,6 +123,7 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
 					<argLine>@{argLine} ${test.jvm.args}</argLine>
+					<skipTests>${skipUnitTests}</skipTests>
 				</configuration>
 			</plugin>
 			<!-- Integration tests: *IT, run in the integration-test phase of verify -->
@@ -129,6 +133,28 @@
 				<configuration>
 					<argLine>@{argLine} ${test.jvm.args}</argLine>
 				</configuration>
+			</plugin>
+			<!-- Coverage: one agent for unit and integration tests, both appending to
+			     target/jacoco.exec; HTML/XML report in target/site/jacoco after verify -->
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>${jacoco.version}</version>
+				<executions>
+					<execution>
+						<id>prepare-agent</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>report</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>
