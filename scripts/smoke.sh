@@ -39,7 +39,7 @@ done
 
 # Week 1: the app is up and healthy
 check "health reports UP" GET /actuator/health 200 '"status":"UP"'
-check "unknown route is 404" GET /does-not-exist 404
+check "unknown route is a 404 problem" GET /does-not-exist 404 "urn:roomkeeper:problem:not-found"
 
 if (( failures > 0 )); then
   echo "$failures smoke check(s) failed"

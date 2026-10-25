@@ -4,7 +4,7 @@ The build plan from the [project design](Hotel%20Booking%20Backend%20Project%20D
 
 Tasks are listed in the order to do them. Where a task names a test, that test is written and committed first.
 
-**Current:** Week 1
+**Current:** Week 2
 
 ## Week 1: Skeleton
 
@@ -23,7 +23,7 @@ Goal: an empty app that starts against real Postgres and Redis, with CI checking
 - [x] REST Assured set up for black-box API tests against the real HTTP server
 - [x] Multi-stage `Dockerfile`; add the app service to Compose
 - [x] Smoke script that checks the running Compose stack (health endpoint now, more routes each week)
-- [ ] GitHub Actions: build, unit tests, integration tests, JaCoCo report, Docker image build
+- [x] GitHub Actions: build, unit tests, integration tests, JaCoCo report, Docker image build
 
 **Done when:** CI is green on an empty app.
 
@@ -32,7 +32,7 @@ Goal: an empty app that starts against real Postgres and Redis, with CI checking
 Goal: users can sign up, log in, refresh, and log out, and login can't be brute forced.
 
 - [ ] Migration: `users` table (unique email, password hash, role)
-- [ ] Error handling: RFC 9457 problem details with stable `type` values; web slice tests for the error shape
+- [x] Error handling: RFC 9457 problem details with stable `type` values; web slice tests for the error shape
 - [ ] Test data builders, starting with `aUser()`
 - [ ] Signup: validation, BCrypt hashing, duplicate email returns 409
 - [ ] Login: issue a JWT access token; test that a bad password gets 401
