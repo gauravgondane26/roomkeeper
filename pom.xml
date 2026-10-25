@@ -15,6 +15,9 @@
 	<description>Hotel booking backend</description>
 	<properties>
 		<java.version>25</java.version>
+		<!-- Filled in by the JaCoCo agent when it runs; empty otherwise -->
+		<argLine></argLine>
+		<test.jvm.args>-Duser.timezone=UTC</test.jvm.args>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -103,6 +106,22 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<!-- Unit tests: *Test -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>@{argLine} ${test.jvm.args}</argLine>
+				</configuration>
+			</plugin>
+			<!-- Integration tests: *IT, run in the integration-test phase of verify -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<configuration>
+					<argLine>@{argLine} ${test.jvm.args}</argLine>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>
