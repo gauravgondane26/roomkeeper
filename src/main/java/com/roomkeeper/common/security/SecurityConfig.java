@@ -27,7 +27,10 @@ public class SecurityConfig {
 			.logout(logout -> logout.disable())
 			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.authorizeHttpRequests(auth -> auth
-				.requestMatchers(HttpMethod.POST, "/api/v1/auth/signup", "/api/v1/auth/login").permitAll()
+				// Refresh and logout prove identity with the refresh token itself, so they work
+				// after the access token has expired
+				.requestMatchers(HttpMethod.POST, "/api/v1/auth/signup", "/api/v1/auth/login", "/api/v1/auth/refresh",
+						"/api/v1/auth/logout").permitAll()
 				.requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
 				// Errors thrown on permitted routes are forwarded here and must stay visible
 				.requestMatchers("/error").permitAll()

@@ -37,8 +37,8 @@ Goal: users can sign up, log in, refresh, and log out, and login can't be brute 
 - [x] Signup: validation, BCrypt hashing, duplicate email returns 409
 - [x] Login: issue a JWT access token; test that a bad password gets 401
 - [x] Security config: stateless JWT filter; test that the wrong role on `/admin` gets 403
-- [ ] Refresh tokens in Redis (`refresh:{jti}`, TTL = token lifetime); `POST /auth/refresh` rotates them
-- [ ] Logout deletes the refresh token; test that a revoked token can't refresh
+- [x] Refresh tokens in Redis (`refresh:{jti}`, TTL = token lifetime); `POST /auth/refresh` rotates them
+- [x] Logout deletes the refresh token; test that a revoked token can't refresh
 - [ ] Rate limiter: token bucket as a Redis Lua script (`rl:{route}:{key}`), fails open and logs when Redis is down
 - [ ] Test: the 11th login attempt inside the window gets 429
 - [x] `GET` and `PATCH /users/profile`

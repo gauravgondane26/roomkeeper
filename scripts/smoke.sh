@@ -68,6 +68,20 @@ check "profile with the token" GET /api/v1/users/profile 200 "\"email\":\"$email
 check "profile name update" PATCH /api/v1/users/profile 200 '"name":"Smoke Renamed"' '{"name":"Smoke Renamed"}'
 TOKEN=""
 
+refresh_token() {
+  curl -s -H 'Content-Type: application/json' \
+    -d "{\"email\":\"$email\",\"password\":\"smoke-test-password\"}" "$BASE_URL/api/v1/auth/login" \
+    | sed -nE 's/.*"refreshToken":"([^"]+)".*/\1/p'
+}
+rotated="{\"refreshToken\":\"$(refresh_token)\"}"
+check "refresh issues a new token pair" POST /api/v1/auth/refresh 200 '"refreshToken"' "$rotated"
+check "a used refresh token is rejected" POST /api/v1/auth/refresh 401 \
+  "urn:roomkeeper:problem:invalid-refresh-token" "$rotated"
+logged_out="{\"refreshToken\":\"$(refresh_token)\"}"
+check "logout succeeds" POST /api/v1/auth/logout 204 "" "$logged_out"
+check "refresh after logout is rejected" POST /api/v1/auth/refresh 401 \
+  "urn:roomkeeper:problem:invalid-refresh-token" "$logged_out"
+
 if (( failures > 0 )); then
   echo "$failures smoke check(s) failed"
   exit 1

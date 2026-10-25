@@ -26,11 +26,13 @@ public enum ProblemType {
 	UNSUPPORTED_MEDIA_TYPE("unsupported-media-type", HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Unsupported media type"),
 	RATE_LIMITED("rate-limited", HttpStatus.TOO_MANY_REQUESTS, "Too many requests"),
 	INTERNAL_ERROR("internal-error", HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error"),
+	SERVICE_UNAVAILABLE("service-unavailable", HttpStatus.SERVICE_UNAVAILABLE, "Service unavailable"),
 
 	// Specific
 	VALIDATION("validation", HttpStatus.BAD_REQUEST, "Validation failed"),
 	EMAIL_ALREADY_REGISTERED("email-already-registered", HttpStatus.CONFLICT, "Email already registered"),
-	INVALID_CREDENTIALS("invalid-credentials", HttpStatus.UNAUTHORIZED, "Invalid credentials");
+	INVALID_CREDENTIALS("invalid-credentials", HttpStatus.UNAUTHORIZED, "Invalid credentials"),
+	INVALID_REFRESH_TOKEN("invalid-refresh-token", HttpStatus.UNAUTHORIZED, "Invalid refresh token");
 
 	private static final String URN_PREFIX = "urn:roomkeeper:problem:";
 

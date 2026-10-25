@@ -18,6 +18,7 @@ roomkeeper:
   auth:
     issuer: roomkeeper
     access-token-ttl: 15m
+    refresh-token-ttl: 7d
     # jwt-secret is set per profile; prod reads it from JWT_SECRET
 
 management:

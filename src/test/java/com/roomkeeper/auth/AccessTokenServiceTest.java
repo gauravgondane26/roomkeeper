@@ -28,7 +28,8 @@ class AccessTokenServiceTest {
 
 	private final MutableClock clock = new MutableClock(NOW);
 
-	private final AuthProperties properties = new AuthProperties(SECRET, "roomkeeper", Duration.ofMinutes(15));
+	private final AuthProperties properties = new AuthProperties(SECRET, "roomkeeper", Duration.ofMinutes(15),
+			Duration.ofDays(7));
 
 	private final SecretKey key = JwtConfig.secretKey(SECRET);
 
@@ -78,7 +79,7 @@ class AccessTokenServiceTest {
 
 	@Test
 	void isRejectedFromAnotherIssuer() {
-		var otherIssuer = new AuthProperties(SECRET, "someone-else", Duration.ofMinutes(15));
+		var otherIssuer = new AuthProperties(SECRET, "someone-else", Duration.ofMinutes(15), Duration.ofDays(7));
 		var token = new AccessTokenService(JwtConfig.encoder(key), otherIssuer, clock).issue(42L, Role.GUEST);
 
 		assertThatThrownBy(() -> decoder.decode(token.value())).isInstanceOf(JwtValidationException.class);
