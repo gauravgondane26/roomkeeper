@@ -1,6 +1,7 @@
 # Local development stack: `docker compose up -d`
 # Host ports can be overridden with POSTGRES_PORT / REDIS_PORT.
-# Postgres defaults to 5433 because 5432 is often taken by a native install.
+# Defaults (15432, 16379) avoid clashing with native Postgres or Redis installs,
+# which on Windows can bind the same port and silently take the connection.
 
 services:
   postgres:
@@ -10,7 +11,7 @@ services:
       POSTGRES_USER: roomkeeper
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-roomkeeper}
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "${POSTGRES_PORT:-15432}:5432"
     volumes:
       # Postgres 18 images keep data under /var/lib/postgresql/<major>/
       - postgres-data:/var/lib/postgresql
@@ -23,7 +24,7 @@ services:
   redis:
     image: redis:8-alpine
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_PORT:-16379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
