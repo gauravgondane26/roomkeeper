@@ -1,0 +1,11 @@
+# Normalize text files to LF in the repo and in the working copy,
+# so mvnw and shell scripts run unchanged in Linux CI and Docker.
+* text=auto eol=lf
+
+# Windows-only scripts need CRLF
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+*.jar binary
+*.png binary
+*.jpg binary

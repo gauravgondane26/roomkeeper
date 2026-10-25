@@ -11,7 +11,7 @@ Tasks are listed in the order to do them. Where a task names a test, that test i
 Goal: an empty app that starts against real Postgres and Redis, with CI checking every push.
 
 - [x] Git repo, design doc, GitHub remote
-- [ ] Repo hygiene: `.gitignore`, `.gitattributes` (LF for `mvnw` and shell scripts), README stub, `CLAUDE.md`
+- [x] Repo hygiene: `.gitignore`, `.gitattributes` (LF for `mvnw` and shell scripts), README stub, `CLAUDE.md`
 - [x] Choose the Java version: 25 (LTS), mainly for the virtual-thread pinning fix
 - [ ] Generate the Spring Boot project: Java 25, Maven wrapper, base package, starter dependencies
 - [ ] `docker-compose.yml` with Postgres and Redis for local development
