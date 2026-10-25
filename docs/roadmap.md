@@ -4,7 +4,7 @@ The build plan from the [project design](Hotel%20Booking%20Backend%20Project%20D
 
 Tasks are listed in the order to do them. Where a task names a test, that test is written and committed first.
 
-**Current:** Week 2
+**Current:** Week 3
 
 ## Week 1: Skeleton
 
@@ -37,7 +37,7 @@ Goal: users can sign up, log in, refresh, and log out, and login can't be brute 
 - [x] Signup: validation, BCrypt hashing, duplicate email returns 409
 - [x] Login: issue a JWT access token; test that a bad password gets 401
 - [x] Security config: stateless JWT filter; test that the wrong role on `/admin` gets 403
-- [x] Refresh tokens in Redis (`refresh:{jti}`, TTL = token lifetime); `POST /auth/refresh` rotates them
+- [x] Refresh tokens in Redis (`refresh:{sha256(token)}`, 7-day TTL); `POST /auth/refresh` rotates them
 - [x] Logout deletes the refresh token; test that a revoked token can't refresh
 - [x] Rate limiter: token bucket as a Redis Lua script (`rl:{route}:{key}`), fails open and logs when Redis is down
 - [x] Test: the 11th login attempt inside the window gets 429

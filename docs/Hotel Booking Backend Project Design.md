@@ -167,7 +167,7 @@ Redis makes the system faster and harder to abuse, but Postgres decides what's t
 | Idempotency keys | `SET NX` with status and stored response | `idem:{userId}:{key}` | 24 hours | Fail closed with 503. Better than a duplicate payment |
 | Caching | Spring Cache with a Redis cache manager | `hotel:{id}`, `search:{hash}` | Hotel info about 10 minutes, search about 60 seconds | Fall through to Postgres |
 | Job locks | Redisson or ShedLock | `lock:hold-expiry`, `lock:outbox` | Lease shorter than the job interval | That run is skipped, the next one catches up |
-| Token revocation | Refresh tokens stored by id, deleted on logout | `refresh:{jti}` | Token lifetime | Refresh fails, users log in again |
+| Token revocation | Opaque refresh tokens stored as a hash, single use (rotated on refresh), deleted on logout | `refresh:{sha256(token)}` | Token lifetime (7 days) | Refresh fails, users log in again |
 
 Cache invalidation is the subtle part. Hotel details can live in the cache for minutes. Search results depend on availability, so they get a short TTL plus eviction whenever inventory for that hotel changes. Write a test for the eviction, since stale availability is the bug users would actually notice.
 
@@ -192,7 +192,7 @@ Every feature starts as a failing test that states a business rule in plain word
 - [ ] The same webhook delivered twice confirms the booking once and creates one outbox row
 - [ ] A webhook that arrives after the hold expired gets confirmed or refunded, never stuck
 - [ ] A retried `POST /bookings/init` with the same `Idempotency-Key` returns the original booking
-- [ ] The 11th login attempt inside the window is rejected with 429
+- [x] The 11th login attempt inside the window is rejected with 429
 - [ ] Changing inventory evicts the cached search result for that hotel
 - [ ] Cancelling restores inventory and calls the refund exactly once
 
