@@ -1,6 +1,7 @@
 package com.roomkeeper.user;
 
 import com.roomkeeper.common.security.CurrentUserId;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/users/profile")
+@Tag(name = "Profile", description = "The signed-in user's own profile")
 public class ProfileController {
 
 	private final UserService userService;

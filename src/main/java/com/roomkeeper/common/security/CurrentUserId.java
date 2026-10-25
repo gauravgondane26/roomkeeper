@@ -6,6 +6,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 /**
@@ -16,5 +17,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @AuthenticationPrincipal(expression = "T(java.lang.Long).valueOf(subject)")
+@Parameter(hidden = true) // comes from the token, not the request, so keep it out of the API docs
 public @interface CurrentUserId {
 }

@@ -49,7 +49,9 @@ done
 # Week 1: the app is up and healthy
 check "health reports UP" GET /actuator/health 200 '"status":"UP"'
 
-# Week 2: auth
+# Week 2: API docs and auth
+check "API docs are public" GET /v3/api-docs 200 '"title":"RoomKeeper API"'
+check "Swagger UI is public" GET /swagger-ui/index.html 200 "Swagger UI"
 check "anonymous request is a 401 problem" GET /api/v1/does-not-exist 401 "urn:roomkeeper:problem:unauthorized"
 email="smoke-$(date +%s)-$RANDOM@example.com"
 signup_body="{\"email\":\"$email\",\"password\":\"smoke-test-password\",\"name\":\"Smoke Test\"}"

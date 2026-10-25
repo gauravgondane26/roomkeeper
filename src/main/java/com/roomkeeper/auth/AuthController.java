@@ -1,6 +1,8 @@
 package com.roomkeeper.auth;
 
 import com.roomkeeper.user.UserResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,6 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/auth")
+@Tag(name = "Auth", description = "Sign up, log in, refresh, and log out")
+@SecurityRequirements // open endpoints: no bearer token needed
 public class AuthController {
 
 	private final AuthService authService;

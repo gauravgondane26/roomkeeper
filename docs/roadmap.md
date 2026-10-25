@@ -42,7 +42,7 @@ Goal: users can sign up, log in, refresh, and log out, and login can't be brute 
 - [x] Rate limiter: token bucket as a Redis Lua script (`rl:{route}:{key}`), fails open and logs when Redis is down
 - [x] Test: the 11th login attempt inside the window gets 429
 - [x] `GET` and `PATCH /users/profile`
-- [ ] springdoc-openapi with bearer auth, so Swagger can log in
+- [x] springdoc-openapi with bearer auth, so Swagger can log in
 
 **Done when:** Swagger can log in and call a protected route.
 
