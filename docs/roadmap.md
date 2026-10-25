@@ -15,7 +15,7 @@ Goal: an empty app that starts against real Postgres and Redis, with CI checking
 - [x] Choose the Java version: 25 (LTS), mainly for the virtual-thread pinning fix
 - [x] Generate the Spring Boot project: Java 25, Maven wrapper, base package, starter dependencies
 - [x] `compose.yaml` with Postgres and Redis for local development
-- [ ] Spring profiles `local`, `test`, `prod`; secrets read from environment variables only
+- [x] Spring profiles `local`, `test`, `prod`; secrets read from environment variables only
 - [ ] Flyway wired up with a baseline `V1__init.sql`
 - [ ] Testcontainers base: one shared Postgres and one shared Redis container for the whole suite
 - [ ] Test: the app context starts, Flyway migrates, Redis answers a ping

@@ -1,0 +1,17 @@
+# Everything comes from the environment, with no defaults,
+# so a missing setting fails at startup instead of falling back silently.
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD:}
+
+management:
+  endpoint:
+    health:
+      show-details: never

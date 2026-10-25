@@ -1,0 +1,15 @@
+# Matches compose.yaml. Override ports with POSTGRES_PORT / REDIS_PORT.
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT:15432}/roomkeeper
+    username: roomkeeper
+    password: ${POSTGRES_PASSWORD:roomkeeper}
+  data:
+    redis:
+      host: localhost
+      port: ${REDIS_PORT:16379}
+
+management:
+  endpoint:
+    health:
+      show-details: always

@@ -1,0 +1,10 @@
+# Database and Redis connections come from Testcontainers (@ServiceConnection),
+# so nothing here points at a real host.
+spring:
+  main:
+    banner-mode: off
+
+logging:
+  level:
+    org.testcontainers: WARN
+    tc: WARN
