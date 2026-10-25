@@ -1,5 +1,7 @@
 package com.roomkeeper.testsupport;
 
+import java.util.Map;
+
 import io.restassured.http.ContentType;
 import io.restassured.specification.RequestSpecification;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -39,6 +41,33 @@ public abstract class AbstractIntegrationTest {
 	/** A REST Assured request against the running app, over real HTTP. */
 	protected RequestSpecification api() {
 		return given().port(port).accept(ContentType.JSON);
+	}
+
+	/** A request that sends the given access token as a bearer token. */
+	protected RequestSpecification api(String accessToken) {
+		return api().header("Authorization", "Bearer " + accessToken);
+	}
+
+	/** Signs the user up and returns their id. */
+	protected long signUp(TestUser user) {
+		return api().contentType(ContentType.JSON).body(user.signupRequest())
+			.when().post("/api/v1/auth/signup")
+			.then().statusCode(201)
+			.extract().jsonPath().getLong("id");
+	}
+
+	/** Logs the user in and returns their access token. */
+	protected String logIn(TestUser user) {
+		return api().contentType(ContentType.JSON).body(Map.of("email", user.email(), "password", user.password()))
+			.when().post("/api/v1/auth/login")
+			.then().statusCode(200)
+			.extract().jsonPath().getString("accessToken");
+	}
+
+	/** Signs the user up, logs them in, and returns their access token. */
+	protected String signUpAndLogIn(TestUser user) {
+		signUp(user);
+		return logIn(user);
 	}
 
 }

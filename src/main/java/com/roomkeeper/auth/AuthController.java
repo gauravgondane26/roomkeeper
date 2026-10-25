@@ -25,4 +25,9 @@ public class AuthController {
 		return UserResponse.from(authService.signup(request));
 	}
 
+	@PostMapping("/login")
+	public TokenResponse login(@Valid @RequestBody LoginRequest request) {
+		return TokenResponse.from(authService.login(request));
+	}
+
 }

@@ -14,6 +14,12 @@ spring:
         jdbc:
           time_zone: UTC
 
+roomkeeper:
+  auth:
+    issuer: roomkeeper
+    access-token-ttl: 15m
+    # jwt-secret is set per profile; prod reads it from JWT_SECRET
+
 management:
   endpoints:
     web:

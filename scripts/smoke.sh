@@ -47,8 +47,14 @@ check "health reports UP" GET /actuator/health 200 '"status":"UP"'
 # Week 2: auth
 check "anonymous request is a 401 problem" GET /api/v1/does-not-exist 401 "urn:roomkeeper:problem:unauthorized"
 email="smoke-$(date +%s)-$RANDOM@example.com"
-check "signup creates a guest" POST /api/v1/auth/signup 201 '"role":"GUEST"'   "{\"email\":\"$email\",\"password\":\"smoke-test-password\",\"name\":\"Smoke Test\"}"
-check "duplicate signup is a 409 problem" POST /api/v1/auth/signup 409 "urn:roomkeeper:problem:email-already-registered"   "{\"email\":\"$email\",\"password\":\"smoke-test-password\",\"name\":\"Smoke Test\"}"
+signup_body="{\"email\":\"$email\",\"password\":\"smoke-test-password\",\"name\":\"Smoke Test\"}"
+check "signup creates a guest" POST /api/v1/auth/signup 201 '"role":"GUEST"' "$signup_body"
+check "duplicate signup is a 409 problem" POST /api/v1/auth/signup 409 \
+  "urn:roomkeeper:problem:email-already-registered" "$signup_body"
+check "login returns a bearer token" POST /api/v1/auth/login 200 '"tokenType":"Bearer"' \
+  "{\"email\":\"$email\",\"password\":\"smoke-test-password\"}"
+check "wrong password is a 401 problem" POST /api/v1/auth/login 401 \
+  "urn:roomkeeper:problem:invalid-credentials" "{\"email\":\"$email\",\"password\":\"wrong-password\"}"
 
 if (( failures > 0 )); then
   echo "$failures smoke check(s) failed"

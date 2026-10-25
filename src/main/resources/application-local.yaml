@@ -9,6 +9,11 @@ spring:
       host: localhost
       port: ${REDIS_PORT:16379}
 
+roomkeeper:
+  auth:
+    # Development-only secret; never reuse it anywhere real
+    jwt-secret: ${JWT_SECRET:VrafQC2/RfRzmNJ2WUp9ketFZXrRb41ZQn0ZXAJEyCw=}
+
 management:
   endpoint:
     health:

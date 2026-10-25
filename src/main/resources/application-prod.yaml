@@ -11,6 +11,11 @@ spring:
       port: ${REDIS_PORT}
       password: ${REDIS_PASSWORD:}
 
+roomkeeper:
+  auth:
+    # base64, at least 32 bytes: openssl rand -base64 32
+    jwt-secret: ${JWT_SECRET}
+
 management:
   endpoint:
     health:

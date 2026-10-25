@@ -7,6 +7,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
@@ -17,7 +18,8 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
 	@Bean
-	SecurityFilterChain apiSecurity(HttpSecurity http, ProblemDetailsSecurityHandler problemHandler) {
+	SecurityFilterChain apiSecurity(HttpSecurity http, ProblemDetailsSecurityHandler problemHandler,
+			JwtAuthenticationConverter jwtAuthenticationConverter) {
 		return http
 			.csrf(csrf -> csrf.disable())
 			.httpBasic(basic -> basic.disable())
@@ -25,11 +27,18 @@ public class SecurityConfig {
 			.logout(logout -> logout.disable())
 			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.authorizeHttpRequests(auth -> auth
-				.requestMatchers(HttpMethod.POST, "/api/v1/auth/signup").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/v1/auth/signup", "/api/v1/auth/login").permitAll()
 				.requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
 				// Errors thrown on permitted routes are forwarded here and must stay visible
 				.requestMatchers("/error").permitAll()
+				.requestMatchers("/api/v1/admin/**").hasRole("HOTEL_MANAGER")
 				.anyRequest().authenticated())
+			// Bearer tokens are validated by Spring's resource server support (signature,
+			// expiry, issuer: see JwtConfig); missing or bad tokens get our 401 problem
+			.oauth2ResourceServer(resourceServer -> resourceServer
+				.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
+				.authenticationEntryPoint(problemHandler)
+				.accessDeniedHandler(problemHandler))
 			.exceptionHandling(errors -> errors
 				.authenticationEntryPoint(problemHandler)
 				.accessDeniedHandler(problemHandler))

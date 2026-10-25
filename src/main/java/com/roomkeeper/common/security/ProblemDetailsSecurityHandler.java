@@ -34,7 +34,9 @@ public class ProblemDetailsSecurityHandler implements AuthenticationEntryPoint, 
 	@Override
 	public void commence(HttpServletRequest request, HttpServletResponse response,
 			AuthenticationException authException) throws IOException {
-		write(request, response, ProblemType.UNAUTHORIZED.problem("Authentication is required"));
+		// Missing, malformed, tampered, and expired tokens all land here (RFC 6750 challenge)
+		response.setHeader("WWW-Authenticate", "Bearer");
+		write(request, response, ProblemType.UNAUTHORIZED.problem("A valid access token is required"));
 	}
 
 	@Override

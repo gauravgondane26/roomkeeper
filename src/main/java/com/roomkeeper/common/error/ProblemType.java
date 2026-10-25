@@ -29,7 +29,8 @@ public enum ProblemType {
 
 	// Specific
 	VALIDATION("validation", HttpStatus.BAD_REQUEST, "Validation failed"),
-	EMAIL_ALREADY_REGISTERED("email-already-registered", HttpStatus.CONFLICT, "Email already registered");
+	EMAIL_ALREADY_REGISTERED("email-already-registered", HttpStatus.CONFLICT, "Email already registered"),
+	INVALID_CREDENTIALS("invalid-credentials", HttpStatus.UNAUTHORIZED, "Invalid credentials");
 
 	private static final String URN_PREFIX = "urn:roomkeeper:problem:";
 

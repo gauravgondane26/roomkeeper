@@ -40,6 +40,6 @@ The app listens on port 8080. Postgres and Redis are published on 15432 and 1637
 | --- | --- | --- |
 | `local` (default) | Running on a developer machine | The Compose services |
 | `test` | The test suite | Testcontainers |
-| `prod` | The Docker image | Environment variables only: `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` |
+| `prod` | The Docker image | Environment variables only: `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `JWT_SECRET` (base64, 32+ bytes) |
 
 Everything runs in UTC regardless of the host's time zone.
