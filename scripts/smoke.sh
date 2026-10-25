@@ -8,6 +8,8 @@ set -euo pipefail
 BASE_URL="${BASE_URL:-http://localhost:8080}"
 WAIT_SECONDS="${WAIT_SECONDS:-60}"
 failures=0
+# When set, check() sends it as a bearer token
+TOKEN=""
 
 # check <description> <method> <path> <expected status> [expected body substring] [JSON request body]
 check() {
@@ -16,6 +18,9 @@ check() {
   local -a data=()
   if [[ -n "$request_body" ]]; then
     data=(-H 'Content-Type: application/json' -d "$request_body")
+  fi
+  if [[ -n "$TOKEN" ]]; then
+    data+=(-H "Authorization: Bearer $TOKEN")
   fi
   body=$(curl -s --max-time 10 -X "$method" "${data[@]}" -w '\n%{http_code}' "$BASE_URL$path") || true
   status=${body##*$'\n'}
@@ -55,6 +60,13 @@ check "login returns a bearer token" POST /api/v1/auth/login 200 '"tokenType":"B
   "{\"email\":\"$email\",\"password\":\"smoke-test-password\"}"
 check "wrong password is a 401 problem" POST /api/v1/auth/login 401 \
   "urn:roomkeeper:problem:invalid-credentials" "{\"email\":\"$email\",\"password\":\"wrong-password\"}"
+
+TOKEN=$(curl -s -H 'Content-Type: application/json' \
+  -d "{\"email\":\"$email\",\"password\":\"smoke-test-password\"}" "$BASE_URL/api/v1/auth/login" \
+  | sed -nE 's/.*"accessToken":"([^"]+)".*/\1/p')
+check "profile with the token" GET /api/v1/users/profile 200 "\"email\":\"$email\""
+check "profile name update" PATCH /api/v1/users/profile 200 '"name":"Smoke Renamed"' '{"name":"Smoke Renamed"}'
+TOKEN=""
 
 if (( failures > 0 )); then
   echo "$failures smoke check(s) failed"
