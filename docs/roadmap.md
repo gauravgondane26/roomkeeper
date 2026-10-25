@@ -12,7 +12,8 @@ Goal: an empty app that starts against real Postgres and Redis, with CI checking
 
 - [x] Git repo, design doc, GitHub remote
 - [ ] Repo hygiene: `.gitignore`, `.gitattributes` (LF for `mvnw` and shell scripts), README stub, `CLAUDE.md`
-- [ ] Generate the Spring Boot project: Java version decided (21 or 25), Maven wrapper, base package, starter dependencies
+- [x] Choose the Java version: 25 (LTS), mainly for the virtual-thread pinning fix
+- [ ] Generate the Spring Boot project: Java 25, Maven wrapper, base package, starter dependencies
 - [ ] `docker-compose.yml` with Postgres and Redis for local development
 - [ ] Spring profiles `local`, `test`, `prod`; secrets read from environment variables only
 - [ ] Flyway wired up with a baseline `V1__init.sql`
