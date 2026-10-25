@@ -1,0 +1,3 @@
+-- Baseline migration: gives Flyway a starting version.
+-- Tables arrive in later migrations, one feature at a time (V2 adds users).
+-- Never edit a migration once it has been applied; add a new one instead.

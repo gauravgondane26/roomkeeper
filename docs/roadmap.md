@@ -16,9 +16,9 @@ Goal: an empty app that starts against real Postgres and Redis, with CI checking
 - [x] Generate the Spring Boot project: Java 25, Maven wrapper, base package, starter dependencies
 - [x] `compose.yaml` with Postgres and Redis for local development
 - [x] Spring profiles `local`, `test`, `prod`; secrets read from environment variables only
-- [ ] Flyway wired up with a baseline `V1__init.sql`
-- [ ] Testcontainers base: one shared Postgres and one shared Redis container for the whole suite
-- [ ] Test: the app context starts, Flyway migrates, Redis answers a ping
+- [x] Flyway wired up with a baseline `V1__init.sql`
+- [x] Testcontainers base: one shared Postgres and one shared Redis container for the whole suite
+- [x] Test: the app context starts, Flyway migrates, Redis answers a ping
 - [ ] `Clock` bean, plus a fixed-clock setup for tests
 - [ ] REST Assured set up for black-box API tests against the real HTTP server
 - [ ] Multi-stage `Dockerfile`; add the app service to Compose
