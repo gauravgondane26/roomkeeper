@@ -4,7 +4,7 @@ The build plan from the [project design](Hotel%20Booking%20Backend%20Project%20D
 
 Tasks are listed in the order to do them. Where a task names a test, that test is written and committed first.
 
-**Current:** Week 5
+**Current:** Review fixes, then week 5
 
 ## Week 1: Skeleton
 
@@ -82,6 +82,16 @@ Goal: guests can search a city for dates and see correct prices.
 
 **Done when:** search returns the right hotels and prices, and cached results never show stale availability.
 
+## Review fixes (before week 5)
+
+From a security, efficiency, and regression review of weeks 1 to 4. The first two are bugs reproduced against the running app.
+
+- [x] Signup rejects a password over 72 bytes (BCrypt's limit) with a 400; a 72-character password of 2-byte characters used to return 500
+- [ ] `hotel_min_price` updates are safe under concurrency (upsert instead of delete and insert); test with parallel changes to one hotel, which returned 500s
+- [ ] Search cache eviction without scanning Redis: a per-city version in the cache key, bumped on change
+- [ ] Manager accounts: decide how someone becomes a `HOTEL_MANAGER` instead of choosing the role at signup, then build it
+- [ ] Email enumeration: rate-limit signup and refresh, and decide whether signup may reveal that an email is registered
+
 ## Week 5: Booking init, holds, expiry
 
 Goal: no oversell under load, and holds always release.
@@ -100,6 +110,10 @@ Goal: no oversell under load, and holds always release.
 - [ ] Daily inventory roll job (`lock:inventory-roll`): keeps every active room type open a year ahead and fills any missed nights; test with a fixed clock
 - [ ] Deleting a hotel or room type with bookings is rejected with 409; bookings reference rooms with a restricting foreign key as the backstop
 - [ ] `PATCH /admin/hotels/{id}/deactivate`: out of search and no new bookings, existing bookings honoured, history kept
+- [ ] Every path that changes inventory (init, expiry, the roll job) publishes `InventoryChangedEvent`; a test per path
+- [ ] Decide search-cache eviction for bookings (only when a night sells out or reopens, or rely on the 60 s TTL) so busy cities keep a useful cache
+- [ ] Bookings recompute cheapest prices after commit, so inventory row locks are held as briefly as possible
+- [ ] Test: bookings racing room type edits and inventory admin on the same nights
 
 **Done when:** the 50-thread test passes reliably and expired holds return their rooms.
 
@@ -151,6 +165,23 @@ Goal: the system is observable, load tested, and explained.
 - [ ] JaCoCo: review coverage on the domain package
 - [ ] README: one section per hard problem (what goes wrong, what was chosen, what was rejected, which test proves it), plus query plans and a Grafana screenshot
 - [ ] Optional: deploy to a free tier for a live Swagger link
+- [ ] `prod` refuses the development JWT secret; Compose reads secrets from a gitignored `.env`; Postgres and Redis ports bound to localhost
+- [ ] Swagger UI and API docs off in `prod` unless explicitly enabled
+- [ ] Rate-limit public search; Redis `maxmemory` with `volatile-ttl` eviction so caches go before tokens
+- [ ] Trusted-proxy setup so rate limits see the real client IP; test with forwarded headers from trusted and untrusted sources
+- [ ] Refresh token reuse detection (token families)
+- [ ] Dependency and code scanning in CI (Dependabot, CodeQL)
+- [ ] Reprice `hotel_min_price` when the pricing settings change
+- [ ] Search in one query (`count(*) over ()`) instead of a count and a page query
+- [ ] Inventory admin can reset a night's total to follow the room type again
+- [ ] Cache key prefix carries a version, so a deploy that changes a cached response starts fresh
+- [ ] Reset the shared test clock before every test automatically
+- [ ] Test: authorization matrix over every admin endpoint (anonymous, guest, other manager, owner)
+- [ ] Test: JWT edge cases (expired, wrong issuer, wrong key, `alg: none`, tampered role claim)
+- [ ] Test: the whole app with Redis down, and with Postgres connections lost or the pool exhausted
+- [ ] Test: DST change days, UTC+14 and UTC-11 hotels, a leap day in the inventory window, holidays across the year boundary
+- [ ] Test: Flyway upgrading a populated older database
+- [ ] OpenAPI snapshot test, so a breaking API change fails CI
 
 **Done when:** the README explains every design decision with links to its tests.
 

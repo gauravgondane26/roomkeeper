@@ -12,6 +12,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import static com.roomkeeper.testsupport.UserBuilder.aUser;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
@@ -73,6 +74,29 @@ class SignupIT extends AbstractIntegrationTest {
 			.statusCode(400)
 			.body("type", equalTo("urn:roomkeeper:problem:validation"))
 			.body("errors.field", containsInAnyOrder("email", "password", "name"));
+	}
+
+	@Test
+	void rejectsAPasswordOverBcryptsLimitOf72Bytes() {
+		// 72 characters but 144 bytes: BCrypt can't hash it, so it must be a 400, not a 500
+		String password = "é".repeat(72);
+
+		signUp(aUser().withPassword(password).build().signupRequest())
+			.statusCode(400)
+			.body("type", equalTo("urn:roomkeeper:problem:validation"))
+			.body("errors.field", contains("password"));
+	}
+
+	@Test
+	void acceptsAPasswordOfExactly72Bytes() {
+		// 36 two-byte characters
+		String password = "é".repeat(36);
+		var user = aUser().withPassword(password).build();
+
+		signUp(user.signupRequest()).statusCode(201);
+		api().contentType(ContentType.JSON).body(Map.of("email", user.email(), "password", password))
+			.when().post("/api/v1/auth/login")
+			.then().statusCode(200);
 	}
 
 	@Test
