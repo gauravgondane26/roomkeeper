@@ -35,7 +35,8 @@ public class CacheConfig implements CachingConfigurer {
 			.computePrefixWith(name -> name + ":")
 			.disableCachingNullValues();
 		return RedisCacheManager
-			// SCAN rather than KEYS when a cache is cleared by pattern, so Redis isn't blocked
+			// Eviction is by key or version, never by pattern; if a cache is ever cleared, use SCAN
+			// rather than KEYS so Redis isn't blocked
 			.builder(RedisCacheWriter.nonLockingRedisCacheWriter(redis, BatchStrategies.scan(1000)))
 			.cacheDefaults(defaults)
 			.withCacheConfiguration(HOTEL_INFO, defaults.entryTtl(properties.hotelInfoTtl())

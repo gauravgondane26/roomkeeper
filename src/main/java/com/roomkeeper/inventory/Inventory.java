@@ -60,10 +60,6 @@ public class Inventory {
 		return id;
 	}
 
-	public Long getRoomId() {
-		return roomId;
-	}
-
 	public LocalDate getDate() {
 		return date;
 	}

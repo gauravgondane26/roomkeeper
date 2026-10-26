@@ -55,10 +55,6 @@ public enum ProblemType {
 		return uri;
 	}
 
-	public HttpStatus status() {
-		return status;
-	}
-
 	public String title() {
 		return title;
 	}

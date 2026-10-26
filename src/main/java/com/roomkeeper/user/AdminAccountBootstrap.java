@@ -1,8 +1,6 @@
 package com.roomkeeper.user;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Clock;
-import java.util.Locale;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,10 +48,11 @@ public class AdminAccountBootstrap implements ApplicationRunner {
 			return;
 		}
 		String password = properties.password();
-		if (password == null || password.length() < 8 || password.getBytes(StandardCharsets.UTF_8).length > 72) {
-			throw new IllegalStateException("roomkeeper.admin.password must be 8 characters to 72 bytes");
+		if (!PasswordPolicy.isAcceptable(password)) {
+			throw new IllegalStateException("roomkeeper.admin.password must be " + PasswordPolicy.MIN_CHARACTERS
+					+ " characters to " + PasswordPolicy.MAX_UTF8_BYTES + " bytes");
 		}
-		String email = properties.email().strip().toLowerCase(Locale.ROOT);
+		String email = Emails.normalize(properties.email());
 		users.findByEmail(email).ifPresentOrElse(existing -> {
 			if (existing.getRole() != Role.ADMIN) {
 				log.error("An account with the admin email {} already exists and is not an admin; it was not promoted. "

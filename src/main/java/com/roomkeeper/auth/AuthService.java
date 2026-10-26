@@ -1,11 +1,11 @@
 package com.roomkeeper.auth;
 
 import java.time.Clock;
-import java.util.Locale;
 import java.util.function.Supplier;
 
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.ProblemType;
+import com.roomkeeper.user.Emails;
 import com.roomkeeper.user.Role;
 import com.roomkeeper.user.User;
 import com.roomkeeper.user.UserMapper;
@@ -58,7 +58,7 @@ public class AuthService {
 
 	@Transactional
 	public UserResponse signup(SignupRequest request) {
-		String email = normalizeEmail(request.email());
+		String email = Emails.normalize(request.email());
 		if (users.existsByEmail(email)) {
 			throw new EmailAlreadyRegisteredException();
 		}
@@ -76,7 +76,7 @@ public class AuthService {
 
 	@Transactional(readOnly = true)
 	public TokenResponse login(LoginRequest request) {
-		User user = users.findByEmail(normalizeEmail(request.email())).orElse(null);
+		User user = users.findByEmail(Emails.normalize(request.email())).orElse(null);
 		if (user == null) {
 			passwordEncoder.matches(request.password(), dummyPasswordHash);
 			throw new InvalidCredentialsException();
@@ -128,10 +128,6 @@ public class AuthService {
 			throw new ApiException(ProblemType.SERVICE_UNAVAILABLE,
 					"Sessions can't be refreshed right now; log in again");
 		}
-	}
-
-	static String normalizeEmail(String email) {
-		return email.strip().toLowerCase(Locale.ROOT);
 	}
 
 }

@@ -1,6 +1,7 @@
 package com.roomkeeper.auth;
 
 import com.roomkeeper.common.validation.MaxUtf8Bytes;
+import com.roomkeeper.user.PasswordPolicy;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -12,8 +13,8 @@ import jakarta.validation.constraints.Size;
  */
 public record SignupRequest(
 		@NotBlank @Email @Size(max = 320) String email,
-		// BCrypt hashes at most 72 bytes, and rejects longer passwords rather than truncate them
-		@NotBlank @Size(min = 8) @MaxUtf8Bytes(72) String password,
+		@NotBlank @Size(min = PasswordPolicy.MIN_CHARACTERS) @MaxUtf8Bytes(PasswordPolicy.MAX_UTF8_BYTES)
+		String password,
 		@NotBlank @Size(max = 100) String name,
 		SignupRole role) {
 }
