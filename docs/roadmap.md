@@ -113,7 +113,7 @@ Goal: no oversell under load, and holds always release.
 - [x] Every path that changes inventory (init, expiry, the roll job) publishes `InventoryChangedEvent`; a test per path
 - [x] Decide search-cache eviction for bookings: evict only when a night sells out or reopens; the 60 s TTL covers the rest (partial availability for multi-room searches, occupancy repricing). The eviction runs after the cheapest-price recompute, so a search can't re-cache the old price
 - [x] Bookings recompute cheapest prices after commit, so inventory row locks are held as briefly as possible: an after-commit listener on a small bounded async executor (not REQUIRES_NEW on the request thread, which starved the pool); moves to the outbox in week 7
-- [ ] Test: bookings racing room type edits and inventory admin on the same nights
+- [x] Test: bookings racing room type edits and inventory admin on the same nights
 
 **Done when:** the 50-thread test passes reliably and expired holds return their rooms.
 
