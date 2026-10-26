@@ -106,6 +106,15 @@ public class Inventory {
 		reservedCount += rooms;
 	}
 
+	/** Gives back rooms held by a booking that expired. */
+	public void release(int rooms) {
+		if (reservedCount < rooms) {
+			throw new IllegalStateException("Can't release " + rooms + " rooms on " + date + ": only " + reservedCount
+					+ " held");
+		}
+		reservedCount -= rooms;
+	}
+
 	/** This night as the pricing rules see it, for a room type at {@code basePrice}. */
 	public Night toNight(BigDecimal basePrice) {
 		return new Night(date, basePrice, surgeFactor, totalCount, sold());

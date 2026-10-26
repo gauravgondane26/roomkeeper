@@ -171,6 +171,11 @@ public class Booking {
 		guests.sort(Comparator.comparing(Guest::getId, Comparator.nullsLast(Comparator.naturalOrder())));
 	}
 
+	/** The hold ran out without payment; the caller gives the rooms back. */
+	public void expire() {
+		moveTo(BookingStatus.EXPIRED);
+	}
+
 	private void moveTo(BookingStatus next) {
 		if (!status.canMoveTo(next)) {
 			throw new ApiException(ProblemType.BOOKING_STATE,

@@ -49,6 +49,8 @@ roomkeeper:
   booking:
     # How long unpaid rooms stay held before the expiry job releases them
     hold-duration: 10m
+    # How often the expiry job looks for holds that have run out
+    expiry-interval: 1m
   cache:
     hotel-info-ttl: 10m
     search-ttl: 60s

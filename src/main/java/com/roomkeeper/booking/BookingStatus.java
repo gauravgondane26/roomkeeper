@@ -34,7 +34,12 @@ public enum BookingStatus {
 
 	/** Not yet paid for: the rooms are held, counted in reserved_count, until the hold runs out. */
 	public boolean isHold() {
-		return this == RESERVED || this == GUESTS_ADDED || this == PAYMENT_PENDING;
+		return holds().contains(this);
+	}
+
+	/** Every status that is a hold. */
+	public static Set<BookingStatus> holds() {
+		return EnumSet.of(RESERVED, GUESTS_ADDED, PAYMENT_PENDING);
 	}
 
 }

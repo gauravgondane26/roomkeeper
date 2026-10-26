@@ -190,7 +190,7 @@ Every feature starts as a failing test that states a business rule in plain word
 **Signature tests** (the ones to show in an interview):
 
 - [x] 50 concurrent requests for the last room: exactly one succeeds, 49 get a clean "sold out" error
-- [ ] A hold expires after 10 minutes using an injected `Clock`, with no `Thread.sleep`
+- [x] A hold expires after 10 minutes using an injected `Clock`, with no `Thread.sleep`
 - [ ] The same webhook delivered twice confirms the booking once and creates one outbox row
 - [ ] A webhook that arrives after the hold expired gets confirmed or refunded, never stuck
 - [ ] A retried `POST /bookings/init` with the same `Idempotency-Key` returns the original booking

@@ -105,7 +105,7 @@ Goal: no oversell under load, and holds always release.
 - [x] Guest CRUD on `/users/guests`
 - [x] `POST /bookings/{id}/guests`, validated against room capacity
 - [x] `GET /bookings/{id}/status` and `GET /users/bookings`
-- [ ] Hold expiry job: releases `reserved_count` and marks bookings Expired; test with a fixed clock, no `Thread.sleep`
+- [x] Hold expiry job: releases `reserved_count` and marks bookings Expired; test with a fixed clock, no `Thread.sleep`
 - [ ] Redis job lock (`lock:hold-expiry`); test that only one instance runs the job
 - [ ] Daily inventory roll job (`lock:inventory-roll`): keeps every active room type open a year ahead and fills any missed nights; test with a fixed clock
 - [ ] Deleting a hotel or room type with bookings is rejected with 409; bookings reference rooms with a restricting foreign key as the backstop

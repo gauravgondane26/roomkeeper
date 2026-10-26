@@ -13,6 +13,10 @@ roomkeeper:
     email: admin@roomkeeper.test
     password: test-admin-password
 
+  # Tests run the scheduled jobs themselves, at the time they choose
+  jobs:
+    enabled: false
+
 logging:
   level:
     org.testcontainers: WARN
