@@ -101,6 +101,21 @@ class HotelMinPriceIT extends AbstractIntegrationTest {
 	}
 
 	@Test
+	void renamingARoomTypeOrChangingItsCapacityDoesNotRepriceTheHotel() {
+		activate();
+		// A marker no real recalculation would produce
+		jdbc.update("update hotel_min_price set min_price = 1.00 where hotel_id = ? and date = ?", hotelId,
+				LocalDate.parse(TUESDAY));
+
+		api(manager).contentType(ContentType.JSON)
+			.body(aRoom().ofType("Deluxe Sea View").pricedAt("4000").sleeping(3).withTotalCount(5).build())
+			.when().put("/api/v1/admin/hotels/{hotelId}/rooms/{roomId}", hotelId, deluxe)
+			.then().statusCode(200);
+
+		assertThat(minPrice(TUESDAY)).isEqualByComparingTo("1.00");
+	}
+
+	@Test
 	void changingARoomsBasePriceRepricesItsNights() {
 		activate();
 

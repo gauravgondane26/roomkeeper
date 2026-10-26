@@ -44,13 +44,15 @@ class CachingIT extends AbstractIntegrationTest {
 
 	private long hotelId;
 
+	private long roomId;
+
 	@BeforeEach
 	void activateAHotel() {
 		clock.setInstant(Instant.parse("2026-03-10T09:00:00Z"));
 		manager = signUpAndLogIn(aUser().asHotelManager().build());
 		city = "Cache-" + UUID.randomUUID();
 		hotelId = createHotel(manager, aHotel().named("Seaside Inn").inCity(city).build());
-		createRoom(manager, hotelId, aRoom().ofType("Deluxe").build());
+		roomId = createRoom(manager, hotelId, aRoom().ofType("Deluxe").build());
 		activateHotel(manager, hotelId);
 	}
 
@@ -106,6 +108,21 @@ class CachingIT extends AbstractIntegrationTest {
 		jdbc.update("update hotels set name = 'Changed behind the cache' where id = ?", hotelId);
 
 		search().body("hotels[0].name", equalTo("Seaside Inn"));
+	}
+
+	@Test
+	void editingARoomTypesCapacityRefreshesTheInfoButKeepsCachedSearches() {
+		info().body("rooms.capacity", contains(2));
+		search();
+
+		api(manager).contentType(ContentType.JSON).body(aRoom().ofType("Deluxe").sleeping(3).build())
+			.when().put("/api/v1/admin/hotels/{hotelId}/rooms/{roomId}", hotelId, roomId)
+			.then().statusCode(200);
+
+		info().body("rooms.capacity", contains(3));
+		// Capacity isn't part of search results or prices, so the cached search stays valid
+		search();
+		assertThat(redis.keys("search:*")).hasSize(1);
 	}
 
 	@Test

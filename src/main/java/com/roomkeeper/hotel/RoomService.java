@@ -53,7 +53,7 @@ public class RoomService {
 			inventory.openYear(room.getId(), room.getTotalCount(), hotel.today(clock));
 			inventoryChanged(hotel);
 		}
-		events.publishEvent(HotelChangedEvent.of(hotel));
+		events.publishEvent(HotelChangedEvent.roomTypesOf(hotel));
 		return mapper.toResponse(room);
 	}
 
@@ -76,15 +76,19 @@ public class RoomService {
 			throw new RoomTypeExistsException(type);
 		}
 		Hotel hotel = room.getHotel();
-		if (hotel.isActive() && request.totalCount() != room.getTotalCount()) {
+		boolean totalChanges = request.totalCount() != room.getTotalCount();
+		// Only the price and the room count affect what's sold and for how much; a new name or
+		// capacity leaves every night's price and availability as it was
+		boolean salesChange = totalChanges || price(request).compareTo(room.getBasePrice()) != 0;
+		if (hotel.isActive() && totalChanges) {
 			inventory.applyRoomTotal(roomId, request.totalCount(), hotel.today(clock));
 		}
 		room.changeDetails(type, price(request), request.capacity(), request.totalCount());
 		RoomResponse response = mapper.toResponse(saveAndFlush(room, type));
-		if (hotel.isActive()) {
+		if (hotel.isActive() && salesChange) {
 			inventoryChanged(hotel);
 		}
-		events.publishEvent(HotelChangedEvent.of(hotel));
+		events.publishEvent(HotelChangedEvent.roomTypesOf(hotel));
 		return response;
 	}
 
@@ -96,7 +100,7 @@ public class RoomService {
 		if (hotel.isActive()) {
 			inventoryChanged(hotel);
 		}
-		events.publishEvent(HotelChangedEvent.of(hotel));
+		events.publishEvent(HotelChangedEvent.roomTypesOf(hotel));
 	}
 
 	/** The hotel's rooms changed, so every night it sells from today on may have changed too. */
