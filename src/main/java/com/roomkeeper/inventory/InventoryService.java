@@ -27,11 +27,12 @@ public class InventoryService {
 	 * Opens a room for booking: one row per night for {@link #NIGHTS_AHEAD} nights from
 	 * {@code firstNight} (the hotel's today), each with the room's total count. Nights that
 	 * already have a row keep it, so calling this again only fills in what's missing.
+	 * Returns how many nights it opened.
 	 */
 	@Transactional
-	public void openYear(long roomId, int totalCount, LocalDate firstNight) {
+	public int openYear(long roomId, int totalCount, LocalDate firstNight) {
 		// One statement for the whole year; date + integer is a date, so no time zones involved
-		jdbc.sql("""
+		return jdbc.sql("""
 				insert into inventory (room_id, date, total_count)
 				select :roomId, cast(:from as date) + n, :totalCount
 				from generate_series(0, :nights - 1) as n

@@ -51,6 +51,9 @@ roomkeeper:
     hold-duration: 10m
     # How often the expiry job looks for holds that have run out
     expiry-interval: 1m
+  inventory:
+    # Hourly, at five past: each hotel's newest night opens within an hour of its midnight
+    roll-cron: "0 5 * * * *"
   cache:
     hotel-info-ttl: 10m
     search-ttl: 60s

@@ -107,10 +107,10 @@ Goal: no oversell under load, and holds always release.
 - [x] `GET /bookings/{id}/status` and `GET /users/bookings`
 - [x] Hold expiry job: releases `reserved_count` and marks bookings Expired; test with a fixed clock, no `Thread.sleep`
 - [x] Redis job lock (`lock:hold-expiry`); test that only one instance runs the job
-- [ ] Daily inventory roll job (`lock:inventory-roll`): keeps every active room type open a year ahead and fills any missed nights; test with a fixed clock
+- [x] Inventory roll job (`lock:inventory-roll`): keeps every active room type open a year ahead and fills any missed nights; test with a fixed clock. Runs hourly rather than daily, so each hotel's newest night opens within an hour of its own midnight
 - [ ] Deleting a hotel or room type with bookings is rejected with 409; bookings reference rooms with a restricting foreign key as the backstop
 - [ ] `PATCH /admin/hotels/{id}/deactivate`: out of search and no new bookings, existing bookings honoured, history kept; admins can also take an approved hotel off sale
-- [ ] Every path that changes inventory (init, expiry, the roll job) publishes `InventoryChangedEvent`; a test per path
+- [x] Every path that changes inventory (init, expiry, the roll job) publishes `InventoryChangedEvent`; a test per path
 - [x] Decide search-cache eviction for bookings: evict only when a night sells out or reopens; the 60 s TTL covers the rest (partial availability for multi-room searches, occupancy repricing). The eviction runs after the cheapest-price recompute, so a search can't re-cache the old price
 - [x] Bookings recompute cheapest prices after commit, so inventory row locks are held as briefly as possible: an after-commit listener on a small bounded async executor (not REQUIRES_NEW on the request thread, which starved the pool); moves to the outbox in week 7
 - [ ] Test: bookings racing room type edits and inventory admin on the same nights
