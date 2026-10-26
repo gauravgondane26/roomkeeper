@@ -20,6 +20,17 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Keeps hotel_min_price in step with inventory: when a hotel's nights change, re-prices
  * them in the same transaction and stores each night's cheapest bookable room.
+ * <p>
+ * Each recalculation first takes a per-hotel advisory lock, held until its transaction
+ * ends. Recalculations for one hotel therefore run one at a time, and each starts only
+ * after the previous writer committed, so it reads that writer's changes: two concurrent
+ * changes to different room types can't leave a price worked out from stale data, or
+ * collide re-inserting the same rows. It can't deadlock: holding the lock, it only reads
+ * inventory and writes hotel_min_price, which nothing else writes.
+ * <p>
+ * It deliberately stays in the writer's transaction, on the writer's connection. Running it
+ * after commit in a new transaction needs a second connection while the first is still
+ * held, which starves the pool under concurrent writes.
  */
 @Component
 class HotelMinPriceUpdater {
@@ -45,6 +56,9 @@ class HotelMinPriceUpdater {
 	@EventListener
 	@Transactional(propagation = Propagation.MANDATORY)
 	void onInventoryChanged(InventoryChangedEvent event) {
+		// One recalculation per hotel at a time; the lock is released when the transaction ends.
+		// The key is the hotel id: nothing else in the app takes advisory locks.
+		jdbc.sql("select pg_advisory_xact_lock(:hotelId)").param("hotelId", event.hotelId()).query().singleRow();
 		// Changes made through JPA may still be pending; the query below must see them
 		entityManager.flush();
 		LocalDate to = event.to() != null ? event.to() : NO_END;
