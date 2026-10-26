@@ -13,31 +13,23 @@ import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.lifecycle.Startables;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import static io.restassured.RestAssured.given;
 
 /**
- * Base class for tests that run the full application against real Postgres and Redis.
- * <p>
- * The containers are started once per test JVM and shared by every subclass, so the suite
- * pays the startup cost once. Spring only reads their connection details and never stops
- * them; Testcontainers removes them when the JVM exits.
+ * Base class for tests that run the full application against real Postgres and Redis,
+ * using the shared {@link Containers}.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 public abstract class AbstractIntegrationTest {
 
 	@ServiceConnection
-	static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:18-alpine");
+	static final PostgreSQLContainer POSTGRES = Containers.POSTGRES;
 
 	@ServiceConnection(name = "redis")
-	static final GenericContainer<?> REDIS = new GenericContainer<>("redis:8-alpine").withExposedPorts(6379);
-
-	static {
-		Startables.deepStart(POSTGRES, REDIS).join();
-	}
+	static final GenericContainer<?> REDIS = Containers.REDIS;
 
 	@LocalServerPort
 	private int port;

@@ -50,8 +50,8 @@ Goal: users can sign up, log in, refresh, and log out, and login can't be brute 
 
 Goal: a hotel manager can set up a hotel end to end.
 
-- [ ] Migration: `hotels`, `rooms`, `inventory` (unique on `(room_id, date)`, check constraint on counts, indexes)
-- [ ] Data slice test: the check constraint rejects `booked_count + reserved_count > total_count`
+- [x] Migration: `hotels`, `rooms`, `inventory` (unique on `(room_id, date)`, check constraint on counts, indexes)
+- [x] Data slice test: the check constraint rejects `booked_count + reserved_count > total_count`
 - [ ] MapStruct setup; entities never leave the service layer
 - [ ] Hotel CRUD on `/admin/hotels`; test that a non-owner gets 403
 - [ ] Room CRUD on `/admin/hotels/{id}/rooms`
