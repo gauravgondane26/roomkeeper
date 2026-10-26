@@ -161,6 +161,14 @@ check "guest puts the traveller on the booking" POST "/api/v1/bookings/$booking_
   '"status":"GUESTS_ADDED"' "{\"guestIds\":[$traveller_id]}"
 check "guest reads the booking's status" GET "/api/v1/bookings/$booking_id/status" 200 '"status":"GUESTS_ADDED"'
 check "guest lists their bookings" GET /api/v1/users/bookings 200 "\"id\":$booking_id"
+TOKEN=$manager_token
+check "a hotel with bookings can't be deleted" DELETE "/api/v1/admin/hotels/$hotel_id" 409 \
+  "urn:roomkeeper:problem:has-bookings"
+check "manager takes the hotel off sale" PATCH "/api/v1/admin/hotels/$hotel_id/deactivate" 200 '"active":false'
+TOKEN=$guest_token
+check "a hotel off sale can't be booked" POST /api/v1/bookings/init 404 "urn:roomkeeper:problem:not-found" \
+  "{\"roomId\":$room_id,\"checkIn\":\"$stay_in\",\"checkOut\":\"$stay_out\",\"rooms\":1}"
+check "its bookings carry on" GET "/api/v1/bookings/$booking_id/status" 200 '"status":"GUESTS_ADDED"'
 TOKEN=""
 
 # Last, since it uses up this client's login attempts: within 11 tries the limit must hit

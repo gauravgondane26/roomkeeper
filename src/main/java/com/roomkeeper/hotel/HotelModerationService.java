@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.ProblemType;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,11 +17,15 @@ public class HotelModerationService {
 
 	private final HotelMapper mapper;
 
+	private final ApplicationEventPublisher events;
+
 	private final Clock clock;
 
-	public HotelModerationService(HotelRepository hotels, HotelMapper mapper, Clock clock) {
+	public HotelModerationService(HotelRepository hotels, HotelMapper mapper, ApplicationEventPublisher events,
+			Clock clock) {
 		this.hotels = hotels;
 		this.mapper = mapper;
+		this.events = events;
 		this.clock = clock;
 	}
 
@@ -39,14 +44,18 @@ public class HotelModerationService {
 		return mapper.toReview(hotel);
 	}
 
+	/**
+	 * Rejecting an approved hotel also takes it off sale, and it stays off until its manager
+	 * edits it and an admin approves it again. Bookings it already has carry on.
+	 */
 	@Transactional
 	public HotelReviewResponse reject(long adminId, long hotelId, RejectHotelRequest request) {
 		Hotel hotel = find(hotelId);
-		if (hotel.getApprovalStatus() == ApprovalStatus.APPROVED) {
-			// Taking a hotel off sale is deactivation, which also has to deal with its bookings
-			throw new ApiException(ProblemType.CONFLICT, "Hotel " + hotelId + " is already approved");
-		}
 		hotel.reject(request.reason().strip(), adminId, clock.instant());
+		if (hotel.isActive()) {
+			hotel.deactivate();
+			events.publishEvent(HotelChangedEvent.of(hotel));
+		}
 		return mapper.toReview(hotel);
 	}
 

@@ -92,6 +92,20 @@ public class HotelService {
 		return mapper.toResponse(hotel);
 	}
 
+	/**
+	 * Takes the hotel off sale: guests can't find or book it, while bookings it already has
+	 * carry on. Activating puts it back. Deactivating an inactive hotel changes nothing.
+	 */
+	@Transactional
+	public HotelResponse deactivate(long ownerId, long hotelId) {
+		Hotel hotel = findOwned(ownerId, hotelId);
+		if (hotel.isActive()) {
+			hotel.deactivate();
+			events.publishEvent(HotelChangedEvent.of(hotel));
+		}
+		return mapper.toResponse(hotel);
+	}
+
 	/** Only a hotel that has never had a booking: bookings are history it keeps. */
 	@Transactional
 	public void delete(long ownerId, long hotelId) {

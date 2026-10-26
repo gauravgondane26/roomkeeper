@@ -123,12 +123,19 @@ class HotelApprovalIT extends AbstractIntegrationTest {
 	}
 
 	@Test
-	void anApprovedHotelCannotBeRejected() {
+	void rejectingAnApprovedHotelTakesItOffSaleUntilItsReviewedAgain() {
 		moderate("approve", Map.of());
+		activate().statusCode(200);
 
-		moderate("reject", Map.of("reason", "Changed my mind"))
-			.statusCode(409)
-			.body("type", equalTo("urn:roomkeeper:problem:conflict"));
+		moderate("reject", Map.of("reason", "Guests report the pool is closed"))
+			.statusCode(200)
+			.body("approvalStatus", equalTo("REJECTED"));
+
+		api(manager).when().get("/api/v1/admin/hotels/{id}", hotelId)
+			.then()
+				.body("active", equalTo(false))
+				.body("rejectionReason", equalTo("Guests report the pool is closed"));
+		activate().statusCode(409).body("type", equalTo("urn:roomkeeper:problem:hotel-not-approved"));
 	}
 
 	@Test

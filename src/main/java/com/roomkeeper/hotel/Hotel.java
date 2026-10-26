@@ -124,6 +124,11 @@ public class Hotel {
 		this.active = true;
 	}
 
+	/** Off sale: out of search and closed to new bookings. Its inventory and bookings stay. */
+	public void deactivate() {
+		this.active = false;
+	}
+
 	public ApprovalStatus getApprovalStatus() {
 		return approvalStatus;
 	}

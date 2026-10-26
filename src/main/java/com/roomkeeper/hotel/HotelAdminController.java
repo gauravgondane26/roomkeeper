@@ -59,6 +59,12 @@ public class HotelAdminController {
 		return hotelService.activate(userId, hotelId);
 	}
 
+	/** Off sale: out of search and closed to new bookings; existing bookings carry on. */
+	@PatchMapping("/{hotelId}/deactivate")
+	public HotelResponse deactivate(@CurrentUserId long userId, @PathVariable long hotelId) {
+		return hotelService.deactivate(userId, hotelId);
+	}
+
 	@DeleteMapping("/{hotelId}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void delete(@CurrentUserId long userId, @PathVariable long hotelId) {
