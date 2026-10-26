@@ -68,8 +68,8 @@ Goal: a hotel manager can set up a hotel end to end.
 
 Goal: guests can search a city for dates and see correct prices.
 
-- [ ] Pricing rule interface and base price rule
-- [ ] Surge, occupancy, weekend, and holiday rules, one unit test class each
+- [x] Pricing rule interface and base price rule
+- [x] Surge, occupancy, weekend, and holiday rules, one unit test class each
 - [ ] Rule chain that prices every night in a range and totals it
 - [ ] Migration: `hotel_min_price`; keep it updated when inventory or prices change
 - [ ] Availability query (`GROUP BY` with `HAVING COUNT(*) = nights`); data slice test that skips a hotel with one sold-out night
