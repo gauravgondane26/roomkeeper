@@ -31,6 +31,8 @@ public class SecurityConfig {
 				// after the access token has expired
 				.requestMatchers(HttpMethod.POST, "/api/v1/auth/signup", "/api/v1/auth/login", "/api/v1/auth/refresh",
 						"/api/v1/auth/logout").permitAll()
+				// Guests browse hotels without logging in
+				.requestMatchers(HttpMethod.GET, "/api/v1/hotels/**").permitAll()
 				.requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
 				// API docs: Swagger UI is the client
 				.requestMatchers("/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()

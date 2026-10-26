@@ -74,7 +74,7 @@ Goal: guests can search a city for dates and see correct prices.
 - [x] Migration: `hotel_min_price`; keep it updated when inventory or prices change
 - [x] Availability query (`GROUP BY` with `HAVING COUNT(*) = nights`); data slice test that skips a hotel with one sold-out night
 - [x] Closed dates and inactive hotels excluded from search
-- [ ] `GET /hotels/search` with pagination, and `GET /hotels/{id}/info`
+- [x] `GET /hotels/search` with pagination, and `GET /hotels/{id}/info`
 - [ ] Index check: capture `EXPLAIN ANALYZE` output for the README
 - [ ] Redis cache manager: hotel info (about 10 min), search (about 60 s)
 - [ ] Test: changing inventory evicts the cached search result for that hotel

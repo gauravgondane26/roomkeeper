@@ -99,8 +99,10 @@ manager_email="smoke-manager-$(date +%s)-$RANDOM@example.com"
 check "signup creates a hotel manager" POST /api/v1/auth/signup 201 '"role":"HOTEL_MANAGER"' \
   "{\"email\":\"$manager_email\",\"password\":\"smoke-test-password\",\"name\":\"Smoke Manager\",\"role\":\"HOTEL_MANAGER\"}"
 TOKEN=$(access_token "$manager_email")
+# A city of its own, so searches only find this run's hotel
+city="SmokeCity$(date +%s)$RANDOM"
 check "manager creates a hotel" POST /api/v1/admin/hotels 201 '"timeZone":"Asia/Kolkata"' \
-  '{"name":"Smoke Hotel","city":"Goa","timeZone":"Asia/Kolkata","amenities":["wifi"]}'
+  "{\"name\":\"Smoke Hotel\",\"city\":\"$city\",\"timeZone\":\"Asia/Kolkata\",\"amenities\":[\"wifi\"]}"
 hotel_id=$(sed -nE 's/^\{"id":([0-9]+).*/\1/p' <<<"$last_body")
 check "manager lists their hotels" GET /api/v1/admin/hotels 200 '"name":"Smoke Hotel"'
 check "manager reads their hotel" GET "/api/v1/admin/hotels/$hotel_id" 200 "\"id\":$hotel_id"
@@ -114,6 +116,16 @@ check "manager sees the room's inventory" GET "/api/v1/admin/inventory/rooms/$ro
   "\"date\":\"$night\",\"totalCount\":5"
 check "manager closes a night" PATCH "/api/v1/admin/inventory/rooms/$room_id" 200 '"closed":true' \
   "{\"from\":\"$night\",\"to\":\"$night\",\"closed\":true,\"surgeFactor\":1.5}"
+TOKEN=""
+
+# Week 4: browsing, no login
+check_in=$(date -u -d '+3 days' +%F)
+check_out=$(date -u -d '+5 days' +%F)
+check "guests find the hotel" GET "/api/v1/hotels/search?city=$city&checkIn=$check_in&checkOut=$check_out" 200 \
+  "\"id\":$hotel_id"
+check "a stay over the closed night finds nothing" GET \
+  "/api/v1/hotels/search?city=$city&checkIn=$night&checkOut=$check_out" 200 '"totalHotels":0'
+check "guests see the hotel's details" GET "/api/v1/hotels/$hotel_id/info" 200 '"type":"Deluxe"'
 TOKEN=""
 
 # Last, since it uses up this client's login attempts: within 11 tries the limit must hit
