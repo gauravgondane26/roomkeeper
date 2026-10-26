@@ -78,7 +78,12 @@ public class Inventory {
 
 	/** Rooms still free to sell on this night, closed or not. */
 	public int getAvailable() {
-		return totalCount - bookedCount - reservedCount;
+		return totalCount - sold();
+	}
+
+	/** Rooms booked or held on this night: the total can't go below this. */
+	public int sold() {
+		return bookedCount + reservedCount;
 	}
 
 	public BigDecimal getSurgeFactor() {

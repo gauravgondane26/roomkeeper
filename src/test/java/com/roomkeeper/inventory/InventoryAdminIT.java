@@ -2,6 +2,7 @@ package com.roomkeeper.inventory;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Map;
 
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import static com.roomkeeper.testsupport.HotelBuilder.aHotel;
 import static com.roomkeeper.testsupport.RoomBuilder.aRoom;
@@ -28,6 +30,9 @@ class InventoryAdminIT extends AbstractIntegrationTest {
 
 	@Autowired
 	MutableClock clock;
+
+	@Autowired
+	JdbcTemplate jdbc;
 
 	private String manager;
 
@@ -102,6 +107,41 @@ class InventoryAdminIT extends AbstractIntegrationTest {
 
 		nights("2026-03-10", "2026-03-13")
 			.body("totalCount", contains(5, 8, 8, 5));
+	}
+
+	@Test
+	void showsBookedAndHeldRooms() {
+		sell("2026-03-15", 2, 1);
+
+		nights("2026-03-15", "2026-03-15")
+			.body("[0].bookedCount", equalTo(2))
+			.body("[0].reservedCount", equalTo(1))
+			.body("[0].available", equalTo(2));
+	}
+
+	@Test
+	void rejectsLoweringATotalBelowWhatIsAlreadyBookedOrHeld() {
+		sell("2026-03-15", 2, 1);
+		sell("2026-03-16", 3, 0);
+
+		update(Map.of("from", "2026-03-14", "to", "2026-03-17", "totalCount", 2))
+			.statusCode(409)
+			.body("type", equalTo("urn:roomkeeper:problem:total-below-sold"))
+			.body("nights", contains("2026-03-15", "2026-03-16"));
+
+		// All or nothing: no night in the range changed
+		nights("2026-03-14", "2026-03-17")
+			.body("totalCount", contains(5, 5, 5, 5));
+	}
+
+	@Test
+	void allowsLoweringATotalDownToWhatIsAlreadyBookedAndHeld() {
+		sell("2026-03-15", 2, 1);
+
+		update(Map.of("from", "2026-03-15", "to", "2026-03-15", "totalCount", 3))
+			.statusCode(200)
+			.body("[0].totalCount", equalTo(3))
+			.body("[0].available", equalTo(0));
 	}
 
 	@Test
@@ -193,6 +233,12 @@ class InventoryAdminIT extends AbstractIntegrationTest {
 			.then()
 				.statusCode(404)
 				.body("type", equalTo("urn:roomkeeper:problem:not-found"));
+	}
+
+	/** Stands in for bookings (week 5): marks rooms on a night as booked and held. */
+	private void sell(String night, int booked, int reserved) {
+		jdbc.update("update inventory set booked_count = ?, reserved_count = ? where room_id = ? and date = ?", booked,
+				reserved, roomId, LocalDate.parse(night));
 	}
 
 	private ValidatableResponse nights(String from, String to) {

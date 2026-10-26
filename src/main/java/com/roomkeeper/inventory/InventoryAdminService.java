@@ -62,7 +62,17 @@ public class InventoryAdminService {
 							+ " has no inventory to change");
 		}
 
+		// Locked, so no booking can take a room between this check and the update
 		List<Inventory> nights = inventory.lockNights(roomId, range.from(), range.to());
+		if (request.totalCount() != null) {
+			List<LocalDate> oversold = nights.stream()
+				.filter(night -> night.sold() > request.totalCount())
+				.map(Inventory::getDate)
+				.toList();
+			if (!oversold.isEmpty()) {
+				throw new TotalBelowSoldException(request.totalCount(), oversold);
+			}
+		}
 		for (Inventory night : nights) {
 			if (request.closed() != null) {
 				night.markClosed(request.closed());

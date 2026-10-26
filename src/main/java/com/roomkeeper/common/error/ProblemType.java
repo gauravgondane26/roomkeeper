@@ -33,7 +33,8 @@ public enum ProblemType {
 	EMAIL_ALREADY_REGISTERED("email-already-registered", HttpStatus.CONFLICT, "Email already registered"),
 	INVALID_CREDENTIALS("invalid-credentials", HttpStatus.UNAUTHORIZED, "Invalid credentials"),
 	INVALID_REFRESH_TOKEN("invalid-refresh-token", HttpStatus.UNAUTHORIZED, "Invalid refresh token"),
-	ROOM_TYPE_EXISTS("room-type-exists", HttpStatus.CONFLICT, "Room type already exists");
+	ROOM_TYPE_EXISTS("room-type-exists", HttpStatus.CONFLICT, "Room type already exists"),
+	TOTAL_BELOW_SOLD("total-below-sold", HttpStatus.CONFLICT, "Total below rooms sold");
 
 	private static final String URN_PREFIX = "urn:roomkeeper:problem:";
 
