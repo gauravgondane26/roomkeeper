@@ -194,7 +194,7 @@ Every feature starts as a failing test that states a business rule in plain word
 - [ ] A webhook that arrives after the hold expired gets confirmed or refunded, never stuck
 - [ ] A retried `POST /bookings/init` with the same `Idempotency-Key` returns the original booking
 - [x] The 11th login attempt inside the window is rejected with 429
-- [ ] Changing inventory evicts the cached search result for that hotel
+- [x] Changing inventory evicts the cached search result for that hotel
 - [ ] Cancelling restores inventory and calls the refund exactly once
 
 **Habits that keep the suite trustworthy:**

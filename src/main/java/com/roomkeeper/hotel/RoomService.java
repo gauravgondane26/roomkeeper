@@ -53,7 +53,7 @@ public class RoomService {
 			inventory.openYear(room.getId(), room.getTotalCount(), hotel.today(clock));
 			inventoryChanged(hotel);
 		}
-		events.publishEvent(new HotelChangedEvent(hotelId));
+		events.publishEvent(HotelChangedEvent.of(hotel));
 		return mapper.toResponse(room);
 	}
 
@@ -84,7 +84,7 @@ public class RoomService {
 		if (hotel.isActive()) {
 			inventoryChanged(hotel);
 		}
-		events.publishEvent(new HotelChangedEvent(hotelId));
+		events.publishEvent(HotelChangedEvent.of(hotel));
 		return response;
 	}
 
@@ -96,12 +96,12 @@ public class RoomService {
 		if (hotel.isActive()) {
 			inventoryChanged(hotel);
 		}
-		events.publishEvent(new HotelChangedEvent(hotelId));
+		events.publishEvent(HotelChangedEvent.of(hotel));
 	}
 
 	/** The hotel's rooms changed, so every night it sells from today on may have changed too. */
 	private void inventoryChanged(Hotel hotel) {
-		events.publishEvent(InventoryChangedEvent.fromNight(hotel.getId(), hotel.today(clock)));
+		events.publishEvent(InventoryChangedEvent.fromNight(hotel.getId(), hotel.getCity(), hotel.today(clock)));
 	}
 
 	/** The room, if it exists and the caller owns its hotel: 404 or 403 otherwise. */

@@ -4,7 +4,7 @@ The build plan from the [project design](Hotel%20Booking%20Backend%20Project%20D
 
 Tasks are listed in the order to do them. Where a task names a test, that test is written and committed first.
 
-**Current:** Week 4
+**Current:** Week 5
 
 ## Week 1: Skeleton
 
@@ -77,7 +77,7 @@ Goal: guests can search a city for dates and see correct prices.
 - [x] `GET /hotels/search` with pagination, and `GET /hotels/{id}/info`
 - [x] Index check: capture `EXPLAIN ANALYZE` output for the README
 - [x] Redis cache manager: hotel info (about 10 min), search (about 60 s)
-- [ ] Test: changing inventory evicts the cached search result for that hotel
+- [x] Test: changing inventory evicts the cached search result for that hotel
 - [ ] Optional: set up LeanToken now that the codebase is growing
 
 **Done when:** search returns the right hotels and prices, and cached results never show stale availability.

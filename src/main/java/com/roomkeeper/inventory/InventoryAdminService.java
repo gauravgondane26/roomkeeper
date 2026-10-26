@@ -7,6 +7,7 @@ import java.util.List;
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.InvalidFieldException;
 import com.roomkeeper.common.error.ProblemType;
+import com.roomkeeper.hotel.Hotel;
 import com.roomkeeper.hotel.Room;
 import com.roomkeeper.hotel.RoomService;
 import org.springframework.context.ApplicationEventPublisher;
@@ -82,7 +83,8 @@ public class InventoryAdminService {
 				night.overrideTotalCount(request.totalCount());
 			}
 		}
-		events.publishEvent(new InventoryChangedEvent(room.getHotel().getId(), range.from(), range.to()));
+		Hotel hotel = room.getHotel();
+		events.publishEvent(new InventoryChangedEvent(hotel.getId(), hotel.getCity(), range.from(), range.to()));
 		return nights.stream().map(mapper::toResponse).toList();
 	}
 

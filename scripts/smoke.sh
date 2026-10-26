@@ -116,6 +116,7 @@ check "manager sees the room's inventory" GET "/api/v1/admin/inventory/rooms/$ro
   "\"date\":\"$night\",\"totalCount\":5"
 check "manager closes a night" PATCH "/api/v1/admin/inventory/rooms/$room_id" 200 '"closed":true' \
   "{\"from\":\"$night\",\"to\":\"$night\",\"closed\":true,\"surgeFactor\":1.5}"
+manager_token=$TOKEN
 TOKEN=""
 
 # Week 4: browsing, no login
@@ -126,6 +127,13 @@ check "guests find the hotel" GET "/api/v1/hotels/search?city=$city&checkIn=$che
 check "a stay over the closed night finds nothing" GET \
   "/api/v1/hotels/search?city=$city&checkIn=$night&checkOut=$check_out" 200 '"totalHotels":0'
 check "guests see the hotel's details" GET "/api/v1/hotels/$hotel_id/info" 200 '"type":"Deluxe"'
+# The search above is now cached; closing a night of that stay must evict it
+TOKEN=$manager_token
+check "manager closes a night of the cached stay" PATCH "/api/v1/admin/inventory/rooms/$room_id" 200 '"closed":true' \
+  "{\"from\":\"$check_in\",\"to\":\"$check_in\",\"closed\":true}"
+TOKEN=""
+check "the cached search no longer finds the hotel" GET \
+  "/api/v1/hotels/search?city=$city&checkIn=$check_in&checkOut=$check_out" 200 '"totalHotels":0'
 TOKEN=""
 
 # Last, since it uses up this client's login attempts: within 11 tries the limit must hit

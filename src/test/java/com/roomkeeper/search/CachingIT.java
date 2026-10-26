@@ -109,6 +109,17 @@ class CachingIT extends AbstractIntegrationTest {
 	}
 
 	@Test
+	void movingAHotelToAnotherCityDropsItFromTheOldCitysCachedSearches() {
+		search().body("totalHotels", equalTo(1));
+
+		api(manager).contentType(ContentType.JSON).body(aHotel().named("Seaside Inn").inCity(city + "-moved").build())
+			.when().put("/api/v1/admin/hotels/{id}", hotelId)
+			.then().statusCode(200);
+
+		search().body("totalHotels", equalTo(0));
+	}
+
+	@Test
 	void theSameSearchWithDefaultsSpelledOutSharesTheCacheEntry() {
 		search();
 		api().queryParam("city", city.toUpperCase()).queryParam("checkIn", "2026-03-12")

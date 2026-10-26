@@ -2,6 +2,7 @@ package com.roomkeeper.hotel;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -59,9 +60,11 @@ public class HotelService {
 	@Transactional
 	public HotelResponse update(long ownerId, long hotelId, HotelRequest request) {
 		Hotel hotel = findOwned(ownerId, hotelId);
+		String previousCity = hotel.getCity();
 		hotel.changeDetails(request.name().strip(), request.city().strip(), request.timeZone(),
 				normalize(request.amenities()));
-		events.publishEvent(new HotelChangedEvent(hotelId));
+		// A move leaves stale results in the old city's searches too
+		events.publishEvent(new HotelChangedEvent(hotelId, new HashSet<>(List.of(previousCity, hotel.getCity()))));
 		return mapper.toResponse(hotel);
 	}
 
@@ -79,14 +82,15 @@ public class HotelService {
 		hotel.activate();
 		LocalDate today = hotel.today(clock);
 		hotelRooms.forEach(room -> inventory.openYear(room.getId(), room.getTotalCount(), today));
-		events.publishEvent(InventoryChangedEvent.fromNight(hotelId, today));
+		events.publishEvent(InventoryChangedEvent.fromNight(hotelId, hotel.getCity(), today));
 		return mapper.toResponse(hotel);
 	}
 
 	@Transactional
 	public void delete(long ownerId, long hotelId) {
-		hotels.delete(findOwned(ownerId, hotelId));
-		events.publishEvent(new HotelChangedEvent(hotelId));
+		Hotel hotel = findOwned(ownerId, hotelId);
+		hotels.delete(hotel);
+		events.publishEvent(HotelChangedEvent.of(hotel));
 	}
 
 	/** The hotel, if it exists and the caller owns it: 404 or 403 otherwise. */
