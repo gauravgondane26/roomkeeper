@@ -102,7 +102,7 @@ Goal: no oversell under load, and holds always release.
 - [x] `POST /bookings/init`: lock, check availability, increment `reserved_count`, freeze the price, set `hold_expires_at` from the clock
 - [x] Sold out returns a problem detail with a stable `type`
 - [x] Test: 50 concurrent requests for the last room, exactly one succeeds
-- [ ] Guest CRUD on `/users/guests`
+- [x] Guest CRUD on `/users/guests`
 - [ ] `POST /bookings/{id}/guests`, validated against room capacity
 - [ ] `GET /bookings/{id}/status` and `GET /users/bookings`
 - [ ] Hold expiry job: releases `reserved_count` and marks bookings Expired; test with a fixed clock, no `Thread.sleep`

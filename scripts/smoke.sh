@@ -148,8 +148,15 @@ TOKEN=""
 TOKEN=$guest_token
 stay_in=$(date -u -d '+6 days' +%F)
 stay_out=$(date -u -d '+8 days' +%F)
-check "guest holds two rooms for a stay" POST /api/v1/bookings/init 201 '"status":"RESERVED"'   "{\"roomId\":$room_id,\"checkIn\":\"$stay_in\",\"checkOut\":\"$stay_out\",\"rooms\":2}"
-check "more rooms than are left is sold out" POST /api/v1/bookings/init 409 "urn:roomkeeper:problem:sold-out"   "{\"roomId\":$room_id,\"checkIn\":\"$stay_in\",\"checkOut\":\"$stay_out\",\"rooms\":4}"
+check "guest holds two rooms for a stay" POST /api/v1/bookings/init 201 '"status":"RESERVED"' \
+  "{\"roomId\":$room_id,\"checkIn\":\"$stay_in\",\"checkOut\":\"$stay_out\",\"rooms\":2}"
+booking_id=$(last_id)
+check "more rooms than are left is sold out" POST /api/v1/bookings/init 409 "urn:roomkeeper:problem:sold-out" \
+  "{\"roomId\":$room_id,\"checkIn\":\"$stay_in\",\"checkOut\":\"$stay_out\",\"rooms\":4}"
+check "guest saves a traveller" POST /api/v1/users/guests 201 '"name":"Smoke Traveller"' \
+  '{"name":"Smoke Traveller","age":30,"gender":"OTHER"}'
+traveller_id=$(last_id)
+check "guest lists saved travellers" GET /api/v1/users/guests 200 "\"id\":$traveller_id"
 TOKEN=""
 
 # Last, since it uses up this client's login attempts: within 11 tries the limit must hit

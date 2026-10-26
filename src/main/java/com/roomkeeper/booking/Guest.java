@@ -1,5 +1,7 @@
 package com.roomkeeper.booking;
 
+import java.time.Instant;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -31,6 +33,10 @@ public class Guest {
 	@Column(nullable = false, length = 20)
 	private Gender gender;
 
+	// Removed guests stay in the table for the bookings they're on
+	@Column(name = "removed_at")
+	private Instant removedAt;
+
 	protected Guest() {
 	}
 
@@ -47,6 +53,24 @@ public class Guest {
 
 	public String getName() {
 		return name;
+	}
+
+	public int getAge() {
+		return age;
+	}
+
+	public Gender getGender() {
+		return gender;
+	}
+
+	public void changeDetails(String name, int age, Gender gender) {
+		this.name = name;
+		this.age = age;
+		this.gender = gender;
+	}
+
+	public void remove(Instant at) {
+		this.removedAt = at;
 	}
 
 }
