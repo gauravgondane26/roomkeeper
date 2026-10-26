@@ -30,10 +30,19 @@ public abstract class AbstractDataTest {
 
 	/** A hotel manager with a unique email, to own fixture hotels; returns the user's id. */
 	protected long insertManager() {
+		return insertUser("Owner", "HOTEL_MANAGER");
+	}
+
+	/** A guest account with a unique email, to make bookings; returns the user's id. */
+	protected long insertGuestUser() {
+		return insertUser("Guest", "GUEST");
+	}
+
+	private long insertUser(String name, String role) {
 		return jdbc.queryForObject("""
 				insert into users (email, password_hash, name, role, created_at)
-				values (?, 'not-a-real-hash', 'Owner', 'HOTEL_MANAGER', now()) returning id""",
-				Long.class, "owner-" + UUID.randomUUID() + "@example.com");
+				values (?, 'not-a-real-hash', ?, ?, now()) returning id""",
+				Long.class, name.toLowerCase() + "-" + UUID.randomUUID() + "@example.com", name, role);
 	}
 
 	/** A hotel named "Hotel {id}" with wifi and a pool; returns its id. */

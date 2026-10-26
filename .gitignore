@@ -24,4 +24,4 @@ Thumbs.db
 *.log
 
 # Claude session handoffs (local only)
-CLAUDE HANDOFFS/
+/CLAUDE HANDOFFS/
