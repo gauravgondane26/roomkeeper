@@ -1,6 +1,9 @@
 package com.roomkeeper.hotel;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,6 +34,9 @@ public class Hotel {
 	@Column(nullable = false, length = 100)
 	private String city;
 
+	@Column(name = "time_zone", nullable = false, length = 64)
+	private String timeZone;
+
 	@JdbcTypeCode(SqlTypes.ARRAY)
 	@Column(nullable = false, columnDefinition = "text[]")
 	private List<String> amenities = new ArrayList<>();
@@ -44,10 +50,12 @@ public class Hotel {
 	protected Hotel() {
 	}
 
-	public Hotel(Long ownerId, String name, String city, List<String> amenities, Instant createdAt) {
+	public Hotel(Long ownerId, String name, String city, String timeZone, List<String> amenities,
+			Instant createdAt) {
 		this.ownerId = ownerId;
 		this.name = name;
 		this.city = city;
+		this.timeZone = timeZone;
 		this.amenities = new ArrayList<>(amenities);
 		this.createdAt = createdAt;
 	}
@@ -68,13 +76,23 @@ public class Hotel {
 		return city;
 	}
 
+	public String getTimeZone() {
+		return timeZone;
+	}
+
+	/** Today's date where the hotel is: the first night that can still be sold. */
+	public LocalDate today(Clock clock) {
+		return LocalDate.ofInstant(clock.instant(), ZoneId.of(timeZone));
+	}
+
 	public List<String> getAmenities() {
 		return List.copyOf(amenities);
 	}
 
-	public void changeDetails(String name, String city, List<String> amenities) {
+	public void changeDetails(String name, String city, String timeZone, List<String> amenities) {
 		this.name = name;
 		this.city = city;
+		this.timeZone = timeZone;
 		this.amenities = new ArrayList<>(amenities);
 	}
 

@@ -99,8 +99,8 @@ manager_email="smoke-manager-$(date +%s)-$RANDOM@example.com"
 check "signup creates a hotel manager" POST /api/v1/auth/signup 201 '"role":"HOTEL_MANAGER"' \
   "{\"email\":\"$manager_email\",\"password\":\"smoke-test-password\",\"name\":\"Smoke Manager\",\"role\":\"HOTEL_MANAGER\"}"
 TOKEN=$(access_token "$manager_email")
-check "manager creates a hotel" POST /api/v1/admin/hotels 201 '"active":false' \
-  '{"name":"Smoke Hotel","city":"Goa","amenities":["wifi"]}'
+check "manager creates a hotel" POST /api/v1/admin/hotels 201 '"timeZone":"Asia/Kolkata"' \
+  '{"name":"Smoke Hotel","city":"Goa","timeZone":"Asia/Kolkata","amenities":["wifi"]}'
 hotel_id=$(sed -nE 's/^\{"id":([0-9]+).*/\1/p' <<<"$last_body")
 check "manager lists their hotels" GET /api/v1/admin/hotels 200 '"name":"Smoke Hotel"'
 check "manager reads their hotel" GET "/api/v1/admin/hotels/$hotel_id" 200 "\"id\":$hotel_id"

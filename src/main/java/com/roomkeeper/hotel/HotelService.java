@@ -1,6 +1,7 @@
 package com.roomkeeper.hotel;
 
 import java.time.Clock;
+import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -35,7 +36,7 @@ public class HotelService {
 
 	@Transactional
 	public HotelResponse create(long ownerId, HotelRequest request) {
-		Hotel hotel = new Hotel(ownerId, request.name().strip(), request.city().strip(),
+		Hotel hotel = new Hotel(ownerId, request.name().strip(), request.city().strip(), request.timeZone(),
 				normalize(request.amenities()), clock.instant());
 		return mapper.toResponse(hotels.save(hotel));
 	}
@@ -53,13 +54,14 @@ public class HotelService {
 	@Transactional
 	public HotelResponse update(long ownerId, long hotelId, HotelRequest request) {
 		Hotel hotel = findOwned(ownerId, hotelId);
-		hotel.changeDetails(request.name().strip(), request.city().strip(), normalize(request.amenities()));
+		hotel.changeDetails(request.name().strip(), request.city().strip(), request.timeZone(),
+				normalize(request.amenities()));
 		return mapper.toResponse(hotel);
 	}
 
 	/**
-	 * Puts the hotel on sale: every room type gets a year of inventory. Activating again is
-	 * safe and tops the year up to start from today.
+	 * Puts the hotel on sale: every room type gets a year of inventory from the hotel's
+	 * today. Activating again is safe and tops the year up.
 	 */
 	@Transactional
 	public HotelResponse activate(long ownerId, long hotelId) {
@@ -69,7 +71,8 @@ public class HotelService {
 			throw new ApiException(ProblemType.CONFLICT, "Add at least one room type before activating the hotel");
 		}
 		hotel.activate();
-		hotelRooms.forEach(room -> inventory.openYear(room.getId(), room.getTotalCount()));
+		LocalDate today = hotel.today(clock);
+		hotelRooms.forEach(room -> inventory.openYear(room.getId(), room.getTotalCount(), today));
 		return mapper.toResponse(hotel);
 	}
 

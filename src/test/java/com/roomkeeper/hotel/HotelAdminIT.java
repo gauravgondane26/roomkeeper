@@ -27,12 +27,14 @@ class HotelAdminIT extends AbstractIntegrationTest {
 	@Test
 	void managerCreatesAnInactiveHotel() {
 		var response = api(manager).contentType(ContentType.JSON)
-			.body(aHotel().named("  Seaside Inn ").inCity("Goa").withAmenities("wifi", " pool ", "wifi").build())
+			.body(aHotel().named("  Seaside Inn ").inCity("Goa").inTimeZone("Asia/Kolkata")
+				.withAmenities("wifi", " pool ", "wifi").build())
 			.when().post("/api/v1/admin/hotels")
 			.then()
 				.statusCode(201)
 				.body("name", equalTo("Seaside Inn"))
 				.body("city", equalTo("Goa"))
+				.body("timeZone", equalTo("Asia/Kolkata"))
 				.body("amenities", contains("wifi", "pool"))
 				.body("active", equalTo(false))
 				.extract();
@@ -62,6 +64,25 @@ class HotelAdminIT extends AbstractIntegrationTest {
 				.body("type", equalTo("urn:roomkeeper:problem:validation"))
 				.body("errors.field", hasItem("name"))
 				.body("errors.field", hasItem("city"));
+	}
+
+	@Test
+	void requiresAKnownTimeZone() {
+		for (String timeZone : new String[] { "Mars/Olympus_Mons", "+05:30", "" }) {
+			api(manager).contentType(ContentType.JSON).body(aHotel().inTimeZone(timeZone).build())
+				.when().post("/api/v1/admin/hotels")
+				.then()
+					.statusCode(400)
+					.body("errors.field", contains("timeZone"));
+		}
+
+		Map<String, Object> hotel = aHotel().build();
+		hotel.remove("timeZone");
+		api(manager).contentType(ContentType.JSON).body(hotel)
+			.when().post("/api/v1/admin/hotels")
+			.then()
+				.statusCode(400)
+				.body("errors.field", contains("timeZone"));
 	}
 
 	@Test

@@ -34,11 +34,11 @@ public class InventoryAdminService {
 		this.clock = clock;
 	}
 
-	/** The nights in the range; by default the next {@value #DEFAULT_NIGHTS} from today. */
+	/** The nights in the range; by default the next {@value #DEFAULT_NIGHTS} from the hotel's today. */
 	@Transactional(readOnly = true)
 	public List<InventoryResponse> list(long ownerId, long roomId, LocalDate from, LocalDate to) {
-		rooms.findOwnedRoom(ownerId, roomId);
-		LocalDate start = from != null ? from : LocalDate.now(clock);
+		Room room = rooms.findOwnedRoom(ownerId, roomId);
+		LocalDate start = from != null ? from : room.getHotel().today(clock);
 		NightRange range = NightRange.of(start, to != null ? to : start.plusDays(DEFAULT_NIGHTS - 1));
 		return inventory.findByRoomIdAndDateBetweenOrderByDate(roomId, range.from(), range.to()).stream()
 			.map(mapper::toResponse)
@@ -53,7 +53,7 @@ public class InventoryAdminService {
 			throw new ApiException(ProblemType.VALIDATION, "Set at least one of closed, surgeFactor, or totalCount");
 		}
 		NightRange range = NightRange.of(request.from(), request.to());
-		if (range.from().isBefore(LocalDate.now(clock))) {
+		if (range.from().isBefore(room.getHotel().today(clock))) {
 			throw new InvalidFieldException("from", "must not be in the past");
 		}
 		if (!room.getHotel().isActive()) {

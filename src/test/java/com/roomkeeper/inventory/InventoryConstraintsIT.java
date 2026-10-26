@@ -34,8 +34,8 @@ class InventoryConstraintsIT extends AbstractDataTest {
 				values (?, 'not-a-real-hash', 'Owner', 'HOTEL_MANAGER', now()) returning id""",
 				Long.class, "owner-" + UUID.randomUUID() + "@example.com");
 		long hotelId = jdbc.queryForObject("""
-				insert into hotels (owner_id, name, city, created_at)
-				values (?, 'Seaside', 'Goa', now()) returning id""", Long.class, ownerId);
+				insert into hotels (owner_id, name, city, time_zone, created_at)
+				values (?, 'Seaside', 'Goa', 'Asia/Kolkata', now()) returning id""", Long.class, ownerId);
 		roomId = jdbc.queryForObject("""
 				insert into rooms (hotel_id, type, base_price, capacity, total_count, created_at)
 				values (?, 'Deluxe', 4500.00, 2, 5, now()) returning id""", Long.class, hotelId);

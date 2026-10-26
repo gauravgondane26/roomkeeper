@@ -45,7 +45,7 @@ public class RoomService {
 				new Room(hotel, type, price(request), request.capacity(), request.totalCount(), clock.instant()), type);
 		// An active hotel is already on sale, so the new room goes on sale with it
 		if (hotel.isActive()) {
-			inventory.openYear(room.getId(), room.getTotalCount());
+			inventory.openYear(room.getId(), room.getTotalCount(), hotel.today(clock));
 		}
 		return mapper.toResponse(room);
 	}

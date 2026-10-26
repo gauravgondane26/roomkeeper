@@ -14,6 +14,8 @@ public final class HotelBuilder {
 
 	private String city = "Goa";
 
+	private String timeZone = "UTC";
+
 	private List<String> amenities = List.of("wifi", "pool");
 
 	private HotelBuilder() {
@@ -33,6 +35,11 @@ public final class HotelBuilder {
 		return this;
 	}
 
+	public HotelBuilder inTimeZone(String timeZone) {
+		this.timeZone = timeZone;
+		return this;
+	}
+
 	public HotelBuilder withAmenities(String... amenities) {
 		this.amenities = List.of(amenities);
 		return this;
@@ -42,6 +49,7 @@ public final class HotelBuilder {
 		Map<String, Object> body = new LinkedHashMap<>();
 		body.put("name", name);
 		body.put("city", city);
+		body.put("timeZone", timeZone);
 		body.put("amenities", amenities);
 		return body;
 	}
