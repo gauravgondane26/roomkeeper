@@ -57,7 +57,7 @@ Goal: a hotel manager can set up a hotel end to end.
 - [x] Room CRUD on `/admin/hotels/{id}/rooms`
 - [x] `PATCH /admin/hotels/{id}/activate`; test that it creates a year of inventory rows per room
 - [x] Adding a room to an already active hotel creates that room's inventory
-- [ ] Inventory admin `GET` and `PATCH /admin/inventory/rooms/{roomId}`: close dates, change surge, change totals over a date range
+- [x] Inventory admin `GET` and `PATCH /admin/inventory/rooms/{roomId}`: close dates, change surge, change totals over a date range
 - [ ] Test: lowering a total below what's already booked or held is rejected with a clean error
 
 **Done when:** a manager can create a hotel, add rooms, activate it, and adjust inventory.

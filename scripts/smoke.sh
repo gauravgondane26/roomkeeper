@@ -109,6 +109,11 @@ check "manager adds a room type" POST "/api/v1/admin/hotels/$hotel_id/rooms" 201
 room_id=$(sed -nE 's/^\{"id":([0-9]+).*/\1/p' <<<"$last_body")
 check "manager lists the hotel's rooms" GET "/api/v1/admin/hotels/$hotel_id/rooms" 200 "\"id\":$room_id"
 check "manager activates the hotel" PATCH "/api/v1/admin/hotels/$hotel_id/activate" 200 '"active":true'
+night=$(date -u -d '+2 days' +%F)
+check "manager sees the room's inventory" GET "/api/v1/admin/inventory/rooms/$room_id?from=$night&to=$night" 200 \
+  "\"date\":\"$night\",\"totalCount\":5"
+check "manager closes a night" PATCH "/api/v1/admin/inventory/rooms/$room_id" 200 '"closed":true' \
+  "{\"from\":\"$night\",\"to\":\"$night\",\"closed\":true,\"surgeFactor\":1.5}"
 TOKEN=""
 
 # Last, since it uses up this client's login attempts: within 11 tries the limit must hit

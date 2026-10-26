@@ -77,6 +77,14 @@ public class RoomService {
 		rooms.delete(findOwned(ownerId, hotelId, roomId));
 	}
 
+	/** The room, if it exists and the caller owns its hotel: 404 or 403 otherwise. */
+	public Room findOwnedRoom(long ownerId, long roomId) {
+		Room room = rooms.findById(roomId)
+			.orElseThrow(() -> new ApiException(ProblemType.NOT_FOUND, "Room " + roomId + " not found"));
+		hotels.findOwned(ownerId, room.getHotel().getId());
+		return room;
+	}
+
 	private Room findOwned(long ownerId, long hotelId, long roomId) {
 		hotels.findOwned(ownerId, hotelId);
 		return rooms.findByIdAndHotelId(roomId, hotelId)

@@ -76,12 +76,29 @@ public class Inventory {
 		return reservedCount;
 	}
 
+	/** Rooms still free to sell on this night, closed or not. */
+	public int getAvailable() {
+		return totalCount - bookedCount - reservedCount;
+	}
+
 	public BigDecimal getSurgeFactor() {
 		return surgeFactor;
 	}
 
 	public boolean isClosed() {
 		return closed;
+	}
+
+	public void markClosed(boolean closed) {
+		this.closed = closed;
+	}
+
+	public void changeSurgeFactor(BigDecimal surgeFactor) {
+		this.surgeFactor = surgeFactor;
+	}
+
+	public void changeTotalCount(int totalCount) {
+		this.totalCount = totalCount;
 	}
 
 }

@@ -13,6 +13,9 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+          # Inventory updates touch up to a year of rows; send them in batches
+          batch_size: 50
+        order_updates: true
 
 roomkeeper:
   auth:
