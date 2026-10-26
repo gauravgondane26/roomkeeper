@@ -86,7 +86,9 @@ public class BookingService {
 		Instant now = clock.instant();
 		Booking booking = bookings.save(new Booking(userId, room, request.checkIn(), request.checkOut(), count,
 				quote.total(), now.plus(properties.holdDuration()), now));
-		events.publishEvent(new InventoryChangedEvent(hotel.getId(), hotel.getCity(), request.checkIn(), lastNight));
+		boolean soldOut = nights.stream().anyMatch(night -> night.getAvailable() == 0);
+		events.publishEvent(
+				InventoryChangedEvent.sale(hotel.getId(), hotel.getCity(), request.checkIn(), lastNight, soldOut));
 		return mapper.toResponse(booking);
 	}
 

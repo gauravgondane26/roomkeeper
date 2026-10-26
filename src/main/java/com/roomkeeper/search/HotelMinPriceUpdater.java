@@ -13,13 +13,17 @@ import jakarta.persistence.EntityManager;
 import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Keeps hotel_min_price in step with inventory: when a hotel's nights change, re-prices
- * them in the same transaction and stores each night's cheapest bookable room.
+ * them and stores each night's cheapest bookable room.
  * <p>
  * Each recalculation first takes a per-hotel advisory lock, held until its transaction
  * ends. Recalculations for one hotel therefore run one at a time, and each starts only
@@ -28,9 +32,13 @@ import org.springframework.transaction.annotation.Transactional;
  * collide re-inserting the same rows. It can't deadlock: holding the lock, it only reads
  * inventory and writes hotel_min_price, which nothing else writes.
  * <p>
- * It deliberately stays in the writer's transaction, on the writer's connection. Running it
- * after commit in a new transaction needs a second connection while the first is still
- * held, which starves the pool under concurrent writes.
+ * Changes by managers and jobs are recomputed in the writer's transaction, on the writer's
+ * connection, so prices are up to date when the change commits. Sales (bookings holding or
+ * releasing rooms) are frequent and contend on the same nights, so they're recomputed after
+ * commit on the {@link RepricingConfig} threads instead: the booking doesn't hold its
+ * inventory locks, or wait behind other recomputes, for the cheapest price. They can't run
+ * on the request thread after commit: a new transaction there needs a second connection
+ * while the first is still held, which starves the pool under concurrent writes.
  */
 @Component
 class HotelMinPriceUpdater {
@@ -46,16 +54,40 @@ class HotelMinPriceUpdater {
 
 	private final EntityManager entityManager;
 
-	HotelMinPriceUpdater(JdbcClient jdbc, JdbcTemplate batch, PricingChain pricing, EntityManager entityManager) {
+	private final TransactionTemplate transaction;
+
+	private final SearchCacheVersions searchVersions;
+
+	HotelMinPriceUpdater(JdbcClient jdbc, JdbcTemplate batch, PricingChain pricing, EntityManager entityManager,
+			PlatformTransactionManager transactions, SearchCacheVersions searchVersions) {
 		this.jdbc = jdbc;
 		this.batch = batch;
 		this.pricing = pricing;
 		this.entityManager = entityManager;
+		this.transaction = new TransactionTemplate(transactions);
+		this.searchVersions = searchVersions;
 	}
 
-	@EventListener
+	@EventListener(condition = "!#event.sale()")
 	@Transactional(propagation = Propagation.MANDATORY)
 	void onInventoryChanged(InventoryChangedEvent event) {
+		recompute(event);
+	}
+
+	/**
+	 * Evicts the city's cached searches afterwards if the sale emptied or freed up a night, so
+	 * a search can't cache the old price again between the sale's commit and the recompute.
+	 */
+	@Async(RepricingConfig.EXECUTOR)
+	@TransactionalEventListener(condition = "#event.sale()")
+	void onSale(InventoryChangedEvent event) {
+		transaction.executeWithoutResult(status -> recompute(event));
+		if (event.evictSearches()) {
+			searchVersions.bump(event.city());
+		}
+	}
+
+	private void recompute(InventoryChangedEvent event) {
 		// One recalculation per hotel at a time; the lock is released when the transaction ends.
 		// The key is the hotel id: nothing else in the app takes advisory locks.
 		jdbc.sql("select pg_advisory_xact_lock(:hotelId)").param("hotelId", event.hotelId()).query().singleRow();

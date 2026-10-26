@@ -30,7 +30,8 @@ class HotelCacheEvictor {
 		this.searchVersions = searchVersions;
 	}
 
-	@TransactionalEventListener
+	/** Sales are left to HotelMinPriceUpdater, which evicts once it has recomputed their prices. */
+	@TransactionalEventListener(condition = "!#event.sale()")
 	void onInventoryChanged(InventoryChangedEvent event) {
 		searchVersions.bump(event.city());
 	}
