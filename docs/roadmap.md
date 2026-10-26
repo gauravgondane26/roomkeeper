@@ -75,7 +75,7 @@ Goal: guests can search a city for dates and see correct prices.
 - [x] Availability query (`GROUP BY` with `HAVING COUNT(*) = nights`); data slice test that skips a hotel with one sold-out night
 - [x] Closed dates and inactive hotels excluded from search
 - [x] `GET /hotels/search` with pagination, and `GET /hotels/{id}/info`
-- [ ] Index check: capture `EXPLAIN ANALYZE` output for the README
+- [x] Index check: capture `EXPLAIN ANALYZE` output for the README
 - [ ] Redis cache manager: hotel info (about 10 min), search (about 60 s)
 - [ ] Test: changing inventory evicts the cached search result for that hotel
 - [ ] Optional: set up LeanToken now that the codebase is growing
@@ -136,6 +136,7 @@ Goal: the full lifecycle works, including the unhappy paths.
 - [ ] `GET /admin/hotels/{id}/bookings`
 - [ ] `GET /admin/hotels/{id}/reports`: revenue and occupancy over a date range
 - [ ] Decide whether deactivating a hotel cancels and refunds its future bookings or honours them
+- [ ] Drop the unused `inventory (date, room_id)` index if the reports don't need it (see [query plans](query-plans.md))
 
 **Done when:** every path in the state diagram is covered by a test.
 

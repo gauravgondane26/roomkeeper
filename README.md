@@ -8,6 +8,7 @@ A hotel booking backend in Java 25 and Spring Boot, built test-first. It focuses
 
 - [Project design](docs/Hotel%20Booking%20Backend%20Project%20Design.md): goals, schema, API, booking lifecycle, and the hard problems
 - [Roadmap](docs/roadmap.md): the build plan broken into tasks
+- [Query plans](docs/query-plans.md): `EXPLAIN ANALYZE` of hotel search over a million inventory rows (about 1 ms) and the indexes it uses
 
 ## Running locally
 
