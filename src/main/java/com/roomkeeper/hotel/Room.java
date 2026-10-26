@@ -77,6 +77,13 @@ public class Room {
 		return totalCount;
 	}
 
+	public void changeDetails(String type, BigDecimal basePrice, int capacity, int totalCount) {
+		this.type = type;
+		this.basePrice = basePrice;
+		this.capacity = capacity;
+		this.totalCount = totalCount;
+	}
+
 	public Instant getCreatedAt() {
 		return createdAt;
 	}

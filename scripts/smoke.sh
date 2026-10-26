@@ -104,6 +104,10 @@ check "manager creates a hotel" POST /api/v1/admin/hotels 201 '"active":false' \
 hotel_id=$(sed -nE 's/^\{"id":([0-9]+).*/\1/p' <<<"$last_body")
 check "manager lists their hotels" GET /api/v1/admin/hotels 200 '"name":"Smoke Hotel"'
 check "manager reads their hotel" GET "/api/v1/admin/hotels/$hotel_id" 200 "\"id\":$hotel_id"
+check "manager adds a room type" POST "/api/v1/admin/hotels/$hotel_id/rooms" 201 '"basePrice":4500.00' \
+  '{"type":"Deluxe","basePrice":4500,"capacity":2,"totalCount":5}'
+room_id=$(sed -nE 's/^\{"id":([0-9]+).*/\1/p' <<<"$last_body")
+check "manager lists the hotel's rooms" GET "/api/v1/admin/hotels/$hotel_id/rooms" 200 "\"id\":$room_id"
 TOKEN=""
 
 # Last, since it uses up this client's login attempts: within 11 tries the limit must hit

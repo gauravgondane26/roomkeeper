@@ -2,6 +2,8 @@ package com.roomkeeper.testsupport;
 
 import java.util.Map;
 
+import io.restassured.config.JsonConfig;
+import io.restassured.config.RestAssuredConfig;
 import io.restassured.http.ContentType;
 import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +18,7 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import static io.restassured.RestAssured.given;
+import static io.restassured.path.json.config.JsonPathConfig.NumberReturnType.BIG_DECIMAL;
 
 /**
  * Base class for tests that run the full application against real Postgres and Redis,
@@ -50,9 +53,13 @@ public abstract class AbstractIntegrationTest {
 		});
 	}
 
-	/** A REST Assured request against the running app, over real HTTP. */
+	/**
+	 * A REST Assured request against the running app, over real HTTP. Decimal numbers in
+	 * responses are read as BigDecimal, so money compares exactly.
+	 */
 	protected RequestSpecification api() {
-		return given().port(port).accept(ContentType.JSON);
+		return given().port(port).accept(ContentType.JSON)
+			.config(RestAssuredConfig.config().jsonConfig(JsonConfig.jsonConfig().numberReturnType(BIG_DECIMAL)));
 	}
 
 	/** A request that sends the given access token as a bearer token. */
@@ -86,6 +93,14 @@ public abstract class AbstractIntegrationTest {
 	protected long createHotel(String managerToken, Map<String, Object> hotel) {
 		return api(managerToken).contentType(ContentType.JSON).body(hotel)
 			.when().post("/api/v1/admin/hotels")
+			.then().statusCode(201)
+			.extract().jsonPath().getLong("id");
+	}
+
+	/** Adds a room type to the hotel and returns its id. */
+	protected long createRoom(String managerToken, long hotelId, Map<String, Object> room) {
+		return api(managerToken).contentType(ContentType.JSON).body(room)
+			.when().post("/api/v1/admin/hotels/{hotelId}/rooms", hotelId)
 			.then().statusCode(201)
 			.extract().jsonPath().getLong("id");
 	}
