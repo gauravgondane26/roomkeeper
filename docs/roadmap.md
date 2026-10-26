@@ -98,10 +98,10 @@ Goal: no oversell under load, and holds always release.
 
 - [x] Migration: `bookings` (with `version`), `guests`, `booking_guests`
 - [x] Booking state machine in domain code; unit tests for every allowed and rejected transition
-- [ ] Inventory locking query: `SELECT ... FOR UPDATE` ordered by date; data slice test
-- [ ] `POST /bookings/init`: lock, check availability, increment `reserved_count`, freeze the price, set `hold_expires_at` from the clock
+- [x] Inventory locking query: `SELECT ... FOR UPDATE` ordered by date; data slice test
+- [x] `POST /bookings/init`: lock, check availability, increment `reserved_count`, freeze the price, set `hold_expires_at` from the clock
 - [x] Sold out returns a problem detail with a stable `type`
-- [ ] Test: 50 concurrent requests for the last room, exactly one succeeds
+- [x] Test: 50 concurrent requests for the last room, exactly one succeeds
 - [ ] Guest CRUD on `/users/guests`
 - [ ] `POST /bookings/{id}/guests`, validated against room capacity
 - [ ] `GET /bookings/{id}/status` and `GET /users/bookings`

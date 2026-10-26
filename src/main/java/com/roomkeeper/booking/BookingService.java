@@ -70,8 +70,9 @@ public class BookingService {
 		LocalDate lastNight = lastNightOf(request, hotel);
 		int count = request.rooms();
 
-		List<Inventory> nights = inventory.findByRoomIdAndDateBetweenOrderByDate(room.getId(), request.checkIn(),
-				lastNight);
+		// Locked until commit, in date order like every other writer, so two requests for the last
+		// room can't both see it free, and two overlapping stays can't deadlock each other
+		List<Inventory> nights = inventory.lockNights(room.getId(), request.checkIn(), lastNight);
 		// A night without a row isn't on sale yet
 		boolean everyNight = nights.size() == ChronoUnit.DAYS.between(request.checkIn(), request.checkOut());
 		if (!everyNight || nights.stream().anyMatch(night -> !night.canSell(count))) {
