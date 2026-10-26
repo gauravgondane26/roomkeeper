@@ -6,7 +6,9 @@ import java.util.List;
 
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.ProblemType;
+import com.roomkeeper.inventory.InventoryChangedEvent;
 import com.roomkeeper.inventory.InventoryService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,14 +25,17 @@ public class RoomService {
 
 	private final RoomMapper mapper;
 
+	private final ApplicationEventPublisher events;
+
 	private final Clock clock;
 
 	public RoomService(RoomRepository rooms, HotelService hotels, InventoryService inventory, RoomMapper mapper,
-			Clock clock) {
+			ApplicationEventPublisher events, Clock clock) {
 		this.rooms = rooms;
 		this.hotels = hotels;
 		this.inventory = inventory;
 		this.mapper = mapper;
+		this.events = events;
 		this.clock = clock;
 	}
 
@@ -46,6 +51,7 @@ public class RoomService {
 		// An active hotel is already on sale, so the new room goes on sale with it
 		if (hotel.isActive()) {
 			inventory.openYear(room.getId(), room.getTotalCount(), hotel.today(clock));
+			inventoryChanged(hotel);
 		}
 		return mapper.toResponse(room);
 	}
@@ -73,12 +79,26 @@ public class RoomService {
 			inventory.applyRoomTotal(roomId, request.totalCount(), hotel.today(clock));
 		}
 		room.changeDetails(type, price(request), request.capacity(), request.totalCount());
-		return mapper.toResponse(saveAndFlush(room, type));
+		RoomResponse response = mapper.toResponse(saveAndFlush(room, type));
+		if (hotel.isActive()) {
+			inventoryChanged(hotel);
+		}
+		return response;
 	}
 
 	@Transactional
 	public void delete(long ownerId, long hotelId, long roomId) {
-		rooms.delete(findOwned(ownerId, hotelId, roomId));
+		Room room = findOwned(ownerId, hotelId, roomId);
+		Hotel hotel = room.getHotel();
+		rooms.delete(room);
+		if (hotel.isActive()) {
+			inventoryChanged(hotel);
+		}
+	}
+
+	/** The hotel's rooms changed, so every night it sells from today on may have changed too. */
+	private void inventoryChanged(Hotel hotel) {
+		events.publishEvent(InventoryChangedEvent.fromNight(hotel.getId(), hotel.today(clock)));
 	}
 
 	/** The room, if it exists and the caller owns its hotel: 404 or 403 otherwise. */

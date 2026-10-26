@@ -7,7 +7,9 @@ import java.util.List;
 
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.ProblemType;
+import com.roomkeeper.inventory.InventoryChangedEvent;
 import com.roomkeeper.inventory.InventoryService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,14 +25,17 @@ public class HotelService {
 
 	private final HotelMapper mapper;
 
+	private final ApplicationEventPublisher events;
+
 	private final Clock clock;
 
 	public HotelService(HotelRepository hotels, RoomRepository rooms, InventoryService inventory, HotelMapper mapper,
-			Clock clock) {
+			ApplicationEventPublisher events, Clock clock) {
 		this.hotels = hotels;
 		this.rooms = rooms;
 		this.inventory = inventory;
 		this.mapper = mapper;
+		this.events = events;
 		this.clock = clock;
 	}
 
@@ -73,6 +78,7 @@ public class HotelService {
 		hotel.activate();
 		LocalDate today = hotel.today(clock);
 		hotelRooms.forEach(room -> inventory.openYear(room.getId(), room.getTotalCount(), today));
+		events.publishEvent(InventoryChangedEvent.fromNight(hotelId, today));
 		return mapper.toResponse(hotel);
 	}
 

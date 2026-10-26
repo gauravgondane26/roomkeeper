@@ -9,6 +9,7 @@ import com.roomkeeper.common.error.InvalidFieldException;
 import com.roomkeeper.common.error.ProblemType;
 import com.roomkeeper.hotel.Room;
 import com.roomkeeper.hotel.RoomService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,13 +25,16 @@ public class InventoryAdminService {
 
 	private final InventoryMapper mapper;
 
+	private final ApplicationEventPublisher events;
+
 	private final Clock clock;
 
 	public InventoryAdminService(InventoryRepository inventory, RoomService rooms, InventoryMapper mapper,
-			Clock clock) {
+			ApplicationEventPublisher events, Clock clock) {
 		this.inventory = inventory;
 		this.rooms = rooms;
 		this.mapper = mapper;
+		this.events = events;
 		this.clock = clock;
 	}
 
@@ -78,6 +82,7 @@ public class InventoryAdminService {
 				night.overrideTotalCount(request.totalCount());
 			}
 		}
+		events.publishEvent(new InventoryChangedEvent(room.getHotel().getId(), range.from(), range.to()));
 		return nights.stream().map(mapper::toResponse).toList();
 	}
 

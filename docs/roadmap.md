@@ -71,7 +71,7 @@ Goal: guests can search a city for dates and see correct prices.
 - [x] Pricing rule interface and base price rule
 - [x] Surge, occupancy, weekend, and holiday rules, one unit test class each
 - [x] Rule chain that prices every night in a range and totals it
-- [ ] Migration: `hotel_min_price`; keep it updated when inventory or prices change
+- [x] Migration: `hotel_min_price`; keep it updated when inventory or prices change
 - [ ] Availability query (`GROUP BY` with `HAVING COUNT(*) = nights`); data slice test that skips a hotel with one sold-out night
 - [ ] Closed dates and inactive hotels excluded from search
 - [ ] `GET /hotels/search` with pagination, and `GET /hotels/{id}/info`
