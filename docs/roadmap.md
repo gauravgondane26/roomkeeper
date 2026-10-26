@@ -4,7 +4,7 @@ The build plan from the [project design](Hotel%20Booking%20Backend%20Project%20D
 
 Tasks are listed in the order to do them. Where a task names a test, that test is written and committed first.
 
-**Current:** Week 4
+**Current:** Week 3 follow-ups, then week 4
 
 ## Week 1: Skeleton
 
@@ -59,6 +59,8 @@ Goal: a hotel manager can set up a hotel end to end.
 - [x] Adding a room to an already active hotel creates that room's inventory
 - [x] Inventory admin `GET` and `PATCH /admin/inventory/rooms/{roomId}`: close dates, change surge, change totals over a date range
 - [x] Test: lowering a total below what's already booked or held is rejected with a clean error
+- [ ] Hotel time zone: "today" (activation start, past-night checks) is the hotel's local date, not UTC's
+- [ ] Changing a room type's total updates its future nights, except nights whose total was set by hand (`total_overridden`); rejected if below what's booked or held
 
 **Done when:** a manager can create a hotel, add rooms, activate it, and adjust inventory.
 
@@ -95,6 +97,9 @@ Goal: no oversell under load, and holds always release.
 - [ ] `GET /bookings/{id}/status` and `GET /users/bookings`
 - [ ] Hold expiry job: releases `reserved_count` and marks bookings Expired; test with a fixed clock, no `Thread.sleep`
 - [ ] Redis job lock (`lock:hold-expiry`); test that only one instance runs the job
+- [ ] Daily inventory roll job (`lock:inventory-roll`): keeps every active room type open a year ahead and fills any missed nights; test with a fixed clock
+- [ ] Deleting a hotel or room type with bookings is rejected with 409; bookings reference rooms with a restricting foreign key as the backstop
+- [ ] `PATCH /admin/hotels/{id}/deactivate`: out of search and no new bookings, existing bookings honoured, history kept
 
 **Done when:** the 50-thread test passes reliably and expired holds return their rooms.
 
@@ -130,6 +135,7 @@ Goal: the full lifecycle works, including the unhappy paths.
 - [ ] Test: cancelling restores inventory and calls the refund exactly once
 - [ ] `GET /admin/hotels/{id}/bookings`
 - [ ] `GET /admin/hotels/{id}/reports`: revenue and occupancy over a date range
+- [ ] Decide whether deactivating a hotel cancels and refunds its future bookings or honours them
 
 **Done when:** every path in the state diagram is covered by a test.
 

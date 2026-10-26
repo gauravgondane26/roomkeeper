@@ -57,9 +57,9 @@ The central idea is that inventory is one row per room type per night, and the d
 | Table | Key columns | Notes |
 | --- | --- | --- |
 | `users` | id, email (unique), password\_hash, role (GUEST, HOTEL\_MANAGER) | Roles drive `/admin` access |
-| `hotels` | id, owner\_id, name, city, active, amenities | Only active hotels show up in search |
+| `hotels` | id, owner\_id, name, city, time\_zone, active, amenities | Only active hotels show up in search. Deactivating stops new bookings but keeps history |
 | `rooms` | id, hotel\_id, type, base\_price, capacity, total\_count | A room type, not a physical room |
-| `inventory` | id, room\_id, date, total\_count, booked\_count, reserved\_count, surge\_factor, closed | Unique on (room\_id, date). Check constraint: booked\_count + reserved\_count <= total\_count |
+| `inventory` | id, room\_id, date, total\_count, total\_overridden, booked\_count, reserved\_count, surge\_factor, closed | Unique on (room\_id, date). Check constraint: booked\_count + reserved\_count <= total\_count. Nights whose total was set by hand keep it when the room's total changes |
 | `bookings` | id, user\_id, room\_id, check\_in, check\_out, rooms\_count, status, amount, hold\_expires\_at, version | Amount is frozen at reservation time |
 | `guests` | id, user\_id, name, age, gender | Saved guests a user can reuse |
 | `booking_guests` | booking\_id, guest\_id | Join table |
@@ -68,11 +68,12 @@ The central idea is that inventory is one row per room type per night, and the d
 | `outbox_events` | id, aggregate\_id, type, payload (jsonb), created\_at, published\_at | Side effects written atomically with the booking |
 | `hotel_min_price` | hotel\_id, date, min\_price | Precomputed cheapest night, keeps search fast |
 
-Three decisions worth calling out:
+Four decisions worth calling out:
 
 - **Holds live in Postgres.** A pending booking increments `reserved_count`. When the hold expires, a job moves it back. Redis never owns this number.
 - **The check constraint is the last line of defense.** Even if application logic has a bug, the database rejects an oversell.
 - **Prices are copied onto the booking.** If a surge rule changes after someone reserves, they still pay what they were quoted.
+- **A night is a local date; a moment is UTC.** Inventory dates, check-in, and check-out are dates in the hotel's own time zone, so "today" for a hotel in Goa starts at midnight in Goa. Instants like `hold_expires_at` are stored in UTC.
 
 ## API surface
 
@@ -82,7 +83,7 @@ The endpoints mirror the original repo, plus a few that make the hard parts visi
 | --- | --- | --- |
 | Auth | `POST /auth/signup`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` | Login is rate limited. Logout revokes the refresh token |
 | Browse | `GET /hotels/search`, `GET /hotels/{id}/info` | Search takes city, dates, rooms, and pagination. Cached |
-| Hotel admin | CRUD on `/admin/hotels`, `PATCH /admin/hotels/{id}/activate` | Activation generates a year of inventory rows |
+| Hotel admin | CRUD on `/admin/hotels`, `PATCH /admin/hotels/{id}/activate`, `PATCH /admin/hotels/{id}/deactivate` | Activation generates a year of inventory rows, and a daily job keeps it a year ahead. A hotel or room type with bookings can be deactivated but not deleted |
 | Room admin | CRUD on `/admin/hotels/{id}/rooms` | Owner-only |
 | Inventory admin | `GET` and `PATCH /admin/inventory/rooms/{roomId}` | Bulk update a date range: close dates, change surge, change totals |
 | Booking | `POST /bookings/init`, `POST /bookings/{id}/guests`, `POST /bookings/{id}/payments`, `POST /bookings/{id}/cancel`, `GET /bookings/{id}/status` | `init` and `payments` require an `Idempotency-Key` header |
@@ -166,7 +167,7 @@ Redis makes the system faster and harder to abuse, but Postgres decides what's t
 | Rate limiting | Token bucket in a Lua script, so check and decrement are atomic | `rl:{route}:{user or ip}` | About one window | Fail open and log it. Availability beats strict limits here |
 | Idempotency keys | `SET NX` with status and stored response | `idem:{userId}:{key}` | 24 hours | Fail closed with 503. Better than a duplicate payment |
 | Caching | Spring Cache with a Redis cache manager | `hotel:{id}`, `search:{hash}` | Hotel info about 10 minutes, search about 60 seconds | Fall through to Postgres |
-| Job locks | Redisson or ShedLock | `lock:hold-expiry`, `lock:outbox` | Lease shorter than the job interval | That run is skipped, the next one catches up |
+| Job locks | Redisson or ShedLock | `lock:hold-expiry`, `lock:outbox`, `lock:inventory-roll` | Lease shorter than the job interval | That run is skipped, the next one catches up |
 | Token revocation | Opaque refresh tokens stored as a hash, single use (rotated on refresh), deleted on logout | `refresh:{sha256(token)}` | Token lifetime (7 days) | Refresh fails, users log in again |
 
 Cache invalidation is the subtle part. Hotel details can live in the cache for minutes. Search results depend on availability, so they get a short TTL plus eviction whenever inventory for that hotel changes. Write a test for the eviction, since stale availability is the bug users would actually notice.
