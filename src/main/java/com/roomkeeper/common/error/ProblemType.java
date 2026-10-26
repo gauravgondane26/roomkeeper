@@ -38,7 +38,8 @@ public enum ProblemType {
 	HOTEL_NOT_APPROVED("hotel-not-approved", HttpStatus.CONFLICT, "Hotel not approved"),
 	SOLD_OUT("sold-out", HttpStatus.CONFLICT, "Sold out"),
 	HOLD_EXPIRED("hold-expired", HttpStatus.CONFLICT, "Hold expired"),
-	BOOKING_STATE("booking-state", HttpStatus.CONFLICT, "Not allowed in the booking's status");
+	BOOKING_STATE("booking-state", HttpStatus.CONFLICT, "Not allowed in the booking's status"),
+	HAS_BOOKINGS("has-bookings", HttpStatus.CONFLICT, "Has bookings");
 
 	private static final String URN_PREFIX = "urn:roomkeeper:problem:";
 

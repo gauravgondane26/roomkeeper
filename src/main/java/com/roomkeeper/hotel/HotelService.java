@@ -11,6 +11,7 @@ import com.roomkeeper.common.error.ProblemType;
 import com.roomkeeper.inventory.InventoryChangedEvent;
 import com.roomkeeper.inventory.InventoryService;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -91,11 +92,27 @@ public class HotelService {
 		return mapper.toResponse(hotel);
 	}
 
+	/** Only a hotel that has never had a booking: bookings are history it keeps. */
 	@Transactional
 	public void delete(long ownerId, long hotelId) {
 		Hotel hotel = findOwned(ownerId, hotelId);
-		hotels.delete(hotel);
+		if (rooms.hotelHasBookings(hotelId)) {
+			throw hasBookings(hotelId);
+		}
+		try {
+			hotels.delete(hotel);
+			hotels.flush();
+		}
+		catch (DataIntegrityViolationException ex) {
+			// A booking came in after the check; the foreign key from bookings caught it
+			throw hasBookings(hotelId);
+		}
 		events.publishEvent(HotelChangedEvent.of(hotel));
+	}
+
+	private static ApiException hasBookings(long hotelId) {
+		return new ApiException(ProblemType.HAS_BOOKINGS,
+				"Hotel " + hotelId + " has bookings, so it can't be deleted; take it off sale instead");
 	}
 
 	/** The hotel, if it exists and the caller owns it: 404 or 403 otherwise. */

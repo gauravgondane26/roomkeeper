@@ -92,15 +92,31 @@ public class RoomService {
 		return response;
 	}
 
+	/** Only a room type that has never had a booking: bookings are history the hotel keeps. */
 	@Transactional
 	public void delete(long ownerId, long hotelId, long roomId) {
 		Room room = findOwned(ownerId, hotelId, roomId);
 		Hotel hotel = room.getHotel();
-		rooms.delete(room);
+		if (rooms.hasBookings(roomId)) {
+			throw hasBookings(roomId);
+		}
+		try {
+			rooms.delete(room);
+			rooms.flush();
+		}
+		catch (DataIntegrityViolationException ex) {
+			// A booking came in after the check; the foreign key from bookings caught it
+			throw hasBookings(roomId);
+		}
 		if (hotel.isActive()) {
 			inventoryChanged(hotel);
 		}
 		events.publishEvent(HotelChangedEvent.roomTypesOf(hotel));
+	}
+
+	private static ApiException hasBookings(long roomId) {
+		return new ApiException(ProblemType.HAS_BOOKINGS,
+				"Room type " + roomId + " has bookings, so it can't be deleted; close its nights instead");
 	}
 
 	/** The hotel's rooms changed, so every night it sells from today on may have changed too. */
