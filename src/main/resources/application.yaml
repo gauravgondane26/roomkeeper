@@ -27,6 +27,18 @@ roomkeeper:
     login:
       capacity: 10
       period: 1m
+  pricing:
+    occupancy:
+      # 20% more once 80% of a room type is booked or held that night
+      threshold: 0.80
+      multiplier: 1.20
+    weekend:
+      nights: FRIDAY, SATURDAY
+      multiplier: 1.15
+    holidays:
+      multiplier: 1.25
+      # One calendar for every hotel for now
+      dates: 2026-11-08, 2026-12-25, 2026-12-31, 2027-01-01, 2027-01-26
 
 management:
   endpoints:
