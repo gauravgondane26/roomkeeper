@@ -21,4 +21,12 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 	@Query("select i from Inventory i where i.roomId = :roomId and i.date between :from and :to order by i.date")
 	List<Inventory> lockNights(Long roomId, LocalDate from, LocalDate to);
 
+	/** Like {@link #lockNights}: every night from {@code from} on whose total wasn't set by hand. */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("""
+			select i from Inventory i
+			where i.roomId = :roomId and i.date >= :from and i.totalOverridden = false
+			order by i.date""")
+	List<Inventory> lockNightsFollowingRoomTotal(Long roomId, LocalDate from);
+
 }

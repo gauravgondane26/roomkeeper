@@ -31,6 +31,10 @@ public class Inventory {
 	@Column(name = "total_count", nullable = false)
 	private int totalCount;
 
+	// Set by hand in inventory admin, so changes to the room type's total skip this night
+	@Column(name = "total_overridden", nullable = false)
+	private boolean totalOverridden;
+
 	@Column(name = "booked_count", nullable = false)
 	private int bookedCount;
 
@@ -68,6 +72,10 @@ public class Inventory {
 		return totalCount;
 	}
 
+	public boolean isTotalOverridden() {
+		return totalOverridden;
+	}
+
 	public int getBookedCount() {
 		return bookedCount;
 	}
@@ -102,7 +110,14 @@ public class Inventory {
 		this.surgeFactor = surgeFactor;
 	}
 
-	public void changeTotalCount(int totalCount) {
+	/** A manager set this night's total by hand: it no longer follows the room type's total. */
+	public void overrideTotalCount(int totalCount) {
+		this.totalCount = totalCount;
+		this.totalOverridden = true;
+	}
+
+	/** The room type's total changed and this night follows it. */
+	public void followRoomTotal(int totalCount) {
 		this.totalCount = totalCount;
 	}
 

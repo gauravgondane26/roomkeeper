@@ -68,6 +68,10 @@ public class RoomService {
 		if (rooms.existsByHotelIdAndTypeIgnoreCaseAndIdNot(hotelId, type, roomId)) {
 			throw new RoomTypeExistsException(type);
 		}
+		Hotel hotel = room.getHotel();
+		if (hotel.isActive() && request.totalCount() != room.getTotalCount()) {
+			inventory.applyRoomTotal(roomId, request.totalCount(), hotel.today(clock));
+		}
 		room.changeDetails(type, price(request), request.capacity(), request.totalCount());
 		return mapper.toResponse(saveAndFlush(room, type));
 	}

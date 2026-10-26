@@ -4,7 +4,7 @@ The build plan from the [project design](Hotel%20Booking%20Backend%20Project%20D
 
 Tasks are listed in the order to do them. Where a task names a test, that test is written and committed first.
 
-**Current:** Week 3 follow-ups, then week 4
+**Current:** Week 4
 
 ## Week 1: Skeleton
 
@@ -60,7 +60,7 @@ Goal: a hotel manager can set up a hotel end to end.
 - [x] Inventory admin `GET` and `PATCH /admin/inventory/rooms/{roomId}`: close dates, change surge, change totals over a date range
 - [x] Test: lowering a total below what's already booked or held is rejected with a clean error
 - [x] Hotel time zone: "today" (activation start, past-night checks) is the hotel's local date, not UTC's
-- [ ] Changing a room type's total updates its future nights, except nights whose total was set by hand (`total_overridden`); rejected if below what's booked or held
+- [x] Changing a room type's total updates its future nights, except nights whose total was set by hand (`total_overridden`); rejected if below what's booked or held
 
 **Done when:** a manager can create a hotel, add rooms, activate it, and adjust inventory.
 

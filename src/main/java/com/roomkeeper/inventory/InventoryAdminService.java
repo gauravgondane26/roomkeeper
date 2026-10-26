@@ -65,13 +65,7 @@ public class InventoryAdminService {
 		// Locked, so no booking can take a room between this check and the update
 		List<Inventory> nights = inventory.lockNights(roomId, range.from(), range.to());
 		if (request.totalCount() != null) {
-			List<LocalDate> oversold = nights.stream()
-				.filter(night -> night.sold() > request.totalCount())
-				.map(Inventory::getDate)
-				.toList();
-			if (!oversold.isEmpty()) {
-				throw new TotalBelowSoldException(request.totalCount(), oversold);
-			}
+			InventoryService.requireNotBelowSold(nights, request.totalCount());
 		}
 		for (Inventory night : nights) {
 			if (request.closed() != null) {
@@ -81,7 +75,7 @@ public class InventoryAdminService {
 				night.changeSurgeFactor(request.surgeFactor().setScale(2));
 			}
 			if (request.totalCount() != null) {
-				night.changeTotalCount(request.totalCount());
+				night.overrideTotalCount(request.totalCount());
 			}
 		}
 		return nights.stream().map(mapper::toResponse).toList();

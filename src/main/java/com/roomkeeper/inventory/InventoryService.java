@@ -1,12 +1,13 @@
 package com.roomkeeper.inventory;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Creates the per-night inventory rows that bookings and search work from. */
+/** Creates the per-night inventory rows that bookings and search work from, and keeps them in step with the room. */
 @Service
 public class InventoryService {
 
@@ -15,8 +16,11 @@ public class InventoryService {
 
 	private final JdbcClient jdbc;
 
-	public InventoryService(JdbcClient jdbc) {
+	private final InventoryRepository inventory;
+
+	public InventoryService(JdbcClient jdbc, InventoryRepository inventory) {
 		this.jdbc = jdbc;
+		this.inventory = inventory;
 	}
 
 	/**
@@ -37,6 +41,30 @@ public class InventoryService {
 			.param("totalCount", totalCount)
 			.param("nights", NIGHTS_AHEAD)
 			.update();
+	}
+
+	/**
+	 * A room type's total changed: every night from {@code firstNight} (the hotel's today)
+	 * follows it, except nights whose total was set by hand. Rejected, changing nothing, if
+	 * any of those nights already has more rooms booked or held than the new total.
+	 */
+	@Transactional
+	public void applyRoomTotal(long roomId, int totalCount, LocalDate firstNight) {
+		// Locked, so no booking can take a room between the check and the update
+		List<Inventory> nights = inventory.lockNightsFollowingRoomTotal(roomId, firstNight);
+		requireNotBelowSold(nights, totalCount);
+		nights.forEach(night -> night.followRoomTotal(totalCount));
+	}
+
+	/** Throws {@link TotalBelowSoldException} naming every night with more rooms sold than {@code totalCount}. */
+	static void requireNotBelowSold(List<Inventory> nights, int totalCount) {
+		List<LocalDate> oversold = nights.stream()
+			.filter(night -> night.sold() > totalCount)
+			.map(Inventory::getDate)
+			.toList();
+		if (!oversold.isEmpty()) {
+			throw new TotalBelowSoldException(totalCount, oversold);
+		}
 	}
 
 }
