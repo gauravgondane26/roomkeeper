@@ -16,9 +16,10 @@ import org.springframework.data.redis.serializer.RedisSerializationContext.Seria
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Response caches in Redis: {@code hotel:{id}} for hotel info and {@code search:{city}:{query}}
- * for search results. Each cache stores one response type as JSON. Postgres stays the
- * source of truth: if Redis fails, the error is logged and the call goes to the database.
+ * Response caches in Redis: {@code hotel:{id}} for hotel info and
+ * {@code search:{city hash}:v{version}:{query}} for search results. Each cache stores one
+ * response type as JSON. Postgres stays the source of truth: if Redis fails, the error is
+ * logged and the call goes to the database.
  */
 @Configuration(proxyBeanMethods = false)
 @EnableCaching

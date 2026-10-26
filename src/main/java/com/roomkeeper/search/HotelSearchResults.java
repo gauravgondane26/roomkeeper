@@ -21,7 +21,9 @@ class HotelSearchResults {
 		this.clock = clock;
 	}
 
-	@Cacheable(cacheNames = CacheConfig.SEARCH, key = "#query.cacheKey()")
+	// No version means Redis is unreachable: search without the cache
+	@Cacheable(cacheNames = CacheConfig.SEARCH, key = "#query.cacheKey()",
+			condition = "#query.cacheVersion() != null")
 	@Transactional(readOnly = true)
 	public HotelSearchResponse find(SearchQuery query) {
 		Instant now = clock.instant();

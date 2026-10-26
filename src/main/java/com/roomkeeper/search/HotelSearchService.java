@@ -15,8 +15,11 @@ public class HotelSearchService {
 
 	private final HotelSearchResults results;
 
-	public HotelSearchService(HotelSearchResults results) {
+	private final SearchCacheVersions cacheVersions;
+
+	public HotelSearchService(HotelSearchResults results, SearchCacheVersions cacheVersions) {
 		this.results = results;
+		this.cacheVersions = cacheVersions;
 	}
 
 	/** Validates the request, fills in defaults, and searches (through the cache). */
@@ -31,7 +34,7 @@ public class HotelSearchService {
 		var criteria = new SearchCriteria(request.city().strip().toLowerCase(Locale.ROOT), request.checkIn(),
 				request.checkOut(), request.rooms() != null ? request.rooms() : 1);
 		return results.find(new SearchQuery(criteria, request.page() != null ? request.page() : 0,
-				request.size() != null ? request.size() : DEFAULT_PAGE_SIZE));
+				request.size() != null ? request.size() : DEFAULT_PAGE_SIZE, cacheVersions.current(criteria.city())));
 	}
 
 }

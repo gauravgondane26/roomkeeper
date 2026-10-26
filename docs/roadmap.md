@@ -88,7 +88,7 @@ From a security, efficiency, and regression review of weeks 1 to 4. The first tw
 
 - [x] Signup rejects a password over 72 bytes (BCrypt's limit) with a 400; a 72-character password of 2-byte characters used to return 500
 - [x] `hotel_min_price` updates are safe under concurrency (upsert instead of delete and insert); test with parallel changes to one hotel, which returned 500s
-- [ ] Search cache eviction without scanning Redis: a per-city version in the cache key, bumped on change
+- [x] Search cache eviction without scanning Redis: a per-city version in the cache key, bumped on change
 - [ ] Manager accounts: decide how someone becomes a `HOTEL_MANAGER` instead of choosing the role at signup, then build it
 - [ ] Email enumeration: rate-limit signup and refresh, and decide whether signup may reveal that an email is registered
 

@@ -2,6 +2,7 @@ package com.roomkeeper.search;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.Properties;
 import java.util.UUID;
 
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import static com.roomkeeper.testsupport.HotelBuilder.aHotel;
@@ -82,6 +84,30 @@ class SearchCacheEvictionIT extends AbstractIntegrationTest {
 			.then().statusCode(200);
 
 		assertThat(redis.keys("search:" + SearchQuery.cityKey(otherCity) + ":*")).hasSize(1);
+	}
+
+	@Test
+	void evictionDoesNotScanRedis() {
+		// SCAN walks every key in Redis (refresh tokens, rate limits, every cache), so its
+		// cost grows with everything stored, not with the city being evicted
+		long hotel = activeHotel(city);
+		search(city);
+		long scansBefore = scanCalls();
+
+		api(manager).contentType(ContentType.JSON).body(Map.of("from", "2026-03-13", "to", "2026-03-13", "closed", true))
+			.when().patch("/api/v1/admin/inventory/rooms/{roomId}", roomOf(hotel))
+			.then().statusCode(200);
+
+		search(city).body("totalHotels", equalTo(0));
+		assertThat(scanCalls()).isEqualTo(scansBefore);
+	}
+
+	/** How many SCAN commands Redis has run since it started. */
+	private long scanCalls() {
+		Properties stats = redis.execute((RedisCallback<Properties>) connection -> connection.serverCommands()
+			.info("commandstats"));
+		String scan = stats.getProperty("cmdstat_scan");
+		return scan == null ? 0 : Long.parseLong(scan.replaceAll("^calls=(\\d+),.*$", "$1"));
 	}
 
 	private long activeHotel(String inCity) {
