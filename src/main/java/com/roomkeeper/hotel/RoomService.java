@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.ProblemType;
+import com.roomkeeper.inventory.InventoryService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,13 +19,17 @@ public class RoomService {
 
 	private final HotelService hotels;
 
+	private final InventoryService inventory;
+
 	private final RoomMapper mapper;
 
 	private final Clock clock;
 
-	public RoomService(RoomRepository rooms, HotelService hotels, RoomMapper mapper, Clock clock) {
+	public RoomService(RoomRepository rooms, HotelService hotels, InventoryService inventory, RoomMapper mapper,
+			Clock clock) {
 		this.rooms = rooms;
 		this.hotels = hotels;
+		this.inventory = inventory;
 		this.mapper = mapper;
 		this.clock = clock;
 	}
@@ -36,8 +41,13 @@ public class RoomService {
 		if (rooms.existsByHotelIdAndTypeIgnoreCase(hotelId, type)) {
 			throw new RoomTypeExistsException(type);
 		}
-		Room room = new Room(hotel, type, price(request), request.capacity(), request.totalCount(), clock.instant());
-		return mapper.toResponse(saveAndFlush(room, type));
+		Room room = saveAndFlush(
+				new Room(hotel, type, price(request), request.capacity(), request.totalCount(), clock.instant()), type);
+		// An active hotel is already on sale, so the new room goes on sale with it
+		if (hotel.isActive()) {
+			inventory.openYear(room.getId(), room.getTotalCount());
+		}
+		return mapper.toResponse(room);
 	}
 
 	@Transactional(readOnly = true)

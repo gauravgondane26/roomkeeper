@@ -82,6 +82,24 @@ class HotelActivationIT extends AbstractIntegrationTest {
 	}
 
 	@Test
+	void roomsAddedBeforeActivationHaveNoInventoryYet() {
+		long roomId = createRoom(manager, hotelId, aRoom().build());
+
+		assertThat(nightsOf(roomId)).isZero();
+	}
+
+	@Test
+	void aRoomAddedToAnActiveHotelGetsItsOwnYearOfInventory() {
+		createRoom(manager, hotelId, aRoom().ofType("Deluxe").build());
+		activate();
+		clock.advance(Duration.ofMinutes(5));
+
+		long suite = createRoom(manager, hotelId, aRoom().ofType("Suite").withTotalCount(3).build());
+
+		assertYearOfInventory(suite, TODAY, 3);
+	}
+
+	@Test
 	void aHotelWithoutRoomsCannotBeActivated() {
 		api(manager)
 			.when().patch("/api/v1/admin/hotels/{id}/activate", hotelId)
