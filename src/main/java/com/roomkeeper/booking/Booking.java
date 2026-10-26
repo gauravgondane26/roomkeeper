@@ -3,9 +3,14 @@ package com.roomkeeper.booking;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 
+import com.roomkeeper.common.error.ApiException;
+import com.roomkeeper.common.error.InvalidFieldException;
+import com.roomkeeper.common.error.ProblemType;
 import com.roomkeeper.hotel.Room;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -19,6 +24,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
@@ -64,7 +70,8 @@ public class Booking {
 	@ManyToMany
 	@JoinTable(name = "booking_guests", joinColumns = @JoinColumn(name = "booking_id"),
 			inverseJoinColumns = @JoinColumn(name = "guest_id"))
-	private Set<Guest> guests = new HashSet<>();
+	@OrderBy("id")
+	private List<Guest> guests = new ArrayList<>();
 
 	// The hold expiry job and the payment webhook can race on one booking; the loser retries
 	@Version
@@ -125,8 +132,41 @@ public class Booking {
 		return holdExpiresAt;
 	}
 
-	public Set<Guest> getGuests() {
-		return Set.copyOf(guests);
+	public List<Guest> getGuests() {
+		return List.copyOf(guests);
+	}
+
+	/** True from {@code holdExpiresAt} on: the rooms are no longer held for this booking, whatever its status says. */
+	public boolean holdRanOut(Instant now) {
+		return !now.isBefore(holdExpiresAt);
+	}
+
+	/**
+	 * Puts these guests on the booking, replacing any already on it, while the rooms are still
+	 * held. At least one, and no more than the rooms sleep.
+	 */
+	public void putGuests(Collection<Guest> newGuests, Instant now) {
+		if (status == BookingStatus.EXPIRED || (status.isHold() && holdRanOut(now))) {
+			throw new ApiException(ProblemType.HOLD_EXPIRED, "Booking " + id + "'s hold ran out at " + holdExpiresAt);
+		}
+		int fits = room.getCapacity() * roomsCount;
+		if (newGuests.isEmpty() || newGuests.size() > fits) {
+			throw new InvalidFieldException("guestIds", "must name 1 to " + fits + " guests: " + roomsCount
+					+ (roomsCount == 1 ? " room" : " rooms") + " sleeping " + room.getCapacity());
+		}
+		moveTo(BookingStatus.GUESTS_ADDED);
+		guests.clear();
+		guests.addAll(newGuests);
+		// In id order, as when loaded (@OrderBy); saved guests always have ids
+		guests.sort(Comparator.comparing(Guest::getId, Comparator.nullsLast(Comparator.naturalOrder())));
+	}
+
+	private void moveTo(BookingStatus next) {
+		if (!status.canMoveTo(next)) {
+			throw new ApiException(ProblemType.BOOKING_STATE,
+					"Booking " + id + " is " + status + " and can't become " + next);
+		}
+		status = next;
 	}
 
 }

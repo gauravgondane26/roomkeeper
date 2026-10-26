@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 import com.roomkeeper.common.error.ApiException;
@@ -31,6 +32,8 @@ public class BookingService {
 
 	private final RoomRepository rooms;
 
+	private final GuestService guests;
+
 	private final InventoryRepository inventory;
 
 	private final PricingChain pricing;
@@ -43,11 +46,12 @@ public class BookingService {
 
 	private final Clock clock;
 
-	public BookingService(BookingRepository bookings, RoomRepository rooms, InventoryRepository inventory,
-			PricingChain pricing, BookingMapper mapper, BookingProperties properties, ApplicationEventPublisher events,
-			Clock clock) {
+	public BookingService(BookingRepository bookings, RoomRepository rooms, GuestService guests,
+			InventoryRepository inventory, PricingChain pricing, BookingMapper mapper, BookingProperties properties,
+			ApplicationEventPublisher events, Clock clock) {
 		this.bookings = bookings;
 		this.rooms = rooms;
+		this.guests = guests;
 		this.inventory = inventory;
 		this.pricing = pricing;
 		this.mapper = mapper;
@@ -89,6 +93,19 @@ public class BookingService {
 		boolean soldOut = nights.stream().anyMatch(night -> night.getAvailable() == 0);
 		events.publishEvent(
 				InventoryChangedEvent.sale(hotel.getId(), hotel.getCity(), request.checkIn(), lastNight, soldOut));
+		return mapper.toResponse(booking);
+	}
+
+	/** Puts the user's saved guests on their booking, in place of any already on it, while the rooms are held. */
+	@Transactional
+	public BookingResponse putGuests(long userId, long bookingId, BookingGuestsRequest request) {
+		// Locked, so the expiry job can't release the rooms halfway through
+		Booking booking = bookings.lockOwned(bookingId, userId)
+			.orElseThrow(() -> new ApiException(ProblemType.NOT_FOUND, "Booking " + bookingId + " not found"));
+		List<Guest> staying = new LinkedHashSet<>(request.guestIds()).stream()
+			.map(guestId -> guests.findOwned(userId, guestId))
+			.toList();
+		booking.putGuests(staying, clock.instant());
 		return mapper.toResponse(booking);
 	}
 

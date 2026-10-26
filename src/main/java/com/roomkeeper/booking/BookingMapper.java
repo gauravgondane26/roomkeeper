@@ -4,7 +4,7 @@ import com.roomkeeper.common.MapperDefaults;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(config = MapperDefaults.class)
+@Mapper(config = MapperDefaults.class, uses = GuestMapper.class)
 public interface BookingMapper {
 
 	@Mapping(target = "hotelId", source = "room.hotel.id")

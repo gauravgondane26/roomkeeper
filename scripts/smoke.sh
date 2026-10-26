@@ -157,6 +157,8 @@ check "guest saves a traveller" POST /api/v1/users/guests 201 '"name":"Smoke Tra
   '{"name":"Smoke Traveller","age":30,"gender":"OTHER"}'
 traveller_id=$(last_id)
 check "guest lists saved travellers" GET /api/v1/users/guests 200 "\"id\":$traveller_id"
+check "guest puts the traveller on the booking" POST "/api/v1/bookings/$booking_id/guests" 200 \
+  '"status":"GUESTS_ADDED"' "{\"guestIds\":[$traveller_id]}"
 TOKEN=""
 
 # Last, since it uses up this client's login attempts: within 11 tries the limit must hit
