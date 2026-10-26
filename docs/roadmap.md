@@ -89,8 +89,8 @@ From a security, efficiency, and regression review of weeks 1 to 4. The first tw
 - [x] Signup rejects a password over 72 bytes (BCrypt's limit) with a 400; a 72-character password of 2-byte characters used to return 500
 - [x] `hotel_min_price` updates are safe under concurrency (upsert instead of delete and insert); test with parallel changes to one hotel, which returned 500s
 - [x] Search cache eviction without scanning Redis: a per-city version in the cache key, bumped on change
-- [ ] Manager accounts: decide how someone becomes a `HOTEL_MANAGER` instead of choosing the role at signup, then build it
-- [ ] Email enumeration: rate-limit signup and refresh, and decide whether signup may reveal that an email is registered
+- [ ] Manager accounts: anyone can still sign up as a manager, but an admin (new `ADMIN` role) approves each hotel before it can be activated
+- [x] Email enumeration: rate-limit signup and refresh per IP like login (the signup response itself changes in week 7)
 
 ## Week 5: Booking init, holds, expiry
 
@@ -151,6 +151,7 @@ Goal: the full lifecycle works, including the unhappy paths.
 - [ ] `GET /admin/hotels/{id}/reports`: revenue and occupancy over a date range
 - [ ] Decide whether deactivating a hotel cancels and refunds its future bookings or honours them
 - [ ] Drop the unused `inventory (date, room_id)` index if the reports don't need it (see [query plans](query-plans.md))
+- [ ] Signup always gives the same response, so it can't reveal registered emails; an already registered email's owner gets an email through the outbox instead
 
 **Done when:** every path in the state diagram is covered by a test.
 

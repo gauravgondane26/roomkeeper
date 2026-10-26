@@ -23,9 +23,16 @@ roomkeeper:
     access-token-ttl: 15m
     refresh-token-ttl: 7d
     # jwt-secret is set per profile; prod reads it from JWT_SECRET
+  # Per client IP; each bucket refills to full over its period
   rate-limits:
     login:
       capacity: 10
+      period: 1m
+    signup:
+      capacity: 20
+      period: 1h
+    refresh:
+      capacity: 30
       period: 1m
   pricing:
     occupancy:

@@ -35,7 +35,7 @@ Swagger UI is the client: open http://localhost:8080/swagger-ui.html.
 3. Click **Authorize** and paste the access token. Routes with a lock icon now work.
 4. When the access token expires, `POST /api/v1/auth/refresh` with the refresh token returns a new pair. `POST /api/v1/auth/logout` revokes it.
 
-Login allows 10 attempts per minute per client IP. Every error is an RFC 9457 problem detail (`application/problem+json`); match on its `type`, such as `urn:roomkeeper:problem:invalid-credentials`.
+Per client IP, login allows 10 attempts a minute, signup 20 an hour, and refresh 30 a minute; past that the API answers 429 with a `Retry-After` header. Every error is an RFC 9457 problem detail (`application/problem+json`); match on its `type`, such as `urn:roomkeeper:problem:invalid-credentials`.
 
 ### Finding a hotel (no login needed)
 

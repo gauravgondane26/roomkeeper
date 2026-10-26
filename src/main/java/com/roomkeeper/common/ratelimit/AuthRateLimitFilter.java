@@ -1,6 +1,7 @@
 package com.roomkeeper.common.ratelimit;
 
 import java.io.IOException;
+import java.util.Map;
 
 import com.roomkeeper.common.error.ProblemDetailsWriter;
 import com.roomkeeper.common.error.ProblemType;
@@ -15,8 +16,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Limits login attempts per client IP, so passwords can't be guessed quickly. Counts every
- * attempt, successful or not.
+ * Limits the open auth routes per client IP, each with its own bucket
+ * ({@code rl:{route}:{ip}}): login so passwords can't be guessed quickly, signup so emails
+ * can't be checked in bulk (it says when one is already registered), and refresh so it
+ * can't be hammered. Every attempt counts, successful or not.
  * <p>
  * If Redis is down the request is allowed and a warning logged: availability matters more
  * than strict limits here, and nothing is lost but the protection.
@@ -28,39 +31,45 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * Registered in {@link RateLimitConfig} rather than by component scanning, so web slice
  * tests (which pick up every Filter component) don't need Redis.
  */
-public class LoginRateLimitFilter extends OncePerRequestFilter {
+public class AuthRateLimitFilter extends OncePerRequestFilter {
 
-	private static final Logger log = LoggerFactory.getLogger(LoginRateLimitFilter.class);
+	private static final Logger log = LoggerFactory.getLogger(AuthRateLimitFilter.class);
 
-	private static final String LOGIN_PATH = "/api/v1/auth/login";
+	private record LimitedRoute(String name, RateLimitProperties.Rule rule, String tooMany) {
+	}
 
 	private final RateLimiter rateLimiter;
 
-	private final RateLimitProperties properties;
-
 	private final ProblemDetailsWriter problemWriter;
 
-	public LoginRateLimitFilter(RateLimiter rateLimiter, RateLimitProperties properties,
+	/** By path; every limited route is a POST. */
+	private final Map<String, LimitedRoute> routes;
+
+	public AuthRateLimitFilter(RateLimiter rateLimiter, RateLimitProperties properties,
 			ProblemDetailsWriter problemWriter) {
 		this.rateLimiter = rateLimiter;
-		this.properties = properties;
 		this.problemWriter = problemWriter;
+		this.routes = Map.of(
+				"/api/v1/auth/login", new LimitedRoute("login", properties.login(), "Too many login attempts"),
+				"/api/v1/auth/signup", new LimitedRoute("signup", properties.signup(), "Too many signups"),
+				"/api/v1/auth/refresh", new LimitedRoute("refresh", properties.refresh(), "Too many token refreshes"));
 	}
 
 	@Override
 	protected boolean shouldNotFilter(HttpServletRequest request) {
-		return !("POST".equals(request.getMethod()) && LOGIN_PATH.equals(request.getRequestURI()));
+		return !("POST".equals(request.getMethod()) && routes.containsKey(request.getRequestURI()));
 	}
 
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
 			throws ServletException, IOException {
+		LimitedRoute route = routes.get(request.getRequestURI());
 		RateLimiter.Decision decision;
 		try {
-			decision = rateLimiter.tryAcquire("rl:login:" + request.getRemoteAddr(), properties.login());
+			decision = rateLimiter.tryAcquire("rl:" + route.name() + ":" + request.getRemoteAddr(), route.rule());
 		}
 		catch (DataAccessException ex) {
-			log.warn("Rate limiter unavailable; allowing login request", ex);
+			log.warn("Rate limiter unavailable; allowing {} request", route.name(), ex);
 			chain.doFilter(request, response);
 			return;
 		}
@@ -71,7 +80,7 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
 		long retryAfterSeconds = Math.max(1, (decision.retryAfter().toMillis() + 999) / 1000);
 		response.setHeader(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds));
 		problemWriter.write(request, response, ProblemType.RATE_LIMITED
-			.problem("Too many login attempts; try again in " + retryAfterSeconds + " seconds"));
+			.problem(route.tooMany() + "; try again in " + retryAfterSeconds + " seconds"));
 	}
 
 }

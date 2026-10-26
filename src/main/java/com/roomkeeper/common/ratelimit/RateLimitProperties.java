@@ -8,10 +8,17 @@ import jakarta.validation.constraints.NotNull;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
-/** @param login attempts allowed on POST /api/v1/auth/login, per client IP */
+/**
+ * Requests allowed per client IP on each open auth route.
+ *
+ * @param login POST /api/v1/auth/login
+ * @param signup POST /api/v1/auth/signup
+ * @param refresh POST /api/v1/auth/refresh
+ */
 @Validated
 @ConfigurationProperties("roomkeeper.rate-limits")
-public record RateLimitProperties(@NotNull @Valid Rule login) {
+public record RateLimitProperties(@NotNull @Valid Rule login, @NotNull @Valid Rule signup,
+		@NotNull @Valid Rule refresh) {
 
 	/** Up to {@code capacity} requests at once, refilling to full over {@code period}. */
 	public record Rule(@Min(1) int capacity, @NotNull Duration period) {
