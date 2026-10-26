@@ -46,6 +46,9 @@ roomkeeper:
       multiplier: 1.25
       # One calendar for every hotel for now
       dates: 2026-11-08, 2026-12-25, 2026-12-31, 2027-01-01, 2027-01-26
+  booking:
+    # How long unpaid rooms stay held before the expiry job releases them
+    hold-duration: 10m
   cache:
     hotel-info-ttl: 10m
     search-ttl: 60s

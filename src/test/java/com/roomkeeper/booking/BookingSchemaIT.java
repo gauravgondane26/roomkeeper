@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 
+import com.roomkeeper.hotel.Room;
 import com.roomkeeper.testsupport.AbstractDataTest;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,7 +49,8 @@ class BookingSchemaIT extends AbstractDataTest {
 	@Test
 	void savesAHoldAndReadsItBack() {
 		Instant expiresAt = NOW.plusSeconds(600);
-		long id = bookings.save(new Booking(userId, roomId, CHECK_IN, CHECK_OUT, 2, new BigDecimal("16000.00"),
+		Room room = entityManager.getReference(Room.class, roomId);
+		long id = bookings.save(new Booking(userId, room, CHECK_IN, CHECK_OUT, 2, new BigDecimal("16000.00"),
 				expiresAt, NOW)).getId();
 		entityManager.flush();
 		entityManager.clear();
@@ -57,7 +59,7 @@ class BookingSchemaIT extends AbstractDataTest {
 
 		assertThat(booking.getStatus()).isEqualTo(BookingStatus.RESERVED);
 		assertThat(booking.getUserId()).isEqualTo(userId);
-		assertThat(booking.getRoomId()).isEqualTo(roomId);
+		assertThat(booking.getRoom().getId()).isEqualTo(roomId);
 		assertThat(booking.getCheckIn()).isEqualTo(CHECK_IN);
 		assertThat(booking.getCheckOut()).isEqualTo(CHECK_OUT);
 		assertThat(booking.getRoomsCount()).isEqualTo(2);

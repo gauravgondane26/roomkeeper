@@ -144,6 +144,14 @@ check "the cached search no longer finds the hotel" GET \
   "/api/v1/hotels/search?city=$city&checkIn=$check_in&checkOut=$check_out" 200 '"totalHotels":0'
 TOKEN=""
 
+# Week 5: bookings hold rooms
+TOKEN=$guest_token
+stay_in=$(date -u -d '+6 days' +%F)
+stay_out=$(date -u -d '+8 days' +%F)
+check "guest holds two rooms for a stay" POST /api/v1/bookings/init 201 '"status":"RESERVED"'   "{\"roomId\":$room_id,\"checkIn\":\"$stay_in\",\"checkOut\":\"$stay_out\",\"rooms\":2}"
+check "more rooms than are left is sold out" POST /api/v1/bookings/init 409 "urn:roomkeeper:problem:sold-out"   "{\"roomId\":$room_id,\"checkIn\":\"$stay_in\",\"checkOut\":\"$stay_out\",\"rooms\":4}"
+TOKEN=""
+
 # Last, since it uses up this client's login attempts: within 11 tries the limit must hit
 limited=""
 for _ in $(seq 1 11); do

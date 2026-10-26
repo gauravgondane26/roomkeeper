@@ -3,6 +3,8 @@ package com.roomkeeper.inventory;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import com.roomkeeper.pricing.Night;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -88,6 +90,25 @@ public class Inventory {
 	/** Rooms booked or held on this night: the total can't go below this. */
 	public int sold() {
 		return bookedCount + reservedCount;
+	}
+
+	/** Open, with at least {@code rooms} rooms free. */
+	public boolean canSell(int rooms) {
+		return !closed && getAvailable() >= rooms;
+	}
+
+	/** Holds rooms for an unpaid booking. Check {@link #canSell} first. */
+	public void hold(int rooms) {
+		if (!canSell(rooms)) {
+			throw new IllegalStateException("Can't hold " + rooms + " rooms on " + date + ": " + getAvailable()
+					+ " free" + (closed ? ", closed" : ""));
+		}
+		reservedCount += rooms;
+	}
+
+	/** This night as the pricing rules see it, for a room type at {@code basePrice}. */
+	public Night toNight(BigDecimal basePrice) {
+		return new Night(date, basePrice, surgeFactor, totalCount, sold());
 	}
 
 	public BigDecimal getSurgeFactor() {

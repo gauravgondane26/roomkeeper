@@ -35,7 +35,8 @@ public enum ProblemType {
 	INVALID_REFRESH_TOKEN("invalid-refresh-token", HttpStatus.UNAUTHORIZED, "Invalid refresh token"),
 	ROOM_TYPE_EXISTS("room-type-exists", HttpStatus.CONFLICT, "Room type already exists"),
 	TOTAL_BELOW_SOLD("total-below-sold", HttpStatus.CONFLICT, "Total below rooms sold"),
-	HOTEL_NOT_APPROVED("hotel-not-approved", HttpStatus.CONFLICT, "Hotel not approved");
+	HOTEL_NOT_APPROVED("hotel-not-approved", HttpStatus.CONFLICT, "Hotel not approved"),
+	SOLD_OUT("sold-out", HttpStatus.CONFLICT, "Sold out");
 
 	private static final String URN_PREFIX = "urn:roomkeeper:problem:";
 

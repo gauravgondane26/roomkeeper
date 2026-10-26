@@ -6,16 +6,19 @@ import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.roomkeeper.hotel.Room;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
@@ -35,8 +38,9 @@ public class Booking {
 	@Column(name = "user_id", nullable = false)
 	private Long userId;
 
-	@Column(name = "room_id", nullable = false)
-	private Long roomId;
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "room_id", nullable = false)
+	private Room room;
 
 	@Column(name = "check_in", nullable = false)
 	private LocalDate checkIn;
@@ -73,10 +77,10 @@ public class Booking {
 	}
 
 	/** A new hold on the rooms, until {@code holdExpiresAt}. */
-	public Booking(Long userId, Long roomId, LocalDate checkIn, LocalDate checkOut, int roomsCount, BigDecimal amount,
+	public Booking(Long userId, Room room, LocalDate checkIn, LocalDate checkOut, int roomsCount, BigDecimal amount,
 			Instant holdExpiresAt, Instant createdAt) {
 		this.userId = userId;
-		this.roomId = roomId;
+		this.room = room;
 		this.checkIn = checkIn;
 		this.checkOut = checkOut;
 		this.roomsCount = roomsCount;
@@ -93,8 +97,8 @@ public class Booking {
 		return userId;
 	}
 
-	public Long getRoomId() {
-		return roomId;
+	public Room getRoom() {
+		return room;
 	}
 
 	public LocalDate getCheckIn() {
