@@ -22,12 +22,12 @@ public class ProfileController {
 
 	@GetMapping
 	public UserResponse get(@CurrentUserId long userId) {
-		return UserResponse.from(userService.get(userId));
+		return userService.get(userId);
 	}
 
 	@PatchMapping
 	public UserResponse update(@CurrentUserId long userId, @Valid @RequestBody UpdateProfileRequest request) {
-		return UserResponse.from(userService.updateProfile(userId, request));
+		return userService.updateProfile(userId, request);
 	}
 
 }

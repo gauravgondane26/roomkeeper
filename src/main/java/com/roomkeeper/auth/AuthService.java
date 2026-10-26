@@ -8,7 +8,9 @@ import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.ProblemType;
 import com.roomkeeper.user.Role;
 import com.roomkeeper.user.User;
+import com.roomkeeper.user.UserMapper;
 import com.roomkeeper.user.UserRepository;
+import com.roomkeeper.user.UserResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -23,6 +25,8 @@ public class AuthService {
 	private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
 	private final UserRepository users;
+
+	private final UserMapper userMapper;
 
 	private final PasswordEncoder passwordEncoder;
 
@@ -40,9 +44,10 @@ public class AuthService {
 	 */
 	private final String dummyPasswordHash;
 
-	public AuthService(UserRepository users, PasswordEncoder passwordEncoder, AccessTokenService accessTokens,
+	public AuthService(UserRepository users, UserMapper userMapper, PasswordEncoder passwordEncoder, AccessTokenService accessTokens,
 			RefreshTokenStore refreshTokens, AuthProperties properties, Clock clock) {
 		this.users = users;
+		this.userMapper = userMapper;
 		this.passwordEncoder = passwordEncoder;
 		this.accessTokens = accessTokens;
 		this.refreshTokens = refreshTokens;
@@ -52,7 +57,7 @@ public class AuthService {
 	}
 
 	@Transactional
-	public User signup(SignupRequest request) {
+	public UserResponse signup(SignupRequest request) {
 		String email = normalizeEmail(request.email());
 		if (users.existsByEmail(email)) {
 			throw new EmailAlreadyRegisteredException();
@@ -61,7 +66,7 @@ public class AuthService {
 		User user = new User(email, passwordEncoder.encode(request.password()), request.name().strip(), role,
 				clock.instant());
 		try {
-			return users.saveAndFlush(user);
+			return userMapper.toResponse(users.saveAndFlush(user));
 		}
 		catch (DataIntegrityViolationException ex) {
 			// Two signups with the same email raced past the check; the unique index caught it

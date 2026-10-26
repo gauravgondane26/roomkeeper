@@ -10,8 +10,10 @@ import com.roomkeeper.common.error.ProblemType;
 import com.roomkeeper.testsupport.MutableClock;
 import com.roomkeeper.user.Role;
 import com.roomkeeper.user.User;
+import com.roomkeeper.user.UserMapper;
 import com.roomkeeper.user.UserRepository;
 import org.junit.jupiter.api.Test;
+import org.mapstruct.factory.Mappers;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -40,7 +42,7 @@ class AuthServiceRedisDownTest {
 
 	private final RefreshTokenStore refreshTokens = mock(RefreshTokenStore.class);
 
-	private final AuthService authService = new AuthService(users, passwordEncoder,
+	private final AuthService authService = new AuthService(users, Mappers.getMapper(UserMapper.class), passwordEncoder,
 			new AccessTokenService(JwtConfig.encoder(JwtConfig.secretKey(SECRET)), properties, clock), refreshTokens,
 			properties, clock);
 

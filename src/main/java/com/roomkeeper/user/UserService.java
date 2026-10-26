@@ -10,22 +10,25 @@ public class UserService {
 
 	private final UserRepository users;
 
-	public UserService(UserRepository users) {
+	private final UserMapper mapper;
+
+	public UserService(UserRepository users, UserMapper mapper) {
 		this.users = users;
+		this.mapper = mapper;
 	}
 
 	@Transactional(readOnly = true)
-	public User get(long userId) {
-		return find(userId);
+	public UserResponse get(long userId) {
+		return mapper.toResponse(find(userId));
 	}
 
 	@Transactional
-	public User updateProfile(long userId, UpdateProfileRequest request) {
+	public UserResponse updateProfile(long userId, UpdateProfileRequest request) {
 		User user = find(userId);
 		if (request.name() != null) {
 			user.changeName(request.name().strip());
 		}
-		return user;
+		return mapper.toResponse(user);
 	}
 
 	private User find(long userId) {

@@ -21,6 +21,7 @@
 		<rest-assured.version>6.2.0</rest-assured.version>
 		<jacoco.version>0.8.15</jacoco.version>
 		<springdoc.version>3.1.1</springdoc.version>
+		<mapstruct.version>1.6.3</mapstruct.version>
 		<!-- CI runs unit tests in their own step, then `verify -DskipUnitTests` for the rest -->
 		<skipUnitTests>false</skipUnitTests>
 	</properties>
@@ -65,6 +66,11 @@
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 			<version>${springdoc.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.mapstruct</groupId>
+			<artifactId>mapstruct</artifactId>
+			<version>${mapstruct.version}</version>
 		</dependency>
 
 		<dependency>
@@ -140,6 +146,20 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<!-- MapStruct generates the entity-to-DTO mappers at compile time -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.mapstruct</groupId>
+							<artifactId>mapstruct-processor</artifactId>
+							<version>${mapstruct.version}</version>
+						</path>
+					</annotationProcessorPaths>
+				</configuration>
 			</plugin>
 			<!-- Unit tests: *Test -->
 			<plugin>
