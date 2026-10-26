@@ -80,7 +80,7 @@ class HotelBrowseIT extends AbstractIntegrationTest {
 	@Test
 	void aHotelClosedForOneNightOfTheStayDropsOut() {
 		long hotel = activeHotel("Seaside", "4000");
-		long roomId = roomOf(hotel);
+		long roomId = firstRoomOf(manager, hotel);
 
 		api(manager).contentType(ContentType.JSON).body(Map.of("from", "2026-03-13", "to", "2026-03-13", "closed", true))
 			.when().patch("/api/v1/admin/inventory/rooms/{roomId}", roomId)
@@ -118,7 +118,7 @@ class HotelBrowseIT extends AbstractIntegrationTest {
 		long hotel = createHotel(manager, aHotel().named("Seaside Inn").inCity(city).inTimeZone("Asia/Kolkata").build());
 		createRoom(manager, hotel, aRoom().ofType("Deluxe").pricedAt("4500").sleeping(2).build());
 		createRoom(manager, hotel, aRoom().ofType("Suite").pricedAt("8000").sleeping(4).build());
-		activate(hotel);
+		activateHotel(manager, hotel);
 
 		api()
 			.when().get("/api/v1/hotels/{id}/info", hotel)
@@ -148,19 +148,7 @@ class HotelBrowseIT extends AbstractIntegrationTest {
 	}
 
 	private long activeHotel(String name, String price) {
-		long hotel = createHotel(manager, aHotel().named(name).inCity(city).build());
-		createRoom(manager, hotel, aRoom().pricedAt(price).build());
-		activate(hotel);
-		return hotel;
-	}
-
-	private void activate(long hotel) {
-		activateHotel(manager, hotel);
-	}
-
-	private long roomOf(long hotel) {
-		return api(manager).when().get("/api/v1/admin/hotels/{id}/rooms", hotel)
-			.then().extract().jsonPath().getLong("[0].id");
+		return activeHotel(manager, aHotel().named(name).inCity(city).build(), aRoom().pricedAt(price).build());
 	}
 
 	/** Searches the test's city for the stay, with any parameters overridden. */

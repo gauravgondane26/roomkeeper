@@ -2,7 +2,6 @@ package com.roomkeeper.inventory;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.Map;
 
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
@@ -15,7 +14,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import static com.roomkeeper.testsupport.HotelBuilder.aHotel;
 import static com.roomkeeper.testsupport.RoomBuilder.aRoom;
@@ -32,9 +30,6 @@ class RoomTotalChangeIT extends AbstractIntegrationTest {
 
 	@Autowired
 	MutableClock clock;
-
-	@Autowired
-	JdbcTemplate jdbc;
 
 	private TestUser managerUser;
 
@@ -58,8 +53,8 @@ class RoomTotalChangeIT extends AbstractIntegrationTest {
 	void everyFutureNightFollowsTheNewTotal() {
 		changeRoomTotal(8).statusCode(200);
 
-		nights("2026-03-10", "2026-03-12").body("totalCount", contains(8, 8, 8));
-		nights("2027-03-09", "2027-03-09").body("totalCount", contains(8));
+		nightsOf(manager, roomId, "2026-03-10", "2026-03-12").body("totalCount", contains(8, 8, 8));
+		nightsOf(manager, roomId, "2027-03-09", "2027-03-09").body("totalCount", contains(8));
 	}
 
 	@Test
@@ -67,11 +62,11 @@ class RoomTotalChangeIT extends AbstractIntegrationTest {
 		api(manager).contentType(ContentType.JSON).body(Map.of("from", "2026-03-15", "to", "2026-03-15", "totalCount", 2))
 			.when().patch("/api/v1/admin/inventory/rooms/{roomId}", roomId)
 			.then().statusCode(200);
-		nights("2026-03-14", "2026-03-16").body("totalOverridden", contains(false, true, false));
+		nightsOf(manager, roomId, "2026-03-14", "2026-03-16").body("totalOverridden", contains(false, true, false));
 
 		changeRoomTotal(8).statusCode(200);
 
-		nights("2026-03-14", "2026-03-16").body("totalCount", contains(8, 2, 8));
+		nightsOf(manager, roomId, "2026-03-14", "2026-03-16").body("totalCount", contains(8, 2, 8));
 	}
 
 	@Test
@@ -81,12 +76,12 @@ class RoomTotalChangeIT extends AbstractIntegrationTest {
 
 		changeRoomTotal(8).statusCode(200);
 
-		nights("2026-03-10", "2026-03-13").body("totalCount", contains(5, 5, 8, 8));
+		nightsOf(manager, roomId, "2026-03-10", "2026-03-13").body("totalCount", contains(5, 5, 8, 8));
 	}
 
 	@Test
 	void rejectsATotalBelowWhatIsAlreadyBookedOrHeld() {
-		sell("2026-03-15", 3, 1);
+		sellRooms(roomId, "2026-03-15", 3, 1);
 
 		changeRoomTotal(3)
 			.statusCode(409)
@@ -97,7 +92,7 @@ class RoomTotalChangeIT extends AbstractIntegrationTest {
 		api(manager)
 			.when().get("/api/v1/admin/hotels/{hotelId}/rooms/{roomId}", hotelId, roomId)
 			.then().body("totalCount", equalTo(5));
-		nights("2026-03-14", "2026-03-16").body("totalCount", contains(5, 5, 5));
+		nightsOf(manager, roomId, "2026-03-14", "2026-03-16").body("totalCount", contains(5, 5, 5));
 	}
 
 	@Test
@@ -110,25 +105,13 @@ class RoomTotalChangeIT extends AbstractIntegrationTest {
 			.when().put("/api/v1/admin/hotels/{hotelId}/rooms/{roomId}", hotelId, roomId)
 			.then().statusCode(200);
 
-		nights("2026-03-14", "2026-03-16").body("totalCount", contains(5, 2, 5));
+		nightsOf(manager, roomId, "2026-03-14", "2026-03-16").body("totalCount", contains(5, 2, 5));
 	}
 
 	private ValidatableResponse changeRoomTotal(int totalCount) {
 		return api(manager).contentType(ContentType.JSON).body(aRoom().withTotalCount(totalCount).build())
 			.when().put("/api/v1/admin/hotels/{hotelId}/rooms/{roomId}", hotelId, roomId)
 			.then();
-	}
-
-	/** Stands in for bookings (week 5): marks rooms on a night as booked and held. */
-	private void sell(String night, int booked, int reserved) {
-		jdbc.update("update inventory set booked_count = ?, reserved_count = ? where room_id = ? and date = ?", booked,
-				reserved, roomId, LocalDate.parse(night));
-	}
-
-	private ValidatableResponse nights(String from, String to) {
-		return api(manager).queryParam("from", from).queryParam("to", to)
-			.when().get("/api/v1/admin/inventory/rooms/{roomId}", roomId)
-			.then().statusCode(200);
 	}
 
 }

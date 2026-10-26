@@ -11,7 +11,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -37,22 +36,16 @@ class HotelSearchRepositoryIT extends AbstractDataTest {
 	@Autowired
 	HotelSearchRepository repository;
 
-	@Autowired
-	JdbcTemplate jdbc;
-
 	@BeforeEach
 	void createAnOwner() {
 		city = "City-" + UUID.randomUUID();
-		ownerId = jdbc.queryForObject("""
-				insert into users (email, password_hash, name, role, created_at)
-				values (?, 'not-a-real-hash', 'Owner', 'HOTEL_MANAGER', now()) returning id""",
-				Long.class, "owner-" + UUID.randomUUID() + "@example.com");
+		ownerId = insertManager();
 	}
 
 	@Test
 	void findsAHotelWithARoomFreeEveryNight() {
 		long hotel = activeHotel("UTC");
-		openNights(room(hotel), 5);
+		openNights(insertRoom(hotel), 5);
 
 		assertThat(searchIds(1)).containsExactly(hotel);
 	}
@@ -60,9 +53,9 @@ class HotelSearchRepositoryIT extends AbstractDataTest {
 	@Test
 	void skipsAHotelWithOneSoldOutNight() {
 		long hotel = activeHotel("UTC");
-		long room = room(hotel);
+		long room = insertRoom(hotel);
 		openNights(room, 5);
-		sell(room, "2026-03-13", 5);
+		setBooked(room, LocalDate.parse("2026-03-13"), 5);
 
 		assertThat(searchIds(1)).isEmpty();
 	}
@@ -70,11 +63,11 @@ class HotelSearchRepositoryIT extends AbstractDataTest {
 	@Test
 	void anyOneRoomTypeFreeEveryNightIsEnough() {
 		long hotel = activeHotel("UTC");
-		long deluxe = room(hotel);
-		long suite = room(hotel);
+		long deluxe = insertRoom(hotel);
+		long suite = insertRoom(hotel);
 		openNights(deluxe, 5);
 		openNights(suite, 2);
-		sell(deluxe, "2026-03-13", 5);
+		setBooked(deluxe, LocalDate.parse("2026-03-13"), 5);
 
 		assertThat(searchIds(1)).containsExactly(hotel);
 	}
@@ -83,12 +76,12 @@ class HotelSearchRepositoryIT extends AbstractDataTest {
 	void theSameRoomTypeMustBeFreeEveryNight() {
 		// Each night has a free room, but switching rooms mid-stay isn't offered
 		long hotel = activeHotel("UTC");
-		long deluxe = room(hotel);
-		long suite = room(hotel);
+		long deluxe = insertRoom(hotel);
+		long suite = insertRoom(hotel);
 		openNights(deluxe, 5);
 		openNights(suite, 2);
-		sell(deluxe, "2026-03-14", 5);
-		sell(suite, "2026-03-12", 2);
+		setBooked(deluxe, LocalDate.parse("2026-03-14"), 5);
+		setBooked(suite, LocalDate.parse("2026-03-12"), 2);
 
 		assertThat(searchIds(1)).isEmpty();
 	}
@@ -96,9 +89,9 @@ class HotelSearchRepositoryIT extends AbstractDataTest {
 	@Test
 	void needsEnoughRoomsForTheParty() {
 		long hotel = activeHotel("UTC");
-		long room = room(hotel);
+		long room = insertRoom(hotel);
 		openNights(room, 5);
-		sell(room, "2026-03-13", 3);
+		setBooked(room, LocalDate.parse("2026-03-13"), 3);
 
 		assertThat(searchIds(2)).containsExactly(hotel);
 		assertThat(searchIds(3)).isEmpty();
@@ -107,7 +100,7 @@ class HotelSearchRepositoryIT extends AbstractDataTest {
 	@Test
 	void skipsClosedNights() {
 		long hotel = activeHotel("UTC");
-		long room = room(hotel);
+		long room = insertRoom(hotel);
 		openNights(room, 5);
 		jdbc.update("update inventory set closed = true where room_id = ? and date = ?", room,
 				LocalDate.parse("2026-03-14"));
@@ -117,8 +110,8 @@ class HotelSearchRepositoryIT extends AbstractDataTest {
 
 	@Test
 	void skipsInactiveHotels() {
-		long hotel = hotel("UTC", false);
-		openNights(room(hotel), 5);
+		long hotel = insertHotel(ownerId, city, "UTC", false);
+		openNights(insertRoom(hotel), 5);
 
 		assertThat(searchIds(1)).isEmpty();
 	}
@@ -126,10 +119,10 @@ class HotelSearchRepositoryIT extends AbstractDataTest {
 	@Test
 	void skipsAStayReachingPastTheInventory() {
 		long hotel = activeHotel("UTC");
-		long room = room(hotel);
+		long room = insertRoom(hotel);
 		// Only the 12th and 13th exist
-		insertNight(room, "2026-03-12", 5);
-		insertNight(room, "2026-03-13", 5);
+		insertNight(room, LocalDate.parse("2026-03-12"), 5);
+		insertNight(room, LocalDate.parse("2026-03-13"), 5);
 
 		assertThat(searchIds(1)).isEmpty();
 	}
@@ -137,7 +130,7 @@ class HotelSearchRepositoryIT extends AbstractDataTest {
 	@Test
 	void matchesTheCityIgnoringCaseAndOnlyThatCity() {
 		long hotel = activeHotel("UTC");
-		openNights(room(hotel), 5);
+		openNights(insertRoom(hotel), 5);
 
 		var upperCase = repository.search(new SearchCriteria(city.toUpperCase(), CHECK_IN, CHECK_OUT, 1), NOW, 20, 0);
 		var otherCity = repository.search(new SearchCriteria(city + "-elsewhere", CHECK_IN, CHECK_OUT, 1), NOW, 20, 0);
@@ -152,8 +145,8 @@ class HotelSearchRepositoryIT extends AbstractDataTest {
 		Instant lateOnThe11th = Instant.parse("2026-03-11T21:00:00Z");
 		long kolkata = activeHotel("Asia/Kolkata");
 		long utc = activeHotel("UTC");
-		openNightsFrom(room(kolkata), "2026-03-11", 5);
-		openNightsFrom(room(utc), "2026-03-11", 5);
+		openNightsFrom(insertRoom(kolkata), "2026-03-11", 5);
+		openNightsFrom(insertRoom(utc), "2026-03-11", 5);
 		var stayFromThe11th = new SearchCriteria(city, LocalDate.parse("2026-03-11"), CHECK_OUT, 1);
 
 		assertThat(repository.search(stayFromThe11th, lateOnThe11th, 20, 0)).extracting(HotelMatch::id)
@@ -163,7 +156,7 @@ class HotelSearchRepositoryIT extends AbstractDataTest {
 	@Test
 	void returnsDetailsAndTheCheapestNightlyPriceOfTheStay() {
 		long hotel = activeHotel("UTC");
-		openNights(room(hotel), 5);
+		openNights(insertRoom(hotel), 5);
 		minPrice(hotel, "2026-03-11", "1000.00"); // before the stay: ignored
 		minPrice(hotel, "2026-03-12", "4000.00");
 		minPrice(hotel, "2026-03-13", "3500.00");
@@ -183,7 +176,7 @@ class HotelSearchRepositoryIT extends AbstractDataTest {
 		long cheap = activeHotel("UTC");
 		long middle = activeHotel("UTC");
 		for (long hotel : new long[] { pricey, cheap, middle }) {
-			openNights(room(hotel), 5);
+			openNights(insertRoom(hotel), 5);
 		}
 		minPrice(pricey, "2026-03-12", "9000.00");
 		minPrice(cheap, "2026-03-12", "2000.00");
@@ -203,23 +196,7 @@ class HotelSearchRepositoryIT extends AbstractDataTest {
 	}
 
 	private long activeHotel(String timeZone) {
-		return hotel(timeZone, true);
-	}
-
-	private long hotel(String timeZone, boolean active) {
-		long id = jdbc.queryForObject("""
-				insert into hotels (owner_id, name, city, time_zone, amenities, active, created_at)
-				values (?, 'pending', ?, ?, '{wifi,pool}', ?, now()) returning id""",
-				Long.class, ownerId, city, timeZone, active);
-		jdbc.update("update hotels set name = ? where id = ?", "Hotel " + id, id);
-		return id;
-	}
-
-	private long room(long hotelId) {
-		return jdbc.queryForObject("""
-				insert into rooms (hotel_id, type, base_price, capacity, total_count, created_at)
-				values (?, ?, 4000.00, 2, 5, now()) returning id""", Long.class, hotelId,
-				"Type-" + UUID.randomUUID());
+		return insertHotel(ownerId, city, timeZone, true);
 	}
 
 	/** Open nights from the 10th to the 20th, each with {@code total} rooms. */
@@ -230,19 +207,9 @@ class HotelSearchRepositoryIT extends AbstractDataTest {
 	private void openNightsFrom(long roomId, String first, int total) {
 		LocalDate night = LocalDate.parse(first);
 		while (!night.isAfter(LocalDate.parse("2026-03-20"))) {
-			insertNight(roomId, night.toString(), total);
+			insertNight(roomId, night, total);
 			night = night.plusDays(1);
 		}
-	}
-
-	private void insertNight(long roomId, String night, int total) {
-		jdbc.update("insert into inventory (room_id, date, total_count) values (?, ?, ?)", roomId,
-				LocalDate.parse(night), total);
-	}
-
-	private void sell(long roomId, String night, int booked) {
-		jdbc.update("update inventory set booked_count = ? where room_id = ? and date = ?", booked, roomId,
-				LocalDate.parse(night));
 	}
 
 	private void minPrice(long hotelId, String night, String price) {

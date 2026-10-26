@@ -66,28 +66,28 @@ check "login returns a bearer token" POST /api/v1/auth/login 200 '"tokenType":"B
 check "wrong password is a 401 problem" POST /api/v1/auth/login 401 \
   "urn:roomkeeper:problem:invalid-credentials" "{\"email\":\"$email\",\"password\":\"wrong-password\"}"
 
-# access_token <email>: logs in with the smoke password and prints the access token
-access_token() {
+# login <email> [password] [field]: logs in and prints one field of the token response,
+# the access token by default; the password defaults to the smoke password
+login() {
   curl -s -H 'Content-Type: application/json' \
-    -d "{\"email\":\"$1\",\"password\":\"smoke-test-password\"}" "$BASE_URL/api/v1/auth/login" \
-    | sed -nE 's/.*"accessToken":"([^"]+)".*/\1/p'
+    -d "{\"email\":\"$1\",\"password\":\"${2:-smoke-test-password}\"}" "$BASE_URL/api/v1/auth/login" \
+    | sed -nE "s/.*\"${3:-accessToken}\":\"([^\"]+)\".*/\1/p"
 }
-guest_token=$(access_token "$email")
+# last_id: the id at the start of the last response body
+last_id() {
+  sed -nE 's/^\{"id":([0-9]+).*/\1/p' <<<"$last_body"
+}
+guest_token=$(login "$email")
 TOKEN=$guest_token
 check "profile with the token" GET /api/v1/users/profile 200 "\"email\":\"$email\""
 check "profile name update" PATCH /api/v1/users/profile 200 '"name":"Smoke Renamed"' '{"name":"Smoke Renamed"}'
 TOKEN=""
 
-refresh_token() {
-  curl -s -H 'Content-Type: application/json' \
-    -d "{\"email\":\"$email\",\"password\":\"smoke-test-password\"}" "$BASE_URL/api/v1/auth/login" \
-    | sed -nE 's/.*"refreshToken":"([^"]+)".*/\1/p'
-}
-rotated="{\"refreshToken\":\"$(refresh_token)\"}"
+rotated="{\"refreshToken\":\"$(login "$email" "" refreshToken)\"}"
 check "refresh issues a new token pair" POST /api/v1/auth/refresh 200 '"refreshToken"' "$rotated"
 check "a used refresh token is rejected" POST /api/v1/auth/refresh 401 \
   "urn:roomkeeper:problem:invalid-refresh-token" "$rotated"
-logged_out="{\"refreshToken\":\"$(refresh_token)\"}"
+logged_out="{\"refreshToken\":\"$(login "$email" "" refreshToken)\"}"
 check "logout succeeds" POST /api/v1/auth/logout 204 "" "$logged_out"
 check "refresh after logout is rejected" POST /api/v1/auth/refresh 401 \
   "urn:roomkeeper:problem:invalid-refresh-token" "$logged_out"
@@ -98,25 +98,23 @@ check "guests can't manage hotels" GET /api/v1/admin/hotels 403 "urn:roomkeeper:
 manager_email="smoke-manager-$(date +%s)-$RANDOM@example.com"
 check "signup creates a hotel manager" POST /api/v1/auth/signup 201 '"role":"HOTEL_MANAGER"' \
   "{\"email\":\"$manager_email\",\"password\":\"smoke-test-password\",\"name\":\"Smoke Manager\",\"role\":\"HOTEL_MANAGER\"}"
-TOKEN=$(access_token "$manager_email")
+TOKEN=$(login "$manager_email")
 # A city of its own, so searches only find this run's hotel
 city="SmokeCity$(date +%s)$RANDOM"
 check "manager creates a hotel" POST /api/v1/admin/hotels 201 '"timeZone":"Asia/Kolkata"' \
   "{\"name\":\"Smoke Hotel\",\"city\":\"$city\",\"timeZone\":\"Asia/Kolkata\",\"amenities\":[\"wifi\"]}"
-hotel_id=$(sed -nE 's/^\{"id":([0-9]+).*/\1/p' <<<"$last_body")
+hotel_id=$(last_id)
 check "manager lists their hotels" GET /api/v1/admin/hotels 200 '"name":"Smoke Hotel"'
 check "manager reads their hotel" GET "/api/v1/admin/hotels/$hotel_id" 200 "\"id\":$hotel_id"
 check "manager adds a room type" POST "/api/v1/admin/hotels/$hotel_id/rooms" 201 '"basePrice":4500.00' \
   '{"type":"Deluxe","basePrice":4500,"capacity":2,"totalCount":5}'
-room_id=$(sed -nE 's/^\{"id":([0-9]+).*/\1/p' <<<"$last_body")
+room_id=$(last_id)
 check "manager lists the hotel's rooms" GET "/api/v1/admin/hotels/$hotel_id/rooms" 200 "\"id\":$room_id"
 check "a hotel can't go on sale before review" PATCH "/api/v1/admin/hotels/$hotel_id/activate" 409 \
   "urn:roomkeeper:problem:hotel-not-approved"
 manager_token=$TOKEN
 # The development admin from compose.yaml; override with ADMIN_EMAIL / ADMIN_PASSWORD
-TOKEN=$(curl -s -H 'Content-Type: application/json' \
-  -d "{\"email\":\"${ADMIN_EMAIL:-admin@roomkeeper.local}\",\"password\":\"${ADMIN_PASSWORD:-local-admin-password}\"}" \
-  "$BASE_URL/api/v1/auth/login" | sed -nE 's/.*"accessToken":"([^"]+)".*/\1/p')
+TOKEN=$(login "${ADMIN_EMAIL:-admin@roomkeeper.local}" "${ADMIN_PASSWORD:-local-admin-password}")
 check "the hotel is in the review queue" GET /api/v1/moderation/hotels 200 "\"id\":$hotel_id"
 check "admin approves the hotel" PATCH "/api/v1/moderation/hotels/$hotel_id/approve" 200 '"approvalStatus":"APPROVED"'
 TOKEN=$manager_token

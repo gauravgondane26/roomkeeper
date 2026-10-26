@@ -1,10 +1,12 @@
 package com.roomkeeper.testsupport;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 import io.restassured.config.JsonConfig;
 import io.restassured.config.RestAssuredConfig;
 import io.restassured.http.ContentType;
+import io.restassured.response.ValidatableResponse;
 import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +16,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -40,6 +43,9 @@ public abstract class AbstractIntegrationTest {
 
 	@Autowired
 	private StringRedisTemplate redis;
+
+	@Autowired
+	private JdbcTemplate database;
 
 	@Value("${roomkeeper.admin.email}")
 	private String adminEmail;
@@ -130,6 +136,37 @@ public abstract class AbstractIntegrationTest {
 			.when().post("/api/v1/admin/hotels")
 			.then().statusCode(201)
 			.extract().jsonPath().getLong("id");
+	}
+
+	/**
+	 * Creates a hotel with one room type as the manager, has the admin approve it, activates
+	 * it, and returns the hotel's id.
+	 */
+	protected long activeHotel(String managerToken, Map<String, Object> hotel, Map<String, Object> room) {
+		long hotelId = createHotel(managerToken, hotel);
+		createRoom(managerToken, hotelId, room);
+		activateHotel(managerToken, hotelId);
+		return hotelId;
+	}
+
+	/** The id of the hotel's first room type. */
+	protected long firstRoomOf(String managerToken, long hotelId) {
+		return api(managerToken).when().get("/api/v1/admin/hotels/{id}/rooms", hotelId)
+			.then().statusCode(200)
+			.extract().jsonPath().getLong("[0].id");
+	}
+
+	/** A room type's nights from {@code from} to {@code to}, as its manager sees them. */
+	protected ValidatableResponse nightsOf(String managerToken, long roomId, String from, String to) {
+		return api(managerToken).queryParam("from", from).queryParam("to", to)
+			.when().get("/api/v1/admin/inventory/rooms/{roomId}", roomId)
+			.then();
+	}
+
+	/** Sets a night's booked and held rooms directly, for tests that need sold rooms without bookings. */
+	protected void sellRooms(long roomId, String night, int booked, int reserved) {
+		database.update("update inventory set booked_count = ?, reserved_count = ? where room_id = ? and date = ?",
+				booked, reserved, roomId, LocalDate.parse(night));
 	}
 
 	/** Adds a room type to the hotel and returns its id. */

@@ -56,7 +56,7 @@ class SearchCacheEvictionIT extends AbstractIntegrationTest {
 
 		// The manager closes the Friday night of the stay
 		api(manager).contentType(ContentType.JSON).body(Map.of("from", "2026-03-13", "to", "2026-03-13", "closed", true))
-			.when().patch("/api/v1/admin/inventory/rooms/{roomId}", roomOf(hotel))
+			.when().patch("/api/v1/admin/inventory/rooms/{roomId}", firstRoomOf(manager, hotel))
 			.then().statusCode(200);
 
 		search(city).body("totalHotels", equalTo(0));
@@ -80,7 +80,7 @@ class SearchCacheEvictionIT extends AbstractIntegrationTest {
 		long hotel = activeHotel(city);
 
 		api(manager).contentType(ContentType.JSON).body(Map.of("from", "2026-03-13", "to", "2026-03-13", "closed", true))
-			.when().patch("/api/v1/admin/inventory/rooms/{roomId}", roomOf(hotel))
+			.when().patch("/api/v1/admin/inventory/rooms/{roomId}", firstRoomOf(manager, hotel))
 			.then().statusCode(200);
 
 		assertThat(redis.keys("search:" + SearchQuery.cityKey(otherCity) + ":*")).hasSize(1);
@@ -95,7 +95,7 @@ class SearchCacheEvictionIT extends AbstractIntegrationTest {
 		long scansBefore = scanCalls();
 
 		api(manager).contentType(ContentType.JSON).body(Map.of("from", "2026-03-13", "to", "2026-03-13", "closed", true))
-			.when().patch("/api/v1/admin/inventory/rooms/{roomId}", roomOf(hotel))
+			.when().patch("/api/v1/admin/inventory/rooms/{roomId}", firstRoomOf(manager, hotel))
 			.then().statusCode(200);
 
 		search(city).body("totalHotels", equalTo(0));
@@ -111,15 +111,7 @@ class SearchCacheEvictionIT extends AbstractIntegrationTest {
 	}
 
 	private long activeHotel(String inCity) {
-		long hotel = createHotel(manager, aHotel().inCity(inCity).build());
-		createRoom(manager, hotel, aRoom().build());
-		activateHotel(manager, hotel);
-		return hotel;
-	}
-
-	private long roomOf(long hotel) {
-		return api(manager).when().get("/api/v1/admin/hotels/{id}/rooms", hotel)
-			.then().extract().jsonPath().getLong("[0].id");
+		return activeHotel(manager, aHotel().inCity(inCity).build(), aRoom().build());
 	}
 
 	/** Thursday 12 to Sunday 15 March, which includes the Friday night. */

@@ -65,10 +65,7 @@ class HotelTimeZoneIT extends AbstractIntegrationTest {
 	}
 
 	private long activeHotelWithARoom(String timeZone) {
-		long hotelId = createHotel(manager, aHotel().inTimeZone(timeZone).build());
-		long roomId = createRoom(manager, hotelId, aRoom().build());
-		activateHotel(manager, hotelId);
-		return roomId;
+		return firstRoomOf(manager, activeHotel(manager, aHotel().inTimeZone(timeZone).build(), aRoom().build()));
 	}
 
 	private void firstNightOf(long roomId, String expectedDate) {
