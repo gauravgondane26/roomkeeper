@@ -104,7 +104,7 @@ Goal: no oversell under load, and holds always release.
 - [x] Test: 50 concurrent requests for the last room, exactly one succeeds
 - [x] Guest CRUD on `/users/guests`
 - [x] `POST /bookings/{id}/guests`, validated against room capacity
-- [ ] `GET /bookings/{id}/status` and `GET /users/bookings`
+- [x] `GET /bookings/{id}/status` and `GET /users/bookings`
 - [ ] Hold expiry job: releases `reserved_count` and marks bookings Expired; test with a fixed clock, no `Thread.sleep`
 - [ ] Redis job lock (`lock:hold-expiry`); test that only one instance runs the job
 - [ ] Daily inventory roll job (`lock:inventory-roll`): keeps every active room type open a year ahead and fills any missed nights; test with a fixed clock

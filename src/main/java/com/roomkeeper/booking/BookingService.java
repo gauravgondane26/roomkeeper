@@ -19,6 +19,9 @@ import com.roomkeeper.inventory.InventoryRepository;
 import com.roomkeeper.pricing.PriceQuote;
 import com.roomkeeper.pricing.PricingChain;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class BookingService {
 
 	static final int MAX_NIGHTS = 30;
+
+	static final int DEFAULT_PAGE_SIZE = 20;
 
 	private final BookingRepository bookings;
 
@@ -93,20 +98,51 @@ public class BookingService {
 		boolean soldOut = nights.stream().anyMatch(night -> night.getAvailable() == 0);
 		events.publishEvent(
 				InventoryChangedEvent.sale(hotel.getId(), hotel.getCity(), request.checkIn(), lastNight, soldOut));
-		return mapper.toResponse(booking);
+		return mapper.toResponse(booking, now);
+	}
+
+	@Transactional(readOnly = true)
+	public BookingResponse get(long userId, long bookingId) {
+		return mapper.toResponse(findOwned(userId, bookingId), clock.instant());
+	}
+
+	@Transactional(readOnly = true)
+	public BookingStatusResponse status(long userId, long bookingId) {
+		return mapper.toStatus(findOwned(userId, bookingId), clock.instant());
+	}
+
+	/** The user's bookings, newest first. */
+	@Transactional(readOnly = true)
+	public BookingPageResponse list(long userId, BookingPageRequest request) {
+		int page = request.page() != null ? request.page() : 0;
+		int size = request.size() != null ? request.size() : DEFAULT_PAGE_SIZE;
+		Page<Booking> found = bookings.findByUserId(userId,
+				PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))));
+		Instant now = clock.instant();
+		return new BookingPageResponse(found.map(booking -> mapper.toResponse(booking, now)).getContent(), page, size,
+				found.getTotalElements(), found.getTotalPages());
 	}
 
 	/** Puts the user's saved guests on their booking, in place of any already on it, while the rooms are held. */
 	@Transactional
 	public BookingResponse putGuests(long userId, long bookingId, BookingGuestsRequest request) {
 		// Locked, so the expiry job can't release the rooms halfway through
-		Booking booking = bookings.lockOwned(bookingId, userId)
-			.orElseThrow(() -> new ApiException(ProblemType.NOT_FOUND, "Booking " + bookingId + " not found"));
+		Booking booking = bookings.lockOwned(bookingId, userId).orElseThrow(() -> notFound(bookingId));
 		List<Guest> staying = new LinkedHashSet<>(request.guestIds()).stream()
 			.map(guestId -> guests.findOwned(userId, guestId))
 			.toList();
-		booking.putGuests(staying, clock.instant());
-		return mapper.toResponse(booking);
+		Instant now = clock.instant();
+		booking.putGuests(staying, now);
+		return mapper.toResponse(booking, now);
+	}
+
+	/** The user's booking: 404 if it doesn't exist or is someone else's. */
+	private Booking findOwned(long userId, long bookingId) {
+		return bookings.findByIdAndUserId(bookingId, userId).orElseThrow(() -> notFound(bookingId));
+	}
+
+	private static ApiException notFound(long bookingId) {
+		return new ApiException(ProblemType.NOT_FOUND, "Booking " + bookingId + " not found");
 	}
 
 	/** The stay's last night, after checking the stay is 1 to {@value #MAX_NIGHTS} nights from the hotel's today. */

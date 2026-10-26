@@ -4,6 +4,7 @@ import com.roomkeeper.common.security.CurrentUserId;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,6 +31,17 @@ public class BookingController {
 			.buildAndExpand(booking.id())
 			.toUri();
 		return ResponseEntity.created(location).body(booking);
+	}
+
+	@GetMapping("/{bookingId}")
+	public BookingResponse get(@CurrentUserId long userId, @PathVariable long bookingId) {
+		return bookingService.get(userId, bookingId);
+	}
+
+	/** A hold that has run out reads EXPIRED, even before the expiry job releases its rooms. */
+	@GetMapping("/{bookingId}/status")
+	public BookingStatusResponse status(@CurrentUserId long userId, @PathVariable long bookingId) {
+		return bookingService.status(userId, bookingId);
 	}
 
 	@PostMapping("/{bookingId}/guests")

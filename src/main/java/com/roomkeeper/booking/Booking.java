@@ -27,6 +27,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import org.hibernate.annotations.BatchSize;
 
 /**
  * A stay of {@code roomsCount} rooms of one room type, from the check-in night up to the
@@ -71,6 +72,7 @@ public class Booking {
 	@JoinTable(name = "booking_guests", joinColumns = @JoinColumn(name = "booking_id"),
 			inverseJoinColumns = @JoinColumn(name = "guest_id"))
 	@OrderBy("id")
+	@BatchSize(size = 50) // a page of bookings loads its guests in one query
 	private List<Guest> guests = new ArrayList<>();
 
 	// The hold expiry job and the payment webhook can race on one booking; the loser retries
@@ -122,6 +124,14 @@ public class Booking {
 
 	public BookingStatus getStatus() {
 		return status;
+	}
+
+	/**
+	 * The status as the guest should see it at {@code now}: a hold that has run out is
+	 * EXPIRED, even before the expiry job releases its rooms and records it.
+	 */
+	public BookingStatus statusAt(Instant now) {
+		return status.isHold() && holdRanOut(now) ? BookingStatus.EXPIRED : status;
 	}
 
 	public BigDecimal getAmount() {
