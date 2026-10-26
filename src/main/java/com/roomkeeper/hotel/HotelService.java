@@ -61,6 +61,7 @@ public class HotelService {
 		Hotel hotel = findOwned(ownerId, hotelId);
 		hotel.changeDetails(request.name().strip(), request.city().strip(), request.timeZone(),
 				normalize(request.amenities()));
+		events.publishEvent(new HotelChangedEvent(hotelId));
 		return mapper.toResponse(hotel);
 	}
 
@@ -85,6 +86,7 @@ public class HotelService {
 	@Transactional
 	public void delete(long ownerId, long hotelId) {
 		hotels.delete(findOwned(ownerId, hotelId));
+		events.publishEvent(new HotelChangedEvent(hotelId));
 	}
 
 	/** The hotel, if it exists and the caller owns it: 404 or 403 otherwise. */

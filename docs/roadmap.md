@@ -76,7 +76,7 @@ Goal: guests can search a city for dates and see correct prices.
 - [x] Closed dates and inactive hotels excluded from search
 - [x] `GET /hotels/search` with pagination, and `GET /hotels/{id}/info`
 - [x] Index check: capture `EXPLAIN ANALYZE` output for the README
-- [ ] Redis cache manager: hotel info (about 10 min), search (about 60 s)
+- [x] Redis cache manager: hotel info (about 10 min), search (about 60 s)
 - [ ] Test: changing inventory evicts the cached search result for that hotel
 - [ ] Optional: set up LeanToken now that the codebase is growing
 

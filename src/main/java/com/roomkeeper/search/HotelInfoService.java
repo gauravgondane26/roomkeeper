@@ -5,6 +5,7 @@ import com.roomkeeper.common.error.ProblemType;
 import com.roomkeeper.hotel.Hotel;
 import com.roomkeeper.hotel.HotelRepository;
 import com.roomkeeper.hotel.RoomRepository;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,7 @@ public class HotelInfoService {
 		this.mapper = mapper;
 	}
 
+	@Cacheable(cacheNames = CacheConfig.HOTEL_INFO, key = "#hotelId")
 	@Transactional(readOnly = true)
 	public HotelInfoResponse get(long hotelId) {
 		Hotel hotel = hotels.findById(hotelId)

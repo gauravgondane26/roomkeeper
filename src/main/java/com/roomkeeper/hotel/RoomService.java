@@ -53,6 +53,7 @@ public class RoomService {
 			inventory.openYear(room.getId(), room.getTotalCount(), hotel.today(clock));
 			inventoryChanged(hotel);
 		}
+		events.publishEvent(new HotelChangedEvent(hotelId));
 		return mapper.toResponse(room);
 	}
 
@@ -83,6 +84,7 @@ public class RoomService {
 		if (hotel.isActive()) {
 			inventoryChanged(hotel);
 		}
+		events.publishEvent(new HotelChangedEvent(hotelId));
 		return response;
 	}
 
@@ -94,6 +96,7 @@ public class RoomService {
 		if (hotel.isActive()) {
 			inventoryChanged(hotel);
 		}
+		events.publishEvent(new HotelChangedEvent(hotelId));
 	}
 
 	/** The hotel's rooms changed, so every night it sells from today on may have changed too. */
