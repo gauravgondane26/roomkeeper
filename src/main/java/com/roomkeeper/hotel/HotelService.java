@@ -69,12 +69,17 @@ public class HotelService {
 	}
 
 	/**
-	 * Puts the hotel on sale: every room type gets a year of inventory from the hotel's
-	 * today. Activating again is safe and tops the year up.
+	 * Puts an approved hotel on sale: every room type gets a year of inventory from the
+	 * hotel's today. Activating again is safe and tops the year up.
 	 */
 	@Transactional
 	public HotelResponse activate(long ownerId, long hotelId) {
 		Hotel hotel = findOwned(ownerId, hotelId);
+		if (hotel.getApprovalStatus() != ApprovalStatus.APPROVED) {
+			throw new ApiException(ProblemType.HOTEL_NOT_APPROVED,
+					"Hotel " + hotelId + " can go on sale once an admin approves it (it is "
+							+ hotel.getApprovalStatus() + ")");
+		}
 		List<Room> hotelRooms = rooms.findByHotelIdOrderById(hotelId);
 		if (hotelRooms.isEmpty()) {
 			throw new ApiException(ProblemType.CONFLICT, "Add at least one room type before activating the hotel");

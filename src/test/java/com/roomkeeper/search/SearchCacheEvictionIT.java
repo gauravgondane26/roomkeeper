@@ -113,7 +113,7 @@ class SearchCacheEvictionIT extends AbstractIntegrationTest {
 	private long activeHotel(String inCity) {
 		long hotel = createHotel(manager, aHotel().inCity(inCity).build());
 		createRoom(manager, hotel, aRoom().build());
-		api(manager).when().patch("/api/v1/admin/hotels/{id}/activate", hotel).then().statusCode(200);
+		activateHotel(manager, hotel);
 		return hotel;
 	}
 

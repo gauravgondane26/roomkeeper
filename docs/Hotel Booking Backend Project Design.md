@@ -56,8 +56,8 @@ The central idea is that inventory is one row per room type per night, and the d
 
 | Table | Key columns | Notes |
 | --- | --- | --- |
-| `users` | id, email (unique), password\_hash, role (GUEST, HOTEL\_MANAGER) | Roles drive `/admin` access |
-| `hotels` | id, owner\_id, name, city, time\_zone, active, amenities | Only active hotels show up in search. Deactivating stops new bookings but keeps history |
+| `users` | id, email (unique), password\_hash, role (GUEST, HOTEL\_MANAGER, ADMIN) | Roles drive `/admin` (managers) and `/moderation` (admins) access. ADMIN can't be chosen at signup |
+| `hotels` | id, owner\_id, name, city, time\_zone, active, amenities, approval\_status, rejection\_reason | Only active hotels show up in search. Deactivating stops new bookings but keeps history |
 | `rooms` | id, hotel\_id, type, base\_price, capacity, total\_count | A room type, not a physical room |
 | `inventory` | id, room\_id, date, total\_count, total\_overridden, booked\_count, reserved\_count, surge\_factor, closed | Unique on (room\_id, date). Check constraint: booked\_count + reserved\_count <= total\_count. Nights whose total was set by hand keep it when the room's total changes |
 | `bookings` | id, user\_id, room\_id, check\_in, check\_out, rooms\_count, status, amount, hold\_expires\_at, version | Amount is frozen at reservation time |
@@ -85,6 +85,7 @@ The endpoints mirror the original repo, plus a few that make the hard parts visi
 | Browse | `GET /hotels/search`, `GET /hotels/{id}/info` | Search takes city, dates, rooms, and pagination. Cached |
 | Hotel admin | CRUD on `/admin/hotels`, `PATCH /admin/hotels/{id}/activate`, `PATCH /admin/hotels/{id}/deactivate` | Activation generates a year of inventory rows, and a daily job keeps it a year ahead. A hotel or room type with bookings can be deactivated but not deleted |
 | Room admin | CRUD on `/admin/hotels/{id}/rooms` | Owner-only |
+| Moderation | `GET /moderation/hotels`, `PATCH /moderation/hotels/{id}/approve`, `PATCH /moderation/hotels/{id}/reject` | Admins only. A hotel can't be activated until it's approved |
 | Inventory admin | `GET` and `PATCH /admin/inventory/rooms/{roomId}` | Bulk update a date range: close dates, change surge, change totals |
 | Booking | `POST /bookings/init`, `POST /bookings/{id}/guests`, `POST /bookings/{id}/payments`, `POST /bookings/{id}/cancel`, `GET /bookings/{id}/status` | `init` and `payments` require an `Idempotency-Key` header |
 | User | `GET` and `PATCH /users/profile`, `GET /users/bookings`, CRUD on `/users/guests` |  |

@@ -8,4 +8,6 @@ public interface HotelMapper {
 
 	HotelResponse toResponse(Hotel hotel);
 
+	HotelReviewResponse toReview(Hotel hotel);
+
 }

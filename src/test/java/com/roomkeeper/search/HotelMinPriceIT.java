@@ -134,7 +134,7 @@ class HotelMinPriceIT extends AbstractIntegrationTest {
 	}
 
 	private void activate() {
-		api(manager).when().patch("/api/v1/admin/hotels/{id}/activate", hotelId).then().statusCode(200);
+		activateHotel(manager, hotelId);
 	}
 
 	private void patchInventory(long roomId, Map<String, Object> body) {

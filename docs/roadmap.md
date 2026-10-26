@@ -4,7 +4,7 @@ The build plan from the [project design](Hotel%20Booking%20Backend%20Project%20D
 
 Tasks are listed in the order to do them. Where a task names a test, that test is written and committed first.
 
-**Current:** Review fixes, then week 5
+**Current:** Week 5
 
 ## Week 1: Skeleton
 
@@ -78,7 +78,7 @@ Goal: guests can search a city for dates and see correct prices.
 - [x] Index check: capture `EXPLAIN ANALYZE` output for the README
 - [x] Redis cache manager: hotel info (about 10 min), search (about 60 s)
 - [x] Test: changing inventory evicts the cached search result for that hotel
-- [ ] Optional: set up LeanToken now that the codebase is growing
+- [x] Optional: set up LeanToken now that the codebase is growing
 
 **Done when:** search returns the right hotels and prices, and cached results never show stale availability.
 
@@ -89,7 +89,7 @@ From a security, efficiency, and regression review of weeks 1 to 4. The first tw
 - [x] Signup rejects a password over 72 bytes (BCrypt's limit) with a 400; a 72-character password of 2-byte characters used to return 500
 - [x] `hotel_min_price` updates are safe under concurrency (upsert instead of delete and insert); test with parallel changes to one hotel, which returned 500s
 - [x] Search cache eviction without scanning Redis: a per-city version in the cache key, bumped on change
-- [ ] Manager accounts: anyone can still sign up as a manager, but an admin (new `ADMIN` role) approves each hotel before it can be activated
+- [x] Manager accounts: anyone can still sign up as a manager, but an admin (new `ADMIN` role) approves each hotel before it can be activated
 - [x] Email enumeration: rate-limit signup and refresh per IP like login (the signup response itself changes in week 7)
 
 ## Week 5: Booking init, holds, expiry
@@ -109,7 +109,7 @@ Goal: no oversell under load, and holds always release.
 - [ ] Redis job lock (`lock:hold-expiry`); test that only one instance runs the job
 - [ ] Daily inventory roll job (`lock:inventory-roll`): keeps every active room type open a year ahead and fills any missed nights; test with a fixed clock
 - [ ] Deleting a hotel or room type with bookings is rejected with 409; bookings reference rooms with a restricting foreign key as the backstop
-- [ ] `PATCH /admin/hotels/{id}/deactivate`: out of search and no new bookings, existing bookings honoured, history kept
+- [ ] `PATCH /admin/hotels/{id}/deactivate`: out of search and no new bookings, existing bookings honoured, history kept; admins can also take an approved hotel off sale
 - [ ] Every path that changes inventory (init, expiry, the roll job) publishes `InventoryChangedEvent`; a test per path
 - [ ] Decide search-cache eviction for bookings (only when a night sells out or reopens, or rely on the 60 s TTL) so busy cities keep a useful cache
 - [ ] Bookings recompute cheapest prices after commit, so inventory row locks are held as briefly as possible
@@ -183,6 +183,7 @@ Goal: the system is observable, load tested, and explained.
 - [ ] Test: DST change days, UTC+14 and UTC-11 hotels, a leap day in the inventory window, holidays across the year boundary
 - [ ] Test: Flyway upgrading a populated older database
 - [ ] OpenAPI snapshot test, so a breaking API change fails CI
+- [ ] Paginate the moderation queue, and record who approved or rejected each hotel in an admin view
 
 **Done when:** the README explains every design decision with links to its tests.
 

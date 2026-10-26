@@ -8,6 +8,10 @@ roomkeeper:
   auth:
     # Test-only secret
     jwt-secret: Ppkmwuhp1b/rqHAnF96nUxXtny03ZgOBUh3NbcEk7yk=
+  # Test-only admin; AbstractIntegrationTest logs in as it to approve hotels
+  admin:
+    email: admin@roomkeeper.test
+    password: test-admin-password
 
 logging:
   level:

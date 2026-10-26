@@ -9,6 +9,8 @@ import java.util.List;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -43,6 +45,19 @@ public class Hotel {
 
 	@Column(nullable = false)
 	private boolean active;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "approval_status", nullable = false, length = 20)
+	private ApprovalStatus approvalStatus = ApprovalStatus.PENDING;
+
+	@Column(name = "rejection_reason", length = 500)
+	private String rejectionReason;
+
+	@Column(name = "reviewed_by")
+	private Long reviewedBy;
+
+	@Column(name = "reviewed_at")
+	private Instant reviewedAt;
 
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
@@ -89,11 +104,16 @@ public class Hotel {
 		return List.copyOf(amenities);
 	}
 
+	/** Edits the details. A rejected hotel goes back for review with the changes. */
 	public void changeDetails(String name, String city, String timeZone, List<String> amenities) {
 		this.name = name;
 		this.city = city;
 		this.timeZone = timeZone;
 		this.amenities = new ArrayList<>(amenities);
+		if (approvalStatus == ApprovalStatus.REJECTED) {
+			approvalStatus = ApprovalStatus.PENDING;
+			rejectionReason = null;
+		}
 	}
 
 	public boolean isActive() {
@@ -102,6 +122,29 @@ public class Hotel {
 
 	public void activate() {
 		this.active = true;
+	}
+
+	public ApprovalStatus getApprovalStatus() {
+		return approvalStatus;
+	}
+
+	public String getRejectionReason() {
+		return rejectionReason;
+	}
+
+	public void approve(long adminId, Instant at) {
+		review(ApprovalStatus.APPROVED, null, adminId, at);
+	}
+
+	public void reject(String reason, long adminId, Instant at) {
+		review(ApprovalStatus.REJECTED, reason, adminId, at);
+	}
+
+	private void review(ApprovalStatus status, String reason, long adminId, Instant at) {
+		this.approvalStatus = status;
+		this.rejectionReason = reason;
+		this.reviewedBy = adminId;
+		this.reviewedAt = at;
 	}
 
 	public Instant getCreatedAt() {

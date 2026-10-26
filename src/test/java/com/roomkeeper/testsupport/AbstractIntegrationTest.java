@@ -8,6 +8,7 @@ import io.restassured.http.ContentType;
 import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -40,6 +41,14 @@ public abstract class AbstractIntegrationTest {
 	@Autowired
 	private StringRedisTemplate redis;
 
+	@Value("${roomkeeper.admin.email}")
+	private String adminEmail;
+
+	@Value("${roomkeeper.admin.password}")
+	private String adminPassword;
+
+	private String adminToken;
+
 	/**
 	 * Redis only holds short-lived state (rate-limit buckets, refresh tokens), and every
 	 * test calls from the same IP, so each test starts with an empty Redis. Postgres isn't
@@ -47,6 +56,7 @@ public abstract class AbstractIntegrationTest {
 	 */
 	@BeforeEach
 	void resetRedis() {
+		adminToken = null;
 		redis.execute((RedisCallback<Void>) connection -> {
 			connection.serverCommands().flushDb();
 			return null;
@@ -77,10 +87,35 @@ public abstract class AbstractIntegrationTest {
 
 	/** Logs the user in and returns their access token. */
 	protected String logIn(TestUser user) {
-		return api().contentType(ContentType.JSON).body(Map.of("email", user.email(), "password", user.password()))
+		return logIn(user.email(), user.password());
+	}
+
+	private String logIn(String email, String password) {
+		return api().contentType(ContentType.JSON).body(Map.of("email", email, "password", password))
 			.when().post("/api/v1/auth/login")
 			.then().statusCode(200)
 			.extract().jsonPath().getString("accessToken");
+	}
+
+	/** An access token for the admin configured in the test profile, logged in once per test. */
+	protected String adminToken() {
+		if (adminToken == null) {
+			adminToken = logIn(adminEmail, adminPassword);
+		}
+		return adminToken;
+	}
+
+	/** Approves the hotel as the admin, so its manager can activate it. */
+	protected void approveHotel(long hotelId) {
+		api(adminToken()).when().patch("/api/v1/moderation/hotels/{id}/approve", hotelId)
+			.then().statusCode(200);
+	}
+
+	/** Has the admin approve the hotel, then activates it as its manager. */
+	protected void activateHotel(String managerToken, long hotelId) {
+		approveHotel(hotelId);
+		api(managerToken).when().patch("/api/v1/admin/hotels/{id}/activate", hotelId)
+			.then().statusCode(200);
 	}
 
 	/** Signs the user up, logs them in, and returns their access token. */

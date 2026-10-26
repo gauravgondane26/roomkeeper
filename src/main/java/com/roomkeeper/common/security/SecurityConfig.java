@@ -39,6 +39,7 @@ public class SecurityConfig {
 				// Errors thrown on permitted routes are forwarded here and must stay visible
 				.requestMatchers("/error").permitAll()
 				.requestMatchers("/api/v1/admin/**").hasRole("HOTEL_MANAGER")
+				.requestMatchers("/api/v1/moderation/**").hasRole("ADMIN")
 				.anyRequest().authenticated())
 			// Bearer tokens are validated by Spring's resource server support (signature,
 			// expiry, issuer: see JwtConfig); missing or bad tokens get our 401 problem

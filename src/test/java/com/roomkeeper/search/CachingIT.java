@@ -51,7 +51,7 @@ class CachingIT extends AbstractIntegrationTest {
 		city = "Cache-" + UUID.randomUUID();
 		hotelId = createHotel(manager, aHotel().named("Seaside Inn").inCity(city).build());
 		createRoom(manager, hotelId, aRoom().ofType("Deluxe").build());
-		api(manager).when().patch("/api/v1/admin/hotels/{id}/activate", hotelId).then().statusCode(200);
+		activateHotel(manager, hotelId);
 	}
 
 	@Test

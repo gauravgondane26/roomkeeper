@@ -19,6 +19,9 @@ services:
       REDIS_PORT: 6379
       # Same development-only secret as the local profile; set JWT_SECRET to override
       JWT_SECRET: ${JWT_SECRET:-VrafQC2/RfRzmNJ2WUp9ketFZXrRb41ZQn0ZXAJEyCw=}
+      # Development-only admin, same as the local profile; approves hotels
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@roomkeeper.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-local-admin-password}
     ports:
       - "${APP_PORT:-8080}:8080"
     depends_on:

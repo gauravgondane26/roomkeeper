@@ -51,7 +51,7 @@ class RoomTotalChangeIT extends AbstractIntegrationTest {
 		manager = signUpAndLogIn(managerUser);
 		hotelId = createHotel(manager, aHotel().build());
 		roomId = createRoom(manager, hotelId, aRoom().withTotalCount(5).build());
-		api(manager).when().patch("/api/v1/admin/hotels/{id}/activate", hotelId).then().statusCode(200);
+		activateHotel(manager, hotelId);
 	}
 
 	@Test

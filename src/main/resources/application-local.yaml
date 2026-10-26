@@ -13,6 +13,10 @@ roomkeeper:
   auth:
     # Development-only secret; never reuse it anywhere real
     jwt-secret: ${JWT_SECRET:VrafQC2/RfRzmNJ2WUp9ketFZXrRb41ZQn0ZXAJEyCw=}
+  # Development-only admin, created at startup; approves hotels
+  admin:
+    email: ${ADMIN_EMAIL:admin@roomkeeper.local}
+    password: ${ADMIN_PASSWORD:local-admin-password}
 
 management:
   endpoint:

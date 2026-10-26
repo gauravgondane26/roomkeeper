@@ -62,7 +62,7 @@ public class AuthService {
 		if (users.existsByEmail(email)) {
 			throw new EmailAlreadyRegisteredException();
 		}
-		Role role = request.role() != null ? request.role() : Role.GUEST;
+		Role role = request.role() != null ? request.role().role() : Role.GUEST;
 		User user = new User(email, passwordEncoder.encode(request.password()), request.name().strip(), role,
 				clock.instant());
 		try {

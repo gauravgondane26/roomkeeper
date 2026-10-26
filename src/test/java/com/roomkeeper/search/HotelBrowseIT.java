@@ -155,7 +155,7 @@ class HotelBrowseIT extends AbstractIntegrationTest {
 	}
 
 	private void activate(long hotel) {
-		api(manager).when().patch("/api/v1/admin/hotels/{id}/activate", hotel).then().statusCode(200);
+		activateHotel(manager, hotel);
 	}
 
 	private long roomOf(long hotel) {

@@ -8,4 +8,7 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
 
 	List<Hotel> findByOwnerIdOrderById(Long ownerId);
 
+	/** The review queue for a status, oldest first. */
+	List<Hotel> findByApprovalStatusOrderByCreatedAtAscIdAsc(ApprovalStatus status);
+
 }

@@ -15,6 +15,10 @@ roomkeeper:
   auth:
     # base64, at least 32 bytes: openssl rand -base64 32
     jwt-secret: ${JWT_SECRET}
+  # Optional: the first admin, created at startup if missing (leave ADMIN_EMAIL unset for none)
+  admin:
+    email: ${ADMIN_EMAIL:}
+    password: ${ADMIN_PASSWORD:}
 
 management:
   endpoint:

@@ -62,7 +62,7 @@ class HotelMinPriceConcurrencyIT extends AbstractIntegrationTest {
 		hotelId = createHotel(manager, aHotel().build());
 		roomIds = List.of(createRoom(manager, hotelId, aRoom().ofType("Deluxe").pricedAt("4000").build()),
 				createRoom(manager, hotelId, aRoom().ofType("Suite").pricedAt("5000").build()));
-		api(manager).when().patch("/api/v1/admin/hotels/{id}/activate", hotelId).then().statusCode(200);
+		activateHotel(manager, hotelId);
 	}
 
 	@Test

@@ -47,6 +47,8 @@ class HotelActivationIT extends AbstractIntegrationTest {
 		managerUser = aUser().asHotelManager().build();
 		manager = signUpAndLogIn(managerUser);
 		hotelId = createHotel(manager, aHotel().build());
+		// Approval is covered by HotelApprovalIT; these tests are about activation itself
+		approveHotel(hotelId);
 	}
 
 	@Test
