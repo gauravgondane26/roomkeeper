@@ -10,6 +10,8 @@ WAIT_SECONDS="${WAIT_SECONDS:-60}"
 failures=0
 # When set, check() sends it as a bearer token
 TOKEN=""
+# The response body of the last check(), for pulling out ids
+last_body=""
 
 # check <description> <method> <path> <expected status> [expected body substring] [JSON request body]
 check() {
@@ -25,6 +27,7 @@ check() {
   body=$(curl -s --max-time 10 -X "$method" "${data[@]}" -w '\n%{http_code}' "$BASE_URL$path") || true
   status=${body##*$'\n'}
   body=${body%$'\n'*}
+  last_body=$body
   if [[ "$status" != "$expected_status" ]]; then
     echo "FAIL $description: expected HTTP $expected_status, got $status"
     failures=$((failures + 1))
@@ -63,9 +66,14 @@ check "login returns a bearer token" POST /api/v1/auth/login 200 '"tokenType":"B
 check "wrong password is a 401 problem" POST /api/v1/auth/login 401 \
   "urn:roomkeeper:problem:invalid-credentials" "{\"email\":\"$email\",\"password\":\"wrong-password\"}"
 
-TOKEN=$(curl -s -H 'Content-Type: application/json' \
-  -d "{\"email\":\"$email\",\"password\":\"smoke-test-password\"}" "$BASE_URL/api/v1/auth/login" \
-  | sed -nE 's/.*"accessToken":"([^"]+)".*/\1/p')
+# access_token <email>: logs in with the smoke password and prints the access token
+access_token() {
+  curl -s -H 'Content-Type: application/json' \
+    -d "{\"email\":\"$1\",\"password\":\"smoke-test-password\"}" "$BASE_URL/api/v1/auth/login" \
+    | sed -nE 's/.*"accessToken":"([^"]+)".*/\1/p'
+}
+guest_token=$(access_token "$email")
+TOKEN=$guest_token
 check "profile with the token" GET /api/v1/users/profile 200 "\"email\":\"$email\""
 check "profile name update" PATCH /api/v1/users/profile 200 '"name":"Smoke Renamed"' '{"name":"Smoke Renamed"}'
 TOKEN=""
@@ -83,6 +91,20 @@ logged_out="{\"refreshToken\":\"$(refresh_token)\"}"
 check "logout succeeds" POST /api/v1/auth/logout 204 "" "$logged_out"
 check "refresh after logout is rejected" POST /api/v1/auth/refresh 401 \
   "urn:roomkeeper:problem:invalid-refresh-token" "$logged_out"
+
+# Week 3: hotel admin
+TOKEN=$guest_token
+check "guests can't manage hotels" GET /api/v1/admin/hotels 403 "urn:roomkeeper:problem:forbidden"
+manager_email="smoke-manager-$(date +%s)-$RANDOM@example.com"
+check "signup creates a hotel manager" POST /api/v1/auth/signup 201 '"role":"HOTEL_MANAGER"' \
+  "{\"email\":\"$manager_email\",\"password\":\"smoke-test-password\",\"name\":\"Smoke Manager\",\"role\":\"HOTEL_MANAGER\"}"
+TOKEN=$(access_token "$manager_email")
+check "manager creates a hotel" POST /api/v1/admin/hotels 201 '"active":false' \
+  '{"name":"Smoke Hotel","city":"Goa","amenities":["wifi"]}'
+hotel_id=$(sed -nE 's/^\{"id":([0-9]+).*/\1/p' <<<"$last_body")
+check "manager lists their hotels" GET /api/v1/admin/hotels 200 '"name":"Smoke Hotel"'
+check "manager reads their hotel" GET "/api/v1/admin/hotels/$hotel_id" 200 "\"id\":$hotel_id"
+TOKEN=""
 
 # Last, since it uses up this client's login attempts: within 11 tries the limit must hit
 limited=""

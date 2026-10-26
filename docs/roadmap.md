@@ -53,7 +53,7 @@ Goal: a hotel manager can set up a hotel end to end.
 - [x] Migration: `hotels`, `rooms`, `inventory` (unique on `(room_id, date)`, check constraint on counts, indexes)
 - [x] Data slice test: the check constraint rejects `booked_count + reserved_count > total_count`
 - [x] MapStruct setup; entities never leave the service layer
-- [ ] Hotel CRUD on `/admin/hotels`; test that a non-owner gets 403
+- [x] Hotel CRUD on `/admin/hotels`; test that a non-owner gets 403
 - [ ] Room CRUD on `/admin/hotels/{id}/rooms`
 - [ ] `PATCH /admin/hotels/{id}/activate`; test that it creates a year of inventory rows per room
 - [ ] Adding a room to an already active hotel creates that room's inventory

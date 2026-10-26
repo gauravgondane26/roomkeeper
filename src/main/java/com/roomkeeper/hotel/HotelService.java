@@ -1,0 +1,75 @@
+package com.roomkeeper.hotel;
+
+import java.time.Clock;
+import java.util.LinkedHashSet;
+import java.util.List;
+
+import com.roomkeeper.common.error.ApiException;
+import com.roomkeeper.common.error.ProblemType;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/** Hotel admin. A manager can only see and change the hotels they own. */
+@Service
+public class HotelService {
+
+	private final HotelRepository hotels;
+
+	private final HotelMapper mapper;
+
+	private final Clock clock;
+
+	public HotelService(HotelRepository hotels, HotelMapper mapper, Clock clock) {
+		this.hotels = hotels;
+		this.mapper = mapper;
+		this.clock = clock;
+	}
+
+	@Transactional
+	public HotelResponse create(long ownerId, HotelRequest request) {
+		Hotel hotel = new Hotel(ownerId, request.name().strip(), request.city().strip(),
+				normalize(request.amenities()), clock.instant());
+		return mapper.toResponse(hotels.save(hotel));
+	}
+
+	@Transactional(readOnly = true)
+	public List<HotelResponse> listOwned(long ownerId) {
+		return hotels.findByOwnerIdOrderById(ownerId).stream().map(mapper::toResponse).toList();
+	}
+
+	@Transactional(readOnly = true)
+	public HotelResponse get(long ownerId, long hotelId) {
+		return mapper.toResponse(findOwned(ownerId, hotelId));
+	}
+
+	@Transactional
+	public HotelResponse update(long ownerId, long hotelId, HotelRequest request) {
+		Hotel hotel = findOwned(ownerId, hotelId);
+		hotel.changeDetails(request.name().strip(), request.city().strip(), normalize(request.amenities()));
+		return mapper.toResponse(hotel);
+	}
+
+	@Transactional
+	public void delete(long ownerId, long hotelId) {
+		hotels.delete(findOwned(ownerId, hotelId));
+	}
+
+	/** The hotel, if it exists and the caller owns it: 404 or 403 otherwise. */
+	Hotel findOwned(long ownerId, long hotelId) {
+		Hotel hotel = hotels.findById(hotelId)
+			.orElseThrow(() -> new ApiException(ProblemType.NOT_FOUND, "Hotel " + hotelId + " not found"));
+		if (!hotel.getOwnerId().equals(ownerId)) {
+			throw new ApiException(ProblemType.FORBIDDEN, "You don't manage hotel " + hotelId);
+		}
+		return hotel;
+	}
+
+	/** Trimmed, without duplicates, in the order given. */
+	private static List<String> normalize(List<String> amenities) {
+		if (amenities == null) {
+			return List.of();
+		}
+		return List.copyOf(new LinkedHashSet<>(amenities.stream().map(String::strip).toList()));
+	}
+
+}

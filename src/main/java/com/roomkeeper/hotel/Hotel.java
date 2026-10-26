@@ -72,6 +72,12 @@ public class Hotel {
 		return List.copyOf(amenities);
 	}
 
+	public void changeDetails(String name, String city, List<String> amenities) {
+		this.name = name;
+		this.city = city;
+		this.amenities = new ArrayList<>(amenities);
+	}
+
 	public boolean isActive() {
 		return active;
 	}

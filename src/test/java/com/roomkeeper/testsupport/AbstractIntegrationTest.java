@@ -82,4 +82,12 @@ public abstract class AbstractIntegrationTest {
 		return logIn(user);
 	}
 
+	/** Creates a hotel as the manager the token belongs to and returns its id. */
+	protected long createHotel(String managerToken, Map<String, Object> hotel) {
+		return api(managerToken).contentType(ContentType.JSON).body(hotel)
+			.when().post("/api/v1/admin/hotels")
+			.then().statusCode(201)
+			.extract().jsonPath().getLong("id");
+	}
+
 }

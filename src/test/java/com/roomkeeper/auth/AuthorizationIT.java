@@ -59,7 +59,7 @@ class AuthorizationIT extends AbstractIntegrationTest {
 		String token = signUpAndLogIn(aUser().build());
 
 		api(token)
-			.when().get("/api/v1/admin/probe")
+			.when().get("/api/v1/admin/hotels")
 			.then()
 				.statusCode(403)
 				.body("type", equalTo("urn:roomkeeper:problem:forbidden"));
@@ -70,7 +70,7 @@ class AuthorizationIT extends AbstractIntegrationTest {
 		String token = signUpAndLogIn(aUser().asHotelManager().build());
 
 		api(token)
-			.when().get("/api/v1/admin/probe")
+			.when().get("/api/v1/admin/hotels")
 			.then()
 				.statusCode(200);
 	}
@@ -86,18 +86,13 @@ class AuthorizationIT extends AbstractIntegrationTest {
 				.body("type", equalTo("urn:roomkeeper:problem:not-found"));
 	}
 
-	/** Stand-in endpoints until real ones exist (admin routes arrive in week 3). */
+	/** Echoes what the token says about the caller. */
 	@RestController
 	static class ProbeController {
 
 		@GetMapping("/api/v1/probe/me")
 		Map<String, Object> me(@AuthenticationPrincipal Jwt jwt) {
 			return Map.of("userId", jwt.getSubject(), "roles", jwt.getClaimAsStringList("roles"));
-		}
-
-		@GetMapping("/api/v1/admin/probe")
-		Map<String, Object> admin() {
-			return Map.of("ok", true);
 		}
 
 	}
