@@ -108,6 +108,7 @@ check "manager adds a room type" POST "/api/v1/admin/hotels/$hotel_id/rooms" 201
   '{"type":"Deluxe","basePrice":4500,"capacity":2,"totalCount":5}'
 room_id=$(sed -nE 's/^\{"id":([0-9]+).*/\1/p' <<<"$last_body")
 check "manager lists the hotel's rooms" GET "/api/v1/admin/hotels/$hotel_id/rooms" 200 "\"id\":$room_id"
+check "manager activates the hotel" PATCH "/api/v1/admin/hotels/$hotel_id/activate" 200 '"active":true'
 TOKEN=""
 
 # Last, since it uses up this client's login attempts: within 11 tries the limit must hit

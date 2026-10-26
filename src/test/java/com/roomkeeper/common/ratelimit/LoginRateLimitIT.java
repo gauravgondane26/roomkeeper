@@ -1,20 +1,17 @@
 package com.roomkeeper.common.ratelimit;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Map;
 
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
 import com.roomkeeper.testsupport.MutableClock;
+import com.roomkeeper.testsupport.MutableClockConfig;
 import com.roomkeeper.testsupport.TestUser;
 import io.restassured.http.ContentType;
 import io.restassured.response.ValidatableResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 
 import static com.roomkeeper.testsupport.UserBuilder.aUser;
 import static org.hamcrest.Matchers.equalTo;
@@ -23,7 +20,7 @@ import static org.hamcrest.Matchers.equalTo;
  * Signature test: login is limited to 10 attempts per minute per client, so password
  * guessing is slow. Time is controlled with a MutableClock instead of sleeping.
  */
-@Import(LoginRateLimitIT.ControllableClock.class)
+@Import(MutableClockConfig.class)
 class LoginRateLimitIT extends AbstractIntegrationTest {
 
 	@Autowired
@@ -77,17 +74,6 @@ class LoginRateLimitIT extends AbstractIntegrationTest {
 		return api().contentType(ContentType.JSON).body(Map.of("email", email, "password", password))
 			.when().post("/api/v1/auth/login")
 			.then();
-	}
-
-	@TestConfiguration(proxyBeanMethods = false)
-	static class ControllableClock {
-
-		@Bean
-		@Primary
-		MutableClock testClock() {
-			return new MutableClock(Instant.parse("2026-01-15T10:00:00Z"));
-		}
-
 	}
 
 }

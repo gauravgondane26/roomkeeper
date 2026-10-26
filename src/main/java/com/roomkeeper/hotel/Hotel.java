@@ -82,6 +82,10 @@ public class Hotel {
 		return active;
 	}
 
+	public void activate() {
+		this.active = true;
+	}
+
 	public Instant getCreatedAt() {
 		return createdAt;
 	}

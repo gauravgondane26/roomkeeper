@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.ProblemType;
+import com.roomkeeper.inventory.InventoryService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,12 +16,19 @@ public class HotelService {
 
 	private final HotelRepository hotels;
 
+	private final RoomRepository rooms;
+
+	private final InventoryService inventory;
+
 	private final HotelMapper mapper;
 
 	private final Clock clock;
 
-	public HotelService(HotelRepository hotels, HotelMapper mapper, Clock clock) {
+	public HotelService(HotelRepository hotels, RoomRepository rooms, InventoryService inventory, HotelMapper mapper,
+			Clock clock) {
 		this.hotels = hotels;
+		this.rooms = rooms;
+		this.inventory = inventory;
 		this.mapper = mapper;
 		this.clock = clock;
 	}
@@ -46,6 +54,22 @@ public class HotelService {
 	public HotelResponse update(long ownerId, long hotelId, HotelRequest request) {
 		Hotel hotel = findOwned(ownerId, hotelId);
 		hotel.changeDetails(request.name().strip(), request.city().strip(), normalize(request.amenities()));
+		return mapper.toResponse(hotel);
+	}
+
+	/**
+	 * Puts the hotel on sale: every room type gets a year of inventory. Activating again is
+	 * safe and tops the year up to start from today.
+	 */
+	@Transactional
+	public HotelResponse activate(long ownerId, long hotelId) {
+		Hotel hotel = findOwned(ownerId, hotelId);
+		List<Room> hotelRooms = rooms.findByHotelIdOrderById(hotelId);
+		if (hotelRooms.isEmpty()) {
+			throw new ApiException(ProblemType.CONFLICT, "Add at least one room type before activating the hotel");
+		}
+		hotel.activate();
+		hotelRooms.forEach(room -> inventory.openYear(room.getId(), room.getTotalCount()));
 		return mapper.toResponse(hotel);
 	}
 

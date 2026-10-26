@@ -55,7 +55,7 @@ Goal: a hotel manager can set up a hotel end to end.
 - [x] MapStruct setup; entities never leave the service layer
 - [x] Hotel CRUD on `/admin/hotels`; test that a non-owner gets 403
 - [x] Room CRUD on `/admin/hotels/{id}/rooms`
-- [ ] `PATCH /admin/hotels/{id}/activate`; test that it creates a year of inventory rows per room
+- [x] `PATCH /admin/hotels/{id}/activate`; test that it creates a year of inventory rows per room
 - [ ] Adding a room to an already active hotel creates that room's inventory
 - [ ] Inventory admin `GET` and `PATCH /admin/inventory/rooms/{roomId}`: close dates, change surge, change totals over a date range
 - [ ] Test: lowering a total below what's already booked or held is rejected with a clean error
