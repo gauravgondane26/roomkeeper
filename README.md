@@ -36,6 +36,15 @@ Swagger UI is the client: open http://localhost:8080/swagger-ui.html.
 
 Login allows 10 attempts per minute per client IP. Every error is an RFC 9457 problem detail (`application/problem+json`); match on its `type`, such as `urn:roomkeeper:problem:invalid-credentials`.
 
+### Setting up a hotel (as a `HOTEL_MANAGER`)
+
+1. `POST /api/v1/admin/hotels` with a name, city, and optional amenities. New hotels start inactive.
+2. `POST /api/v1/admin/hotels/{hotelId}/rooms` for each room type: type name, base price per night, capacity, and how many rooms of that type exist.
+3. `PATCH /api/v1/admin/hotels/{hotelId}/activate` puts the hotel on sale: each room type gets one inventory row per night for the next 365 nights. Room types added later get their own year straight away.
+4. `GET /api/v1/admin/inventory/rooms/{roomId}?from=…&to=…` shows each night (booked, held, available, surge, closed). `PATCH` the same path with `from`, `to`, and any of `closed`, `surgeFactor`, `totalCount` to change a whole date range at once.
+
+Managers only see their own hotels; anyone else's return 403. A total can't be lowered below the rooms already booked or held on a night (409 `total-below-sold`, listing the nights), and the database enforces the same rule with a check constraint.
+
 ## Tests
 
 ```bash
