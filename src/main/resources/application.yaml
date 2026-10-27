@@ -57,6 +57,11 @@ roomkeeper:
   cache:
     hotel-info-ttl: 10m
     search-ttl: 60s
+  idempotency:
+    # A retry within a day gets the first response back
+    ttl: 24h
+    # How long a running request holds its key at most, so a crash can't block it for the day
+    lease: 2m
 
 management:
   endpoints:

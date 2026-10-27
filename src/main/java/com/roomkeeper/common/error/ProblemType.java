@@ -1,8 +1,9 @@
 package com.roomkeeper.common.error;
 
 import java.net.URI;
-import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -11,8 +12,8 @@ import org.springframework.http.ProblemDetail;
  * Every kind of error the API returns. Clients and tests match on {@link #uri()} (the
  * problem's {@code type}), which never changes, rather than on human-readable text.
  * <p>
- * General types come first, one per status; specific types follow. {@link #forStatus}
- * relies on that order.
+ * General types come first, one per status, from {@code BAD_REQUEST} to
+ * {@code SERVICE_UNAVAILABLE}; specific types follow. {@link #forStatus} relies on that order.
  */
 public enum ProblemType {
 
@@ -39,9 +40,14 @@ public enum ProblemType {
 	SOLD_OUT("sold-out", HttpStatus.CONFLICT, "Sold out"),
 	HOLD_EXPIRED("hold-expired", HttpStatus.CONFLICT, "Hold expired"),
 	BOOKING_STATE("booking-state", HttpStatus.CONFLICT, "Not allowed in the booking's status"),
-	HAS_BOOKINGS("has-bookings", HttpStatus.CONFLICT, "Has bookings");
+	HAS_BOOKINGS("has-bookings", HttpStatus.CONFLICT, "Has bookings"),
+	IDEMPOTENCY_KEY_REQUIRED("idempotency-key-required", HttpStatus.BAD_REQUEST, "Idempotency key required"),
+	IDEMPOTENCY_KEY_IN_USE("idempotency-key-in-use", HttpStatus.CONFLICT, "Idempotency key in use"),
+	IDEMPOTENCY_KEY_REUSED("idempotency-key-reused", HttpStatus.UNPROCESSABLE_CONTENT, "Idempotency key reused");
 
 	private static final String URN_PREFIX = "urn:roomkeeper:problem:";
+
+	private static final Set<ProblemType> GENERAL = EnumSet.range(BAD_REQUEST, SERVICE_UNAVAILABLE);
 
 	private final URI uri;
 
@@ -70,9 +76,12 @@ public enum ProblemType {
 		return problem;
 	}
 
-	/** The general type for a status, used for errors raised by the framework itself. */
+	/**
+	 * The general type for a status, used for errors raised by the framework itself. Never a
+	 * specific type, even for a status only specific types have.
+	 */
 	static Optional<ProblemType> forStatus(int status) {
-		return Arrays.stream(values())
+		return GENERAL.stream()
 			.filter(type -> type.status.value() == status)
 			.findFirst();
 	}

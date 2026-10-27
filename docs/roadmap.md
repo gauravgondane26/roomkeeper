@@ -132,7 +132,7 @@ Goal: no oversell under load, and holds always release.
 Goal: a test-card payment confirms a booking exactly once.
 
 - [x] Migration: `payments`, `processed_webhook_events`; a partial unique index allows one open or paid payment per booking, and check constraints require the payment intent once paid and the refund id once refunded
-- [ ] Idempotency keys: Redis `SET NX` (`idem:{userId}:{key}`, 24 h TTL) storing status and response; fail closed with 503 when Redis is down
+- [x] Idempotency keys: Redis `SET NX` (`idem:{userId}:{key}`, 24 h TTL) storing status and response; fail closed with 503 when Redis is down. A running request holds its key on a 2-minute lease; only 2xx responses are kept (a failure releases the key); the same key on a different request gets 422, and a retry while the first runs gets 409 (as in the IETF Idempotency-Key draft)
 - [ ] Apply `Idempotency-Key` to `POST /bookings/init`; test that a retry returns the original booking
 - [ ] Stripe client behind an interface, with a fake for tests
 - [ ] `POST /bookings/{id}/payments`: checkout session for the frozen amount, booking moves to Payment pending
