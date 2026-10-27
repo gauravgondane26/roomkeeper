@@ -9,7 +9,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import javax.sql.DataSource;
@@ -171,24 +173,27 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 
 	@Test
 	void deliveriesInFlightTogetherConfirmOnce() throws Exception {
-		// Another connection holds the booking, so two deliveries of one event both get as far
-		// as they can before either applies it: past reading the payment, which is still pending
+		// Another connection holds the booking, so two deliveries of one event are both in flight
+		// before either applies it: the first waits for the booking, the second for the first's
+		// record of the event
 		String paid = checkoutCompleted("evt_overlap_" + bookingId, sessionId, "pi_" + bookingId);
-		List<CompletableFuture<Integer>> deliveries;
-		try (Connection other = dataSource.getConnection()) {
+		// Threads of their own: on a 2-CPU machine (CI) the common pool has one worker, which
+		// would run the second delivery only after the first finished
+		try (ExecutorService pool = Executors.newFixedThreadPool(2);
+				Connection other = dataSource.getConnection()) {
 			other.setAutoCommit(false);
 			try (PreparedStatement lock = other.prepareStatement("select id from bookings where id = ? for update")) {
 				lock.setLong(1, bookingId);
 				lock.executeQuery();
 			}
-			deliveries = List.of(CompletableFuture.supplyAsync(() -> deliver(paid).extract().statusCode()),
-					CompletableFuture.supplyAsync(() -> deliver(paid).extract().statusCode()));
+			List<Future<Integer>> deliveries = List.of(pool.submit(() -> deliver(paid).extract().statusCode()),
+					pool.submit(() -> deliver(paid).extract().statusCode()));
 			await().atMost(Duration.ofSeconds(10)).until(() -> queriesWaitingOnLocks() == 2);
 			other.rollback();
-		}
 
-		for (CompletableFuture<Integer> delivery : deliveries) {
-			assertThat(delivery.get(10, TimeUnit.SECONDS)).isEqualTo(200);
+			for (Future<Integer> delivery : deliveries) {
+				assertThat(delivery.get(10, TimeUnit.SECONDS)).isEqualTo(200);
+			}
 		}
 		assertThat(nightsBooked()).containsOnly(2);
 	}
