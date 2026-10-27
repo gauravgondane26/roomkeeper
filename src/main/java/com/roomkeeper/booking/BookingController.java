@@ -1,5 +1,6 @@
 package com.roomkeeper.booking;
 
+import com.roomkeeper.common.idempotency.IdempotencyKeyHeader;
 import com.roomkeeper.common.security.CurrentUserId;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -24,6 +25,7 @@ public class BookingController {
 	}
 
 	@PostMapping("/init")
+	@IdempotencyKeyHeader
 	public ResponseEntity<BookingResponse> init(@CurrentUserId long userId,
 			@Valid @RequestBody BookingInitRequest request) {
 		BookingResponse booking = bookingService.init(userId, request);

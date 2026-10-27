@@ -144,7 +144,7 @@ class BookingSearchEffectsIT extends AbstractIntegrationTest {
 
 	/** Holds rooms for Tuesday and Wednesday nights. */
 	private void hold(long roomId, int rooms) {
-		api(guest).contentType(ContentType.JSON)
+		idempotentApi(guest).contentType(ContentType.JSON)
 			.body(Map.of("roomId", roomId, "checkIn", TUESDAY, "checkOut", THURSDAY, "rooms", rooms))
 			.when().post("/api/v1/bookings/init")
 			.then().statusCode(201);

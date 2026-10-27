@@ -40,7 +40,7 @@ class HoldExpiryLockIT extends AbstractIntegrationTest {
 		clock.setInstant(Instant.parse("2026-03-10T09:00:00Z"));
 		String manager = signUpAndLogIn(aUser().asHotelManager().build());
 		long roomId = firstRoomOf(manager, activeHotel(manager, aHotel().build(), aRoom().build()));
-		long bookingId = api(signUpAndLogIn(aUser().build())).contentType(ContentType.JSON)
+		long bookingId = idempotentApi(signUpAndLogIn(aUser().build())).contentType(ContentType.JSON)
 			.body(Map.of("roomId", roomId, "checkIn", "2026-03-10", "checkOut", "2026-03-11", "rooms", 1))
 			.when().post("/api/v1/bookings/init")
 			.then().statusCode(201).extract().jsonPath().getLong("id");

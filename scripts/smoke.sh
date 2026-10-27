@@ -10,6 +10,8 @@ WAIT_SECONDS="${WAIT_SECONDS:-60}"
 failures=0
 # When set, check() sends it as a bearer token
 TOKEN=""
+# When set, check() sends it as the Idempotency-Key header
+IDEMPOTENCY_KEY=""
 # The response body of the last check(), for pulling out ids
 last_body=""
 
@@ -23,6 +25,9 @@ check() {
   fi
   if [[ -n "$TOKEN" ]]; then
     data+=(-H "Authorization: Bearer $TOKEN")
+  fi
+  if [[ -n "$IDEMPOTENCY_KEY" ]]; then
+    data+=(-H "Idempotency-Key: $IDEMPOTENCY_KEY")
   fi
   body=$(curl -s --max-time 10 -X "$method" "${data[@]}" -w '\n%{http_code}' "$BASE_URL$path") || true
   status=${body##*$'\n'}
@@ -76,6 +81,10 @@ login() {
 # last_id: the id at the start of the last response body
 last_id() {
   sed -nE 's/^\{"id":([0-9]+).*/\1/p' <<<"$last_body"
+}
+# new_key: a fresh Idempotency-Key
+new_key() {
+  echo "smoke-$(date +%s)-$RANDOM$RANDOM"
 }
 guest_token=$(login "$email")
 TOKEN=$guest_token
@@ -148,11 +157,17 @@ TOKEN=""
 TOKEN=$guest_token
 stay_in=$(date -u -d '+6 days' +%F)
 stay_out=$(date -u -d '+8 days' +%F)
-check "guest holds two rooms for a stay" POST /api/v1/bookings/init 201 '"status":"RESERVED"' \
-  "{\"roomId\":$room_id,\"checkIn\":\"$stay_in\",\"checkOut\":\"$stay_out\",\"rooms\":2}"
+hold_two="{\"roomId\":$room_id,\"checkIn\":\"$stay_in\",\"checkOut\":\"$stay_out\",\"rooms\":2}"
+check "a hold needs an Idempotency-Key" POST /api/v1/bookings/init 400 \
+  "urn:roomkeeper:problem:idempotency-key-required" "$hold_two"
+IDEMPOTENCY_KEY=$(new_key)
+check "guest holds two rooms for a stay" POST /api/v1/bookings/init 201 '"status":"RESERVED"' "$hold_two"
 booking_id=$(last_id)
+check "a retried hold returns the same booking" POST /api/v1/bookings/init 201 "{\"id\":$booking_id," "$hold_two"
+IDEMPOTENCY_KEY=$(new_key)
 check "more rooms than are left is sold out" POST /api/v1/bookings/init 409 "urn:roomkeeper:problem:sold-out" \
   "{\"roomId\":$room_id,\"checkIn\":\"$stay_in\",\"checkOut\":\"$stay_out\",\"rooms\":4}"
+IDEMPOTENCY_KEY=""
 check "guest saves a traveller" POST /api/v1/users/guests 201 '"name":"Smoke Traveller"' \
   '{"name":"Smoke Traveller","age":30,"gender":"OTHER"}'
 traveller_id=$(last_id)
@@ -166,8 +181,10 @@ check "a hotel with bookings can't be deleted" DELETE "/api/v1/admin/hotels/$hot
   "urn:roomkeeper:problem:has-bookings"
 check "manager takes the hotel off sale" PATCH "/api/v1/admin/hotels/$hotel_id/deactivate" 200 '"active":false'
 TOKEN=$guest_token
+IDEMPOTENCY_KEY=$(new_key)
 check "a hotel off sale can't be booked" POST /api/v1/bookings/init 404 "urn:roomkeeper:problem:not-found" \
   "{\"roomId\":$room_id,\"checkIn\":\"$stay_in\",\"checkOut\":\"$stay_out\",\"rooms\":1}"
+IDEMPOTENCY_KEY=""
 check "its bookings carry on" GET "/api/v1/bookings/$booking_id/status" 200 '"status":"GUESTS_ADDED"'
 TOKEN=""
 

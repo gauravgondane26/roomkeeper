@@ -193,7 +193,7 @@ Every feature starts as a failing test that states a business rule in plain word
 - [x] A hold expires after 10 minutes using an injected `Clock`, with no `Thread.sleep`
 - [ ] The same webhook delivered twice confirms the booking once and creates one outbox row
 - [ ] A webhook that arrives after the hold expired gets confirmed or refunded, never stuck
-- [ ] A retried `POST /bookings/init` with the same `Idempotency-Key` returns the original booking
+- [x] A retried `POST /bookings/init` with the same `Idempotency-Key` returns the original booking
 - [x] The 11th login attempt inside the window is rejected with 429
 - [x] Changing inventory evicts the cached search result for that hotel
 - [ ] Cancelling restores inventory and calls the refund exactly once

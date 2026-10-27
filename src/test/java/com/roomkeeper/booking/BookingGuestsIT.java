@@ -45,7 +45,7 @@ class BookingGuestsIT extends AbstractIntegrationTest {
 		String manager = signUpAndLogIn(aUser().asHotelManager().build());
 		guest = signUpAndLogIn(aUser().build());
 		long hotelId = activeHotel(manager, aHotel().build(), aRoom().sleeping(2).build());
-		bookingId = api(guest).contentType(ContentType.JSON)
+		bookingId = idempotentApi(guest).contentType(ContentType.JSON)
 			.body(Map.of("roomId", firstRoomOf(manager, hotelId), "checkIn", "2026-03-10", "checkOut", "2026-03-12",
 					"rooms", 1))
 			.when().post("/api/v1/bookings/init")

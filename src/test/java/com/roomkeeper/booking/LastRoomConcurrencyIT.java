@@ -66,7 +66,7 @@ class LastRoomConcurrencyIT extends AbstractIntegrationTest {
 			for (String token : tokens) {
 				futures.add(pool.submit(() -> {
 					start.await();
-					return api(token).contentType(ContentType.JSON).body(stay).when().post("/api/v1/bookings/init");
+					return idempotentApi(token).contentType(ContentType.JSON).body(stay).when().post("/api/v1/bookings/init");
 				}));
 			}
 			start.countDown();

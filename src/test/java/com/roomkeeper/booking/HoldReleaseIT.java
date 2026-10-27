@@ -130,7 +130,7 @@ class HoldReleaseIT extends AbstractIntegrationTest {
 
 	/** Holds rooms for Tuesday and Wednesday nights. */
 	private long hold(int rooms) {
-		return api(guest).contentType(ContentType.JSON)
+		return idempotentApi(guest).contentType(ContentType.JSON)
 			.body(Map.of("roomId", roomId, "checkIn", "2026-03-10", "checkOut", "2026-03-12", "rooms", rooms))
 			.when().post("/api/v1/bookings/init")
 			.then().statusCode(201).extract().jsonPath().getLong("id");

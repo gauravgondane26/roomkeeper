@@ -122,7 +122,7 @@ class BookingQueriesIT extends AbstractIntegrationTest {
 	}
 
 	private long hold(String token, String checkIn, String checkOut) {
-		return api(token).contentType(ContentType.JSON)
+		return idempotentApi(token).contentType(ContentType.JSON)
 			.body(Map.of("roomId", roomId, "checkIn", checkIn, "checkOut", checkOut, "rooms", 1))
 			.when().post("/api/v1/bookings/init")
 			.then().statusCode(201).extract().jsonPath().getLong("id");

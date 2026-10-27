@@ -46,7 +46,7 @@ import org.springframework.web.util.pattern.PathPatternParser;
  */
 public class IdempotencyFilter extends OncePerRequestFilter {
 
-	static final String HEADER = "Idempotency-Key";
+	public static final String HEADER = "Idempotency-Key";
 
 	static final String REPLAYED_HEADER = "Idempotent-Replayed";
 

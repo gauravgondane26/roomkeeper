@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import io.restassured.config.JsonConfig;
 import io.restassured.config.RestAssuredConfig;
@@ -84,6 +85,14 @@ public abstract class AbstractIntegrationTest {
 	/** A request that sends the given access token as a bearer token. */
 	protected RequestSpecification api(String accessToken) {
 		return api().header("Authorization", "Bearer " + accessToken);
+	}
+
+	/**
+	 * A signed-in request with a new Idempotency-Key, which requests that create a booking
+	 * or a payment must carry.
+	 */
+	protected RequestSpecification idempotentApi(String accessToken) {
+		return api(accessToken).header("Idempotency-Key", UUID.randomUUID().toString());
 	}
 
 	/**

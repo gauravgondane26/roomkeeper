@@ -185,7 +185,7 @@ class BookingInitIT extends AbstractIntegrationTest {
 	}
 
 	private ValidatableResponse init(Map<String, Object> stay) {
-		return api(guest).contentType(ContentType.JSON).body(stay)
+		return idempotentApi(guest).contentType(ContentType.JSON).body(stay)
 			.when().post("/api/v1/bookings/init")
 			.then();
 	}

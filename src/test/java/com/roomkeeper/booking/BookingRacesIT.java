@@ -63,7 +63,7 @@ class BookingRacesIT extends AbstractIntegrationTest {
 		List<Callable<Response>> requests = new ArrayList<>();
 		for (int i = 0; i < GUESTS; i++) {
 			String guest = accessTokens.issue(insertGuest(), Role.GUEST).value();
-			requests.add(() -> api(guest).contentType(ContentType.JSON).body(stay).post("/api/v1/bookings/init"));
+			requests.add(() -> idempotentApi(guest).contentType(ContentType.JSON).body(stay).post("/api/v1/bookings/init"));
 		}
 		for (int total : new int[] { 12, 9, 14, 8, 11 }) {
 			// The room type's total, which every night follows unless set by hand

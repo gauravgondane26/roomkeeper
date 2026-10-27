@@ -87,7 +87,7 @@ class DeleteWithBookingsIT extends AbstractIntegrationTest {
 	}
 
 	private void book() {
-		api(signUpAndLogIn(aUser().build())).contentType(ContentType.JSON)
+		idempotentApi(signUpAndLogIn(aUser().build())).contentType(ContentType.JSON)
 			.body(Map.of("roomId", roomId, "checkIn", "2026-03-10", "checkOut", "2026-03-11", "rooms", 1))
 			.when().post("/api/v1/bookings/init")
 			.then().statusCode(201);

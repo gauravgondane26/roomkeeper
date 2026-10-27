@@ -72,7 +72,7 @@ class HoldExpiryIT extends AbstractIntegrationTest {
 	}
 
 	private ValidatableResponse hold(String guest) {
-		return api(guest).contentType(ContentType.JSON)
+		return idempotentApi(guest).contentType(ContentType.JSON)
 			.body(Map.of("roomId", roomId, "checkIn", "2026-03-10", "checkOut", "2026-03-12", "rooms", 1))
 			.when().post("/api/v1/bookings/init")
 			.then();

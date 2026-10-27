@@ -32,6 +32,18 @@ class OpenApiIT extends AbstractIntegrationTest {
 	}
 
 	@Test
+	void specSaysWhichRequestsNeedAnIdempotencyKey() {
+		api()
+			.when().get("/v3/api-docs")
+			.then()
+				.statusCode(200)
+				.body("paths.'/api/v1/bookings/init'.post.parameters.find { it.name == 'Idempotency-Key' }.in",
+						equalTo("header"))
+				.body("paths.'/api/v1/bookings/init'.post.parameters.find { it.name == 'Idempotency-Key' }.required",
+						equalTo(true));
+	}
+
+	@Test
 	void swaggerUiLoadsWithoutLoggingIn() {
 		api().accept("text/html")
 			.when().get("/swagger-ui/index.html")
