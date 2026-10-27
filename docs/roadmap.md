@@ -139,8 +139,8 @@ Goal: a test-card payment confirms a booking exactly once.
 - [x] Test: a retried payment request returns the same session (same key replays; a new key while it's open gets it back; racing requests open one)
 - [x] Webhook: verify the signature (bad signature gets 400); in one transaction, dedupe the event, move counts from reserved to booked, confirm the booking. Signatures checked with the SDK against our clock (5-minute tolerance stops replays); events read from the raw JSON; another event about a payment already applied changes nothing; unknown sessions and other event types are acknowledged and ignored
 - [x] Test: the same webhook delivered twice confirms the booking once, including two deliveries in flight together (held on the booking's lock), which only the dedupe table stops; checked by disabling it. The design doc's "one outbox row" half comes with the outbox in week 7
-- [ ] Decide how a webhook after hold expiry is handled, update the state diagram, then implement it
-- [ ] Test: a webhook after hold expiry ends confirmed or refunded, never stuck
+- [x] Decide how a webhook after hold expiry is handled, update the state diagram, then implement it. Decided: re-check the stay as init would (hotel on sale, stay not begun, every night open with the rooms free); if so, book the rooms at the price paid and confirm (a new Expired → Confirmed edge), otherwise refund in full and leave it Expired. Any payment the booking can't take is refunded. Stripe is called for the refund outside the transaction, and the event is recorded only once the refund is made, with one idempotency key per payment. The expiry job also closes a released hold's open checkout session, after commit and off its own thread
+- [x] Test: a webhook after hold expiry ends confirmed or refunded, never stuck, including redelivered and racing deliveries (one refund), a refund Stripe can't make yet (503, then made on Stripe's retry), the hotel taken off sale, the stay already begun, and search updating when a late payment sells out the room
 - [ ] Handle failed and expired checkout sessions
 - [ ] Manual end-to-end check with the Stripe CLI and a test card
 

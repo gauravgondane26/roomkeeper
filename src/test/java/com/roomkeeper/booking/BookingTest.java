@@ -118,6 +118,18 @@ class BookingTest {
 	}
 
 	@Test
+	void aPaymentAfterTheHoldRanOutCanStillConfirmTheBooking() {
+		Booking booking = twoRooms();
+		booking.putGuests(List.of(guest("Asha")), HELD_AT.plusSeconds(60));
+		booking.startPayment(HELD_AT.plusSeconds(120));
+		booking.expire();
+
+		booking.confirm();
+
+		assertThat(booking.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
+	}
+
+	@Test
 	void guestsCantChangeOncePaymentStarted() {
 		Booking booking = twoRooms();
 		booking.putGuests(List.of(guest("Asha")), HELD_AT.plusSeconds(60));

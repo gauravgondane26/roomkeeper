@@ -3,6 +3,7 @@ package com.roomkeeper.payment;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
@@ -13,5 +14,9 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 	long countByBookingId(Long bookingId);
 
 	Optional<Payment> findByProviderSessionId(String providerSessionId);
+
+	/** Which booking the checkout session pays for, without loading the payment before the booking is locked. */
+	@Query("select p.bookingId from Payment p where p.providerSessionId = :sessionId")
+	Optional<Long> findBookingIdBySessionId(String sessionId);
 
 }

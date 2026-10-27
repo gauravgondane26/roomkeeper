@@ -5,7 +5,9 @@ import java.util.Set;
 
 /**
  * Where a booking is in its life. Everything before CONFIRMED is a hold on inventory
- * that can expire; a confirmed booking can only end by cancellation.
+ * that can expire; a confirmed booking can only end by cancellation. An expired booking
+ * can still be confirmed by a payment that arrives after its hold ran out, if its rooms are
+ * still on sale (otherwise the payment is refunded).
  */
 public enum BookingStatus {
 
@@ -24,7 +26,8 @@ public enum BookingStatus {
 			case GUESTS_ADDED -> EnumSet.of(GUESTS_ADDED, PAYMENT_PENDING, EXPIRED);
 			case PAYMENT_PENDING -> EnumSet.of(CONFIRMED, EXPIRED);
 			case CONFIRMED -> EnumSet.of(CANCELLED);
-			case EXPIRED, CANCELLED -> EnumSet.noneOf(BookingStatus.class);
+			case EXPIRED -> EnumSet.of(CONFIRMED);
+			case CANCELLED -> EnumSet.noneOf(BookingStatus.class);
 		};
 	}
 

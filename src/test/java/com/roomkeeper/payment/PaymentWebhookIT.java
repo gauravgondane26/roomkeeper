@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.sql.DataSource;
 
+import com.roomkeeper.booking.HoldExpiryJob;
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
 import com.roomkeeper.testsupport.FakePaymentGateway;
 import com.roomkeeper.testsupport.MutableClock;
@@ -51,6 +52,9 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 
 	@Autowired
 	FakePaymentGateway stripe;
+
+	@Autowired
+	HoldExpiryJob job;
 
 	@Autowired
 	JdbcTemplate jdbc;
@@ -113,6 +117,20 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 			.containsEntry("status", "SUCCEEDED")
 			.containsEntry("payment_intent_id", "pi_" + bookingId);
 		assertThat(nightsBooked()).containsOnly(2);
+	}
+
+	@Test
+	void aPaymentJustAfterTheHoldRanOutConfirmsBeforeTheRoomsAreReleased() {
+		// The expiry job hasn't run yet, so the rooms are still held for the booking
+		clock.advance(Duration.ofMinutes(10));
+
+		deliver(checkoutCompleted("evt_just_late_" + bookingId, sessionId, "pi_" + bookingId)).statusCode(200);
+		job.run();
+
+		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId)
+			.then().body("status", equalTo("CONFIRMED"));
+		assertThat(nightsBooked()).containsOnly(2);
+		assertThat(stripe.wasExpired(sessionId)).isFalse();
 	}
 
 	@Test

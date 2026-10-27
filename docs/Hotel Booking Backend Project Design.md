@@ -115,21 +115,22 @@ stateDiagram-v2
     Reserved --> Expired: hold timeout
     GuestsAdded --> Expired: hold timeout
     PaymentPending --> Expired: hold timeout
+    Expired --> Confirmed: late payment, rooms still free
     Confirmed --> Cancelled: cancel + refund
     Expired --> [*]
     Cancelled --> [*]
 ```
 
-Any state before Confirmed can time out. A Confirmed booking can only end by cancellation with a refund.
+Any state before Confirmed can time out. A Confirmed booking can only end by cancellation with a refund. An Expired booking can still be confirmed by a payment that arrives late (below); if it can't, the payment is refunded and the booking stays Expired.
 
 1. **Init.** `POST /bookings/init` locks the inventory rows for every night in the range, checks availability, increments `reserved_count`, and creates the booking as Reserved with `hold_expires_at` set 10 minutes out. The price is calculated and frozen here.
 2. **Add guests.** Attach saved guests, validated against room capacity. The hold clock keeps running.
 3. **Start payment.** Create a Stripe checkout session for the frozen amount. The `Idempotency-Key` header means a retried click returns the same session instead of creating a second one.
 4. **Webhook.** Verify the Stripe signature, then in one transaction: insert the event id into `processed_webhook_events` (a duplicate fails here and is ignored), move the counts from reserved to booked, mark the booking Confirmed, and write an outbox event.
-5. **Expiry.** A scheduled job runs every minute, takes a Redis lock so only one instance runs it, and releases any holds past `hold_expires_at`.
+5. **Expiry.** A scheduled job runs every minute, takes a Redis lock so only one instance runs it, and releases any holds past `hold_expires_at`. For a hold that was being paid for, it then asks Stripe to close the checkout session.
 6. **Cancel.** Decrement `booked_count`, call Stripe for the refund, and write an outbox event. A cancellation policy (full refund up to 48 hours before check-in, for example) lives in plain domain code so it's easy to unit test.
 
-One edge case is worth handling on purpose: a webhook that arrives after the hold expired. The safe answer is to re-check availability and either confirm or refund automatically. It makes a good test case and a good interview story.
+One edge case is worth handling on purpose: a webhook that arrives after the hold expired. Stripe keeps a checkout session open for at least 30 minutes, longer than the hold, so a guest can pay after their rooms went back on sale. The expiry job closes the session, but a payment can still get through (made as the session closed, or while Stripe couldn't be reached). The webhook then re-checks the stay as init would: the hotel on sale, the stay not yet begun, every night open with the rooms free. If so, it books the rooms at the price the guest paid and confirms the booking. If not, it refunds in full and the booking stays Expired. The refund is made outside the transaction, so Stripe is never called with inventory locked, and the event is recorded only once the refund succeeds: until then Stripe keeps redelivering it, and one idempotency key per payment means it's refunded once however many deliveries race. More generally, any payment the booking can't take is refunded rather than left stuck. It makes a good test case and a good interview story.
 
 ## Hard problems
 
@@ -192,7 +193,7 @@ Every feature starts as a failing test that states a business rule in plain word
 - [x] 50 concurrent requests for the last room: exactly one succeeds, 49 get a clean "sold out" error
 - [x] A hold expires after 10 minutes using an injected `Clock`, with no `Thread.sleep`
 - [ ] The same webhook delivered twice confirms the booking once and creates one outbox row
-- [ ] A webhook that arrives after the hold expired gets confirmed or refunded, never stuck
+- [x] A webhook that arrives after the hold expired gets confirmed or refunded, never stuck
 - [x] A retried `POST /bookings/init` with the same `Idempotency-Key` returns the original booking
 - [x] The 11th login attempt inside the window is rejected with 429
 - [x] Changing inventory evicts the cached search result for that hotel

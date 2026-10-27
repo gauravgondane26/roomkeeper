@@ -189,7 +189,10 @@ public class Booking {
 		moveTo(BookingStatus.PAYMENT_PENDING);
 	}
 
-	/** Stripe reported the payment: the rooms are the guest's. The caller books them. */
+	/**
+	 * Stripe reported the payment: the rooms are the guest's. The caller books them, either the
+	 * ones still held or, for a payment after the hold was released, the same rooms again.
+	 */
 	public void confirm() {
 		moveTo(BookingStatus.CONFIRMED);
 	}

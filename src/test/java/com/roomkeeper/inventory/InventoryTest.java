@@ -31,4 +31,27 @@ class InventoryTest {
 		assertThat(night.getBookedCount()).isZero();
 	}
 
+	@Test
+	void bookingRoomsStraightAwayTakesThemFromSale() {
+		Inventory night = new Inventory(7L, LocalDate.parse("2026-03-10"), 5);
+		night.hold(2);
+
+		night.book(3);
+
+		assertThat(night.getBookedCount()).isEqualTo(3);
+		assertThat(night.getReservedCount()).isEqualTo(2);
+		assertThat(night.getAvailable()).isZero();
+	}
+
+	@Test
+	void booksOnlyRoomsThatAreFree() {
+		Inventory night = new Inventory(7L, LocalDate.parse("2026-03-10"), 2);
+		night.hold(1);
+
+		assertThatThrownBy(() -> night.book(2)).isInstanceOf(IllegalStateException.class);
+		night.markClosed(true);
+		assertThatThrownBy(() -> night.book(1)).isInstanceOf(IllegalStateException.class);
+		assertThat(night.getBookedCount()).isZero();
+	}
+
 }

@@ -42,6 +42,8 @@ public class FakePaymentGateway implements PaymentGateway {
 
 	private final AtomicBoolean failNextCheckout = new AtomicBoolean();
 
+	private final AtomicBoolean failNextRefund = new AtomicBoolean();
+
 	private final AtomicReference<Runnable> beforeNextCheckout = new AtomicReference<>();
 
 	@Override
@@ -68,6 +70,9 @@ public class FakePaymentGateway implements PaymentGateway {
 
 	@Override
 	public String refund(String paymentIntentId, String idempotencyKey) {
+		if (failNextRefund.getAndSet(false)) {
+			throw new ApiException(ProblemType.PAYMENTS_UNAVAILABLE, "Fake Stripe is down");
+		}
 		return refundsByKey.computeIfAbsent(idempotencyKey, key -> {
 			refundedPaymentIntents.add(paymentIntentId);
 			return "re_test_fake_" + ids.incrementAndGet();
@@ -77,6 +82,11 @@ public class FakePaymentGateway implements PaymentGateway {
 	/** The next checkout session fails as if Stripe were down. */
 	public void failNextCheckout() {
 		failNextCheckout.set(true);
+	}
+
+	/** The next refund fails as if Stripe were down. */
+	public void failNextRefund() {
+		failNextRefund.set(true);
 	}
 
 	/** Runs the action while the next checkout session is being opened, as if it happened meanwhile. */

@@ -88,6 +88,7 @@ class HoldReleaser {
 		if (booking == null || !booking.getStatus().isHold() || !booking.holdRanOut(now)) {
 			return false;
 		}
+		boolean paying = booking.getStatus() == BookingStatus.PAYMENT_PENDING;
 		Room room = booking.getRoom();
 		LocalDate lastNight = booking.getCheckOut().minusDays(1);
 		List<Inventory> nights = inventory.lockNights(room.getId(), booking.getCheckIn(), lastNight);
@@ -98,6 +99,7 @@ class HoldReleaser {
 		Hotel hotel = room.getHotel();
 		events.publishEvent(
 				InventoryChangedEvent.sale(hotel.getId(), hotel.getCity(), booking.getCheckIn(), lastNight, reopened));
+		events.publishEvent(new BookingExpiredEvent(booking.getId(), paying));
 		return true;
 	}
 

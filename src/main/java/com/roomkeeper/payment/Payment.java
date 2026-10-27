@@ -104,4 +104,14 @@ public class Payment {
 		this.paymentIntentId = paymentIntentId;
 	}
 
+	/** Stripe gave back in full what it took against {@code paymentIntentId}. */
+	public void refund(String paymentIntentId, String refundId) {
+		if (status == PaymentStatus.REFUNDED) {
+			throw new IllegalStateException("Payment " + id + " is already refunded");
+		}
+		this.status = PaymentStatus.REFUNDED;
+		this.paymentIntentId = paymentIntentId;
+		this.refundId = refundId;
+	}
+
 }

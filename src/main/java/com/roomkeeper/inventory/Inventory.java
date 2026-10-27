@@ -116,6 +116,18 @@ public class Inventory {
 		bookedCount += rooms;
 	}
 
+	/**
+	 * Books rooms straight away, without a hold: a payment that arrived after its booking's
+	 * hold was released. Check {@link #canSell} first.
+	 */
+	public void book(int rooms) {
+		if (!canSell(rooms)) {
+			throw new IllegalStateException("Can't book " + rooms + " rooms on " + date + ": " + getAvailable()
+					+ " free" + (closed ? ", closed" : ""));
+		}
+		bookedCount += rooms;
+	}
+
 	/** Gives back rooms held by a booking that expired. */
 	public void release(int rooms) {
 		if (reservedCount < rooms) {

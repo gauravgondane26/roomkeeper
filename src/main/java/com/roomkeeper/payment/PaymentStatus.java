@@ -15,7 +15,7 @@ public enum PaymentStatus {
 	/** The payment failed. */
 	FAILED,
 
-	/** Paid, then refunded in full. */
+	/** Paid, then refunded in full: the booking couldn't take it. */
 	REFUNDED
 
 }
