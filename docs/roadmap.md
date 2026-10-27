@@ -134,7 +134,7 @@ Goal: a test-card payment confirms a booking exactly once.
 - [x] Migration: `payments`, `processed_webhook_events`; a partial unique index allows one open or paid payment per booking, and check constraints require the payment intent once paid and the refund id once refunded
 - [x] Idempotency keys: Redis `SET NX` (`idem:{userId}:{key}`, 24 h TTL) storing status and response; fail closed with 503 when Redis is down. A running request holds its key on a 2-minute lease; only 2xx responses are kept (a failure releases the key); the same key on a different request gets 422, and a retry while the first runs gets 409 (as in the IETF Idempotency-Key draft)
 - [x] Apply `Idempotency-Key` to `POST /bookings/init`; test that a retry returns the original booking. The header is required, and racing retries with one key make one booking
-- [ ] Stripe client behind an interface, with a fake for tests
+- [x] Stripe client behind an interface, with a fake for tests. `stripe-java` 34 with idempotency keys on sessions and refunds, 5 s/20 s timeouts; without `STRIPE_SECRET_KEY` payments answer 503 (`payments-unavailable`) and everything else works; integration tests always get the in-memory fake
 - [ ] `POST /bookings/{id}/payments`: checkout session for the frozen amount, booking moves to Payment pending
 - [ ] Test: a retried payment request returns the same session
 - [ ] Webhook: verify the signature (bad signature gets 400); in one transaction, dedupe the event, move counts from reserved to booked, confirm the booking

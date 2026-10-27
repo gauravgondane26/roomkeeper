@@ -17,6 +17,11 @@ roomkeeper:
   jobs:
     enabled: false
 
+  # Tests pay through FakePaymentGateway, not Stripe, and sign webhooks with this test-only secret
+  payments:
+    stripe:
+      webhook-secret: whsec_roomkeeper_test
+
 logging:
   level:
     org.testcontainers: WARN

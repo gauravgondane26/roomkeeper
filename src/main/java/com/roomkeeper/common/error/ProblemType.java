@@ -43,7 +43,8 @@ public enum ProblemType {
 	HAS_BOOKINGS("has-bookings", HttpStatus.CONFLICT, "Has bookings"),
 	IDEMPOTENCY_KEY_REQUIRED("idempotency-key-required", HttpStatus.BAD_REQUEST, "Idempotency key required"),
 	IDEMPOTENCY_KEY_IN_USE("idempotency-key-in-use", HttpStatus.CONFLICT, "Idempotency key in use"),
-	IDEMPOTENCY_KEY_REUSED("idempotency-key-reused", HttpStatus.UNPROCESSABLE_CONTENT, "Idempotency key reused");
+	IDEMPOTENCY_KEY_REUSED("idempotency-key-reused", HttpStatus.UNPROCESSABLE_CONTENT, "Idempotency key reused"),
+	PAYMENTS_UNAVAILABLE("payments-unavailable", HttpStatus.SERVICE_UNAVAILABLE, "Payments unavailable");
 
 	private static final String URN_PREFIX = "urn:roomkeeper:problem:";
 

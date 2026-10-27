@@ -57,6 +57,16 @@ roomkeeper:
   cache:
     hotel-info-ttl: 10m
     search-ttl: 60s
+  payments:
+    # Lowercase ISO code of a currency with two decimal places
+    currency: inr
+    # Where Stripe sends the guest after paying or giving up; only the webhook confirms a booking
+    success-url: http://localhost:8080/payments/complete.html?session_id={CHECKOUT_SESSION_ID}
+    cancel-url: http://localhost:8080/payments/cancelled.html
+    stripe:
+      # Test-mode keys only; without a secret key, payments answer 503 and everything else works
+      secret-key: ${STRIPE_SECRET_KEY:}
+      webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
   idempotency:
     # A retry within a day gets the first response back
     ttl: 24h

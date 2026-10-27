@@ -91,6 +91,6 @@ CI runs on every push to `main` and every pull request. It first checks that no 
 | --- | --- | --- |
 | `local` (default) | Running on a developer machine | The Compose services |
 | `test` | The test suite | Testcontainers |
-| `prod` | The Docker image | Environment variables only: `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `JWT_SECRET` (base64, 32+ bytes) |
+| `prod` | The Docker image | Environment variables only: `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `JWT_SECRET` (base64, 32+ bytes); optionally `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` (test mode), without which payments answer 503 |
 
 Everything runs in UTC regardless of the host's time zone.
