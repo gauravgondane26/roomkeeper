@@ -18,7 +18,7 @@
 		<!-- Filled in by the JaCoCo agent when it runs; empty otherwise -->
 		<argLine></argLine>
 		<test.jvm.args>-Duser.timezone=UTC</test.jvm.args>
-		<rest-assured.version>6.2.0</rest-assured.version>
+		<rest-assured.version>6.3.0</rest-assured.version>
 		<jacoco.version>0.8.15</jacoco.version>
 		<springdoc.version>3.1.1</springdoc.version>
 		<mapstruct.version>1.6.3</mapstruct.version>
