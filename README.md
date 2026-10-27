@@ -71,6 +71,17 @@ Requests that create something take an `Idempotency-Key` header: any string of 1
 
 A job runs every minute and gives back the rooms of holds that ran out unpaid; a Redis lock (`lock:hold-expiry`) makes sure only one instance runs it. A hold past its time already reads `EXPIRED` before the job gets to it. If the guest was paying, the job also closes their Stripe checkout session, which would otherwise stay open for half an hour.
 
+### Trying a payment end to end (Stripe test mode)
+
+No real money moves: test-mode keys only work with Stripe's test cards.
+
+1. Put your test secret key in `.env` (gitignored; Compose reads it): `STRIPE_SECRET_KEY=sk_test_...`, from the Stripe Dashboard under Developers > API keys with Test mode on.
+2. `docker compose --profile stripe up -d --wait` also starts the Stripe CLI (`stripe` service), which signs in with that key and forwards checkout events to the app's webhook. `docker compose logs stripe` shows its webhook signing secret: put it in `.env` as `STRIPE_WEBHOOK_SECRET=whsec_...`, then run the same `up` command again so the app picks it up.
+3. Hold a room, add a guest, and `POST /api/v1/bookings/{id}/payments`; open the `checkoutUrl` within the 10-minute hold and pay with card `4242 4242 4242 4242`, any future expiry, and any CVC. (Brave Shields can block Stripe's page; turn them off for `checkout.stripe.com`.)
+4. `docker compose logs stripe` shows `checkout.session.completed` answered with 200, and the booking reads `CONFIRMED`. `docker compose run --rm --no-deps stripe events resend evt_...` delivers the event again; nothing changes.
+
+`scripts/smoke.sh` reads `.env` as well, so with keys set it opens a real test-mode checkout session and expects webhooks to check signatures.
+
 ## Tests
 
 ```bash

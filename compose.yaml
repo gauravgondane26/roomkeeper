@@ -22,7 +22,7 @@ services:
       # Development-only admin, same as the local profile; approves hotels
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@roomkeeper.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-local-admin-password}
-      # Stripe test-mode keys from your shell; unset, payments answer 503 and the rest works
+      # Stripe test-mode keys from your shell or .env; unset, payments answer 503 and the rest works
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
     ports:
@@ -32,6 +32,25 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  # Forwards Stripe test-mode webhooks to the app, to try a payment end to end:
+  #   docker compose --profile stripe up -d --wait
+  # It uses STRIPE_SECRET_KEY (sk_test_ only), so there's no `stripe login`. Put the
+  # signing secret it prints (docker compose logs stripe) in STRIPE_WEBHOOK_SECRET.
+  stripe:
+    image: stripe/stripe-cli:v1.55.2
+    profiles: [stripe]
+    command:
+      - listen
+      - --forward-to
+      - app:8080/webhook/payment
+      - --events
+      - checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired
+    environment:
+      STRIPE_API_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_CLI_TELEMETRY_OPTOUT: "1"
+    depends_on:
+      - app
 
   postgres:
     image: postgres:18-alpine

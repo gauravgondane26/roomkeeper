@@ -5,6 +5,17 @@
 # Each week adds checks for the endpoints that week delivers.
 set -euo pipefail
 
+# Compose reads .env too, so take the same settings from it (the shell's own still win, as
+# with Compose): the payment checks then expect what the stack was started with
+env_file="$(dirname "$0")/../.env"
+if [[ -f "$env_file" ]]; then
+  while IFS='=' read -r name value; do
+    if [[ "$name" =~ ^[A-Z_][A-Z0-9_]*$ && -z "${!name:-}" ]]; then
+      export "$name=${value%$'\r'}"
+    fi
+  done < "$env_file"
+fi
+
 BASE_URL="${BASE_URL:-http://localhost:8080}"
 WAIT_SECONDS="${WAIT_SECONDS:-60}"
 failures=0
