@@ -63,7 +63,7 @@ The central idea is that inventory is one row per room type per night, and the d
 | `bookings` | id, user\_id, room\_id, check\_in, check\_out, rooms\_count, status, amount, hold\_expires\_at, version | Amount is frozen at reservation time |
 | `guests` | id, user\_id, name, age, gender | Saved guests a user can reuse |
 | `booking_guests` | booking\_id, guest\_id | Join table |
-| `payments` | id, booking\_id, provider\_session\_id, status, amount, refund\_id | One booking can have a failed attempt and a successful one |
+| `payments` | id, booking\_id, provider\_session\_id, checkout\_url, status, amount, currency, payment\_intent\_id, refund\_id | One booking can have an expired or failed attempt and a successful one, but at most one open or paid at a time (partial unique index) |
 | `processed_webhook_events` | event\_id (primary key), received\_at | Dedupes Stripe events inside the same transaction as the state change |
 | `outbox_events` | id, aggregate\_id, type, payload (jsonb), created\_at, published\_at | Side effects written atomically with the booking |
 | `hotel_min_price` | hotel\_id, date, min\_price | Precomputed cheapest night, keeps search fast |

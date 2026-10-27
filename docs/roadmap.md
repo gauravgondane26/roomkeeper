@@ -131,7 +131,7 @@ Goal: no oversell under load, and holds always release.
 
 Goal: a test-card payment confirms a booking exactly once.
 
-- [ ] Migration: `payments`, `processed_webhook_events`
+- [x] Migration: `payments`, `processed_webhook_events`; a partial unique index allows one open or paid payment per booking, and check constraints require the payment intent once paid and the refund id once refunded
 - [ ] Idempotency keys: Redis `SET NX` (`idem:{userId}:{key}`, 24 h TTL) storing status and response; fail closed with 503 when Redis is down
 - [ ] Apply `Idempotency-Key` to `POST /bookings/init`; test that a retry returns the original booking
 - [ ] Stripe client behind an interface, with a fake for tests
@@ -189,6 +189,7 @@ Goal: the system is observable, load tested, and explained.
 - [ ] Search in one query (`count(*) over ()`) instead of a count and a page query
 - [ ] Inventory admin can reset a night's total to follow the room type again
 - [ ] Cache key prefix carries a version, so a deploy that changes a cached response starts fresh
+- [ ] Hotel info can't be re-cached stale after an eviction: Spring Data Redis stores entries without waiting, so a guest's read can land just after a manager's change evicts the entry and serve old details for up to 10 minutes. Version the key like search, or make cache writes wait for Redis; test it by holding writes back with `CLIENT PAUSE`
 - [ ] Reset the shared test clock before every test automatically
 - [ ] Test: authorization matrix over every admin endpoint (anonymous, guest, other manager, owner)
 - [ ] Test: JWT edge cases (expired, wrong issuer, wrong key, `alg: none`, tampered role claim)

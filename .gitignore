@@ -25,3 +25,6 @@ Thumbs.db
 
 # Claude session handoffs (local only)
 /CLAUDE HANDOFFS/
+
+# Claude cleanup reports (local only)
+/CLAUDE CLEANUP/
