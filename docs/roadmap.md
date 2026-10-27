@@ -124,6 +124,7 @@ Goal: no oversell under load, and holds always release.
 - [x] Dependabot: weekly Maven, GitHub Actions, Dockerfile, and Compose updates, minor and patch grouped; no automatic major bumps for Java, Postgres, or Redis
 - [x] Actions pinned to commit SHAs, with the version in a comment for Dependabot
 - [x] Coverage floor: `verify` fails below 94% of lines or 83% of branches
+- [x] The Docker build skips the unit tests again: the POM's `skipTests` setting had been overriding `-DskipTests`
 
 ## Week 6: Payments
 

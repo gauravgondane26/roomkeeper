@@ -142,7 +142,9 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
 					<argLine>@{argLine} ${test.jvm.args}</argLine>
-					<skipTests>${skipUnitTests}</skipTests>
+					<!-- skip, not skipTests: a configured skipTests would override -DskipTests,
+					     which the Dockerfile uses -->
+					<skip>${skipUnitTests}</skip>
 				</configuration>
 			</plugin>
 			<!-- Integration tests: *IT, run in the integration-test phase of verify -->
