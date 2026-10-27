@@ -156,9 +156,7 @@ public class Booking {
 	 * held. At least one, and no more than the rooms sleep.
 	 */
 	public void putGuests(Collection<Guest> newGuests, Instant now) {
-		if (status == BookingStatus.EXPIRED || (status.isHold() && holdRanOut(now))) {
-			throw new ApiException(ProblemType.HOLD_EXPIRED, "Booking " + id + "'s hold ran out at " + holdExpiresAt);
-		}
+		requireHeld(now);
 		int fits = room.getCapacity() * roomsCount;
 		if (newGuests.isEmpty() || newGuests.size() > fits) {
 			throw new InvalidFieldException("guestIds", "must name 1 to " + fits + " guests: " + roomsCount
@@ -171,9 +169,35 @@ public class Booking {
 		guests.sort(Comparator.comparing(Guest::getId, Comparator.nullsLast(Comparator.naturalOrder())));
 	}
 
+	/**
+	 * Checks the guest can start paying: the guests are on and the rooms are still held.
+	 * Throws otherwise, changing nothing.
+	 */
+	public void requirePaymentCanStart(Instant now) {
+		requireHeld(now);
+		if (status == BookingStatus.RESERVED) {
+			throw new ApiException(ProblemType.BOOKING_STATE, "Put the guests on booking " + id + " before paying");
+		}
+		if (!status.canMoveTo(BookingStatus.PAYMENT_PENDING)) {
+			throw new ApiException(ProblemType.BOOKING_STATE, "Booking " + id + " is " + status + " and can't be paid");
+		}
+	}
+
+	/** The guest is paying: the rooms stay held until the payment confirms or the hold runs out. */
+	public void startPayment(Instant now) {
+		requirePaymentCanStart(now);
+		moveTo(BookingStatus.PAYMENT_PENDING);
+	}
+
 	/** The hold ran out without payment; the caller gives the rooms back. */
 	public void expire() {
 		moveTo(BookingStatus.EXPIRED);
+	}
+
+	private void requireHeld(Instant now) {
+		if (status == BookingStatus.EXPIRED || (status.isHold() && holdRanOut(now))) {
+			throw new ApiException(ProblemType.HOLD_EXPIRED, "Booking " + id + "'s hold ran out at " + holdExpiresAt);
+		}
 	}
 
 	private void moveTo(BookingStatus next) {

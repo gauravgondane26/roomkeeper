@@ -135,8 +135,8 @@ Goal: a test-card payment confirms a booking exactly once.
 - [x] Idempotency keys: Redis `SET NX` (`idem:{userId}:{key}`, 24 h TTL) storing status and response; fail closed with 503 when Redis is down. A running request holds its key on a 2-minute lease; only 2xx responses are kept (a failure releases the key); the same key on a different request gets 422, and a retry while the first runs gets 409 (as in the IETF Idempotency-Key draft)
 - [x] Apply `Idempotency-Key` to `POST /bookings/init`; test that a retry returns the original booking. The header is required, and racing retries with one key make one booking
 - [x] Stripe client behind an interface, with a fake for tests. `stripe-java` 34 with idempotency keys on sessions and refunds, 5 s/20 s timeouts; without `STRIPE_SECRET_KEY` payments answer 503 (`payments-unavailable`) and everything else works; integration tests always get the in-memory fake
-- [ ] `POST /bookings/{id}/payments`: checkout session for the frozen amount, booking moves to Payment pending
-- [ ] Test: a retried payment request returns the same session
+- [x] `POST /bookings/{id}/payments`: checkout session for the frozen amount, booking moves to Payment pending. Stripe is called between two short transactions, never with the booking locked; a hold that runs out meanwhile gets its session closed; the session stays open until 31 minutes past the hold (Stripe's minimum is 30); Stripe's return pages are static and public
+- [x] Test: a retried payment request returns the same session (same key replays; a new key while it's open gets it back; racing requests open one)
 - [ ] Webhook: verify the signature (bad signature gets 400); in one transaction, dedupe the event, move counts from reserved to booked, confirm the booking
 - [ ] Test: the same webhook delivered twice confirms the booking once
 - [ ] Decide how a webhook after hold expiry is handled, update the state diagram, then implement it

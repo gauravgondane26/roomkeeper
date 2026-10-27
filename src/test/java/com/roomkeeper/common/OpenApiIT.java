@@ -40,7 +40,9 @@ class OpenApiIT extends AbstractIntegrationTest {
 				.body("paths.'/api/v1/bookings/init'.post.parameters.find { it.name == 'Idempotency-Key' }.in",
 						equalTo("header"))
 				.body("paths.'/api/v1/bookings/init'.post.parameters.find { it.name == 'Idempotency-Key' }.required",
-						equalTo(true));
+						equalTo(true))
+				.body("paths.'/api/v1/bookings/{bookingId}/payments'.post.parameters.find { it.name == 'Idempotency-Key' }"
+						+ ".required", equalTo(true));
 	}
 
 	@Test

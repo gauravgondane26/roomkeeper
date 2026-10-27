@@ -33,6 +33,8 @@ public class SecurityConfig {
 						"/api/v1/auth/logout").permitAll()
 				// Guests browse hotels without logging in
 				.requestMatchers(HttpMethod.GET, "/api/v1/hotels/**").permitAll()
+				// Stripe sends the guest back to these static pages after checkout
+				.requestMatchers(HttpMethod.GET, "/payments/*.html").permitAll()
 				.requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
 				// API docs: Swagger UI is the client
 				.requestMatchers("/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()

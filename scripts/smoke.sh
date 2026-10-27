@@ -175,6 +175,22 @@ check "guest lists saved travellers" GET /api/v1/users/guests 200 "\"id\":$trave
 check "guest puts the traveller on the booking" POST "/api/v1/bookings/$booking_id/guests" 200 \
   '"status":"GUESTS_ADDED"' "{\"guestIds\":[$traveller_id]}"
 check "guest reads the booking's status" GET "/api/v1/bookings/$booking_id/status" 200 '"status":"GUESTS_ADDED"'
+
+# Week 6: payments
+check "paying needs an Idempotency-Key" POST "/api/v1/bookings/$booking_id/payments" 400 \
+  "urn:roomkeeper:problem:idempotency-key-required"
+IDEMPOTENCY_KEY=$(new_key)
+if [[ -n "${STRIPE_SECRET_KEY:-}" ]]; then
+  check "guest opens a Stripe checkout session" POST "/api/v1/bookings/$booking_id/payments" 201 \
+    '"checkoutUrl":"https://checkout.stripe.com/'
+  booking_status=PAYMENT_PENDING
+else
+  check "without Stripe keys, paying answers 503" POST "/api/v1/bookings/$booking_id/payments" 503 \
+    "urn:roomkeeper:problem:payments-unavailable"
+  booking_status=GUESTS_ADDED
+fi
+IDEMPOTENCY_KEY=""
+check "Stripe's return page is public" GET /payments/complete.html 200 "Payment received"
 check "guest lists their bookings" GET /api/v1/users/bookings 200 "\"id\":$booking_id"
 TOKEN=$manager_token
 check "a hotel with bookings can't be deleted" DELETE "/api/v1/admin/hotels/$hotel_id" 409 \
@@ -185,7 +201,7 @@ IDEMPOTENCY_KEY=$(new_key)
 check "a hotel off sale can't be booked" POST /api/v1/bookings/init 404 "urn:roomkeeper:problem:not-found" \
   "{\"roomId\":$room_id,\"checkIn\":\"$stay_in\",\"checkOut\":\"$stay_out\",\"rooms\":1}"
 IDEMPOTENCY_KEY=""
-check "its bookings carry on" GET "/api/v1/bookings/$booking_id/status" 200 '"status":"GUESTS_ADDED"'
+check "its bookings carry on" GET "/api/v1/bookings/$booking_id/status" 200 "\"status\":\"$booking_status\""
 TOKEN=""
 
 # Last, since it uses up this client's login attempts: within 11 tries the limit must hit

@@ -71,6 +71,50 @@ class BookingTest {
 	}
 
 	@Test
+	void payingStartsOnceTheGuestsAreOn() {
+		Booking booking = twoRooms();
+		booking.putGuests(List.of(guest("Asha")), HELD_AT.plusSeconds(60));
+
+		booking.startPayment(HELD_AT.plusSeconds(120));
+
+		assertThat(booking.getStatus()).isEqualTo(BookingStatus.PAYMENT_PENDING);
+	}
+
+	@Test
+	void payingNeedsTheGuestsFirst() {
+		Booking booking = twoRooms();
+
+		assertThatThrownBy(() -> booking.startPayment(HELD_AT.plusSeconds(60)))
+			.isInstanceOfSatisfying(ApiException.class, ex -> {
+				assertThat(ex.type()).isEqualTo(ProblemType.BOOKING_STATE);
+				assertThat(ex.getMessage()).contains("guests");
+			});
+		assertThat(booking.getStatus()).isEqualTo(BookingStatus.RESERVED);
+	}
+
+	@Test
+	void payingNeedsTheRoomsStillHeld() {
+		Booking booking = twoRooms();
+		booking.putGuests(List.of(guest("Asha")), HELD_AT.plusSeconds(60));
+
+		assertThatThrownBy(() -> booking.startPayment(EXPIRES_AT))
+			.isInstanceOfSatisfying(ApiException.class,
+					ex -> assertThat(ex.type()).isEqualTo(ProblemType.HOLD_EXPIRED));
+		assertThat(booking.getStatus()).isEqualTo(BookingStatus.GUESTS_ADDED);
+	}
+
+	@Test
+	void guestsCantChangeOncePaymentStarted() {
+		Booking booking = twoRooms();
+		booking.putGuests(List.of(guest("Asha")), HELD_AT.plusSeconds(60));
+		booking.startPayment(HELD_AT.plusSeconds(120));
+
+		assertThatThrownBy(() -> booking.putGuests(List.of(guest("Vikram")), HELD_AT.plusSeconds(180)))
+			.isInstanceOfSatisfying(ApiException.class,
+					ex -> assertThat(ex.type()).isEqualTo(ProblemType.BOOKING_STATE));
+	}
+
+	@Test
 	void needsAtLeastOneGuest() {
 		assertThatThrownBy(() -> twoRooms().putGuests(List.of(), HELD_AT)).isInstanceOf(InvalidFieldException.class);
 	}
