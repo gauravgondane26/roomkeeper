@@ -74,7 +74,12 @@ A job runs every minute and gives back the rooms of holds that ran out unpaid; a
 ./mvnw verify    # unit + integration tests (*IT) against real Postgres and Redis via Testcontainers
 ```
 
-`verify` writes a coverage report to `target/site/jacoco/index.html` and fails if coverage drops below 94% of lines or 83% of branches.
+`verify` writes a coverage report to `target/site/jacoco/index.html` and fails if coverage drops below 94% of lines or 83% of branches. A run of only some tests can't reach that, so skip coverage for it:
+
+```bash
+./mvnw verify -DskipUnitTests -Djacoco.skip=true -Dit.test=CachingIT   # one integration test class
+./mvnw test -Dtest=BookingStatusTest                                    # one unit test class (no coverage check)
+```
 
 CI runs on every push to `main` and every pull request. It first checks that no migration already on `main` was changed (`scripts/check-migrations.sh`), then runs the same steps as above, then builds the Docker image and smoke tests it. Dependabot opens weekly update pull requests for Maven, GitHub Actions, and the Docker images.
 

@@ -125,6 +125,7 @@ Goal: no oversell under load, and holds always release.
 - [x] Actions pinned to commit SHAs, with the version in a comment for Dependabot
 - [x] Coverage floor: `verify` fails below 94% of lines or 83% of branches
 - [x] The Docker build skips the unit tests again: the POM's `skipTests` setting had been overriding `-DskipTests`
+- [ ] Flaky: `CachingIT.hotelInfoIsCachedForAboutTenMinutes` failed once in CI (run 40474237157) with no error logged and passed on rerun; its failure message now shows what Redis did, so find the cause the next time it fails
 
 ## Week 6: Payments
 

@@ -1,6 +1,11 @@
 package com.roomkeeper.search;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.UUID;
 
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
@@ -12,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -58,10 +64,13 @@ class CachingIT extends AbstractIntegrationTest {
 
 	@Test
 	void hotelInfoIsCachedForAboutTenMinutes() {
+		RedisActivity before = redisActivity();
 		info().statusCode(200);
 
 		String key = "hotel:" + hotelId;
-		assertThat(redis.hasKey(key)).isTrue();
+		// Failed once in CI with nothing logged (run 40474237157); if it fails again, the
+		// message says what Redis did
+		assertThat(redis.hasKey(key)).as(() -> redisSince(before, key)).isTrue();
 		assertThat(redis.getExpire(key)).isBetween(590L, 600L);
 	}
 
@@ -155,6 +164,48 @@ class CachingIT extends AbstractIntegrationTest {
 		return api().queryParam("city", city).queryParam("checkIn", "2026-03-12").queryParam("checkOut", "2026-03-15")
 			.when().get("/api/v1/hotels/search")
 			.then().statusCode(200);
+	}
+
+	/**
+	 * For a failure message: the commands Redis ran since the snapshot (did the cache's SET
+	 * arrive, did anything delete or flush), keys it expired or evicted, and the keys it holds.
+	 */
+	private String redisSince(RedisActivity before, String key) {
+		boolean secondLook = redis.hasKey(key);
+		RedisActivity now = redisActivity();
+		return """
+				%s missing after the request (there on a second look: %s)
+				Commands since the request: %s
+				Keys expired: %d, evicted: %d
+				Keys now: %s""".formatted(key, secondLook, now.commandsSince(before), now.expired() - before.expired(),
+				now.evicted() - before.evicted(), new TreeSet<>(redis.keys("*")));
+	}
+
+	private RedisActivity redisActivity() {
+		Properties commands = redis.execute((RedisCallback<Properties>) c -> c.serverCommands().info("commandstats"));
+		Properties stats = redis.execute((RedisCallback<Properties>) c -> c.serverCommands().info("stats"));
+		Map<String, Long> calls = new HashMap<>();
+		// cmdstat_set=calls=12,usec=34,...
+		commands.forEach((name, value) -> calls.put(name.toString().replace("cmdstat_", ""),
+				Long.parseLong(value.toString().replaceAll("^calls=(\\d+),.*", "$1"))));
+		return new RedisActivity(calls, Long.parseLong(stats.getProperty("expired_keys")),
+				Long.parseLong(stats.getProperty("evicted_keys")));
+	}
+
+	/** Redis's per-command call counts and expired and evicted key totals at one moment. */
+	private record RedisActivity(Map<String, Long> calls, long expired, long evicted) {
+
+		String commandsSince(RedisActivity before) {
+			Map<String, Long> ran = new TreeMap<>();
+			calls.forEach((command, count) -> {
+				long more = count - before.calls.getOrDefault(command, 0L);
+				if (more > 0) {
+					ran.put(command, more);
+				}
+			});
+			return ran.toString();
+		}
+
 	}
 
 }
