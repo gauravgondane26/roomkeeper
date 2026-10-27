@@ -1,7 +1,9 @@
 package com.roomkeeper.testsupport;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.Set;
 
 import io.restassured.config.JsonConfig;
 import io.restassured.config.RestAssuredConfig;
@@ -23,6 +25,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import static io.restassured.RestAssured.given;
 import static io.restassured.path.json.config.JsonPathConfig.NumberReturnType.BIG_DECIMAL;
+import static org.awaitility.Awaitility.await;
 
 /**
  * Base class for tests that run the full application against real Postgres and Redis,
@@ -81,6 +84,16 @@ public abstract class AbstractIntegrationTest {
 	/** A request that sends the given access token as a bearer token. */
 	protected RequestSpecification api(String accessToken) {
 		return api().header("Authorization", "Bearer " + accessToken);
+	}
+
+	/**
+	 * Waits for a cached response to reach Redis and returns the keys matching the pattern.
+	 * The cache doesn't wait for Redis to store a response (Spring Data Redis's default with
+	 * Lettuce), so the entry can land just after the response. A test that reads the entry,
+	 * or changes the data behind it, waits for it first.
+	 */
+	protected Set<String> awaitCached(String keyPattern) {
+		return await().atMost(Duration.ofSeconds(5)).until(() -> redis.keys(keyPattern), keys -> !keys.isEmpty());
 	}
 
 	/** Signs the user up and returns their id. */

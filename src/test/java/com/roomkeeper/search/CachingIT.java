@@ -1,11 +1,6 @@
 package com.roomkeeper.search;
 
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
-import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.UUID;
 
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
@@ -17,7 +12,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -30,10 +24,13 @@ import static org.hamcrest.Matchers.equalTo;
 
 /**
  * Hotel info and search results are cached in Redis. Tests that need to prove a response
- * came from the cache change the database directly, which no cache eviction sees.
+ * came from the cache change the database directly, which no cache eviction sees. A response
+ * reaches the cache just after it's returned, so tests wait for the entry before relying on it.
  */
 @Import(MutableClockConfig.class)
 class CachingIT extends AbstractIntegrationTest {
+
+	private static final String CHANGE_BEHIND_THE_CACHE = "update hotels set name = 'Changed behind the cache' where id = ?";
 
 	@Autowired
 	MutableClock clock;
@@ -64,20 +61,18 @@ class CachingIT extends AbstractIntegrationTest {
 
 	@Test
 	void hotelInfoIsCachedForAboutTenMinutes() {
-		RedisActivity before = redisActivity();
 		info().statusCode(200);
 
 		String key = "hotel:" + hotelId;
-		// Failed once in CI with nothing logged (run 40474237157); if it fails again, the
-		// message says what Redis did
-		assertThat(redis.hasKey(key)).as(() -> redisSince(before, key)).isTrue();
+		awaitCached(key);
 		assertThat(redis.getExpire(key)).isBetween(590L, 600L);
 	}
 
 	@Test
 	void cachedHotelInfoIsServedWithoutTheDatabase() {
 		info().body("name", equalTo("Seaside Inn"));
-		jdbc.update("update hotels set name = 'Changed behind the cache' where id = ?", hotelId);
+		awaitCached("hotel:" + hotelId);
+		jdbc.update(CHANGE_BEHIND_THE_CACHE, hotelId);
 
 		info().body("name", equalTo("Seaside Inn"));
 	}
@@ -85,6 +80,7 @@ class CachingIT extends AbstractIntegrationTest {
 	@Test
 	void editingTheHotelEvictsItsInfo() {
 		info().body("name", equalTo("Seaside Inn"));
+		awaitCached("hotel:" + hotelId);
 
 		api(manager).contentType(ContentType.JSON).body(aHotel().named("Seaside Resort").inCity(city).build())
 			.when().put("/api/v1/admin/hotels/{id}", hotelId)
@@ -96,6 +92,7 @@ class CachingIT extends AbstractIntegrationTest {
 	@Test
 	void addingARoomTypeEvictsTheHotelsInfo() {
 		info().body("rooms.type", contains("Deluxe"));
+		awaitCached("hotel:" + hotelId);
 
 		createRoom(manager, hotelId, aRoom().ofType("Suite").build());
 
@@ -106,7 +103,7 @@ class CachingIT extends AbstractIntegrationTest {
 	void searchResultsAreCachedForAboutAMinute() {
 		search().body("totalHotels", equalTo(1));
 
-		var keys = redis.keys("search:*");
+		var keys = awaitCached("search:*");
 		assertThat(keys).hasSize(1);
 		assertThat(redis.getExpire(keys.iterator().next())).isBetween(55L, 60L);
 	}
@@ -114,7 +111,8 @@ class CachingIT extends AbstractIntegrationTest {
 	@Test
 	void cachedSearchResultsAreServedWithoutTheDatabase() {
 		search().body("hotels[0].name", equalTo("Seaside Inn"));
-		jdbc.update("update hotels set name = 'Changed behind the cache' where id = ?", hotelId);
+		awaitCached("search:*");
+		jdbc.update(CHANGE_BEHIND_THE_CACHE, hotelId);
 
 		search().body("hotels[0].name", equalTo("Seaside Inn"));
 	}
@@ -123,15 +121,17 @@ class CachingIT extends AbstractIntegrationTest {
 	void editingARoomTypesCapacityRefreshesTheInfoButKeepsCachedSearches() {
 		info().body("rooms.capacity", contains(2));
 		search();
+		awaitCached("hotel:" + hotelId);
+		awaitCached("search:*");
 
 		api(manager).contentType(ContentType.JSON).body(aRoom().ofType("Deluxe").sleeping(3).build())
 			.when().put("/api/v1/admin/hotels/{hotelId}/rooms/{roomId}", hotelId, roomId)
 			.then().statusCode(200);
 
 		info().body("rooms.capacity", contains(3));
-		// Capacity isn't part of search results or prices, so the cached search stays valid
-		search();
-		assertThat(redis.keys("search:*")).hasSize(1);
+		// Capacity isn't part of search results or prices, so the cached search is still served
+		jdbc.update(CHANGE_BEHIND_THE_CACHE, hotelId);
+		search().body("hotels[0].name", equalTo("Seaside Inn"));
 	}
 
 	@Test
@@ -148,12 +148,14 @@ class CachingIT extends AbstractIntegrationTest {
 	@Test
 	void theSameSearchWithDefaultsSpelledOutSharesTheCacheEntry() {
 		search();
+		awaitCached("search:*");
+		jdbc.update(CHANGE_BEHIND_THE_CACHE, hotelId);
+
+		// Served from the first search's entry
 		api().queryParam("city", city.toUpperCase()).queryParam("checkIn", "2026-03-12")
 			.queryParam("checkOut", "2026-03-15").queryParam("rooms", 1).queryParam("page", 0).queryParam("size", 20)
 			.when().get("/api/v1/hotels/search")
-			.then().statusCode(200);
-
-		assertThat(redis.keys("search:*")).hasSize(1);
+			.then().statusCode(200).body("hotels[0].name", equalTo("Seaside Inn"));
 	}
 
 	private ValidatableResponse info() {
@@ -164,48 +166,6 @@ class CachingIT extends AbstractIntegrationTest {
 		return api().queryParam("city", city).queryParam("checkIn", "2026-03-12").queryParam("checkOut", "2026-03-15")
 			.when().get("/api/v1/hotels/search")
 			.then().statusCode(200);
-	}
-
-	/**
-	 * For a failure message: the commands Redis ran since the snapshot (did the cache's SET
-	 * arrive, did anything delete or flush), keys it expired or evicted, and the keys it holds.
-	 */
-	private String redisSince(RedisActivity before, String key) {
-		boolean secondLook = redis.hasKey(key);
-		RedisActivity now = redisActivity();
-		return """
-				%s missing after the request (there on a second look: %s)
-				Commands since the request: %s
-				Keys expired: %d, evicted: %d
-				Keys now: %s""".formatted(key, secondLook, now.commandsSince(before), now.expired() - before.expired(),
-				now.evicted() - before.evicted(), new TreeSet<>(redis.keys("*")));
-	}
-
-	private RedisActivity redisActivity() {
-		Properties commands = redis.execute((RedisCallback<Properties>) c -> c.serverCommands().info("commandstats"));
-		Properties stats = redis.execute((RedisCallback<Properties>) c -> c.serverCommands().info("stats"));
-		Map<String, Long> calls = new HashMap<>();
-		// cmdstat_set=calls=12,usec=34,...
-		commands.forEach((name, value) -> calls.put(name.toString().replace("cmdstat_", ""),
-				Long.parseLong(value.toString().replaceAll("^calls=(\\d+),.*", "$1"))));
-		return new RedisActivity(calls, Long.parseLong(stats.getProperty("expired_keys")),
-				Long.parseLong(stats.getProperty("evicted_keys")));
-	}
-
-	/** Redis's per-command call counts and expired and evicted key totals at one moment. */
-	private record RedisActivity(Map<String, Long> calls, long expired, long evicted) {
-
-		String commandsSince(RedisActivity before) {
-			Map<String, Long> ran = new TreeMap<>();
-			calls.forEach((command, count) -> {
-				long more = count - before.calls.getOrDefault(command, 0L);
-				if (more > 0) {
-					ran.put(command, more);
-				}
-			});
-			return ran.toString();
-		}
-
 	}
 
 }
