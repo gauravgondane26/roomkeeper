@@ -1,9 +1,18 @@
 package com.roomkeeper.payment;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
+import javax.sql.DataSource;
 
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
 import com.roomkeeper.testsupport.FakePaymentGateway;
@@ -17,12 +26,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import static com.roomkeeper.testsupport.Concurrently.runTogether;
 import static com.roomkeeper.testsupport.HotelBuilder.aHotel;
 import static com.roomkeeper.testsupport.RoomBuilder.aRoom;
 import static com.roomkeeper.testsupport.StripeWebhooks.checkoutCompleted;
+import static com.roomkeeper.testsupport.StripeWebhooks.checkoutEvent;
 import static com.roomkeeper.testsupport.StripeWebhooks.signature;
 import static com.roomkeeper.testsupport.UserBuilder.aUser;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.equalTo;
 
 /**
@@ -42,6 +54,9 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 
 	@Autowired
 	JdbcTemplate jdbc;
+
+	@Autowired
+	DataSource dataSource;
 
 	private String guest;
 
@@ -86,6 +101,119 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 		assertThat(jdbc.queryForObject("select count(*) from processed_webhook_events where event_id = ?", Long.class,
 				"evt_paid_" + bookingId))
 			.isEqualTo(1);
+	}
+
+	@Test
+	void aPaidCheckoutConfirmsTheBookingAndRecordsThePayment() {
+		deliver(checkoutCompleted("evt_" + bookingId, sessionId, "pi_" + bookingId)).statusCode(200);
+
+		api(guest).when().get("/api/v1/bookings/{id}", bookingId).then().body("status", equalTo("CONFIRMED"));
+		assertThat(jdbc.queryForMap("select status, payment_intent_id from payments where provider_session_id = ?",
+				sessionId))
+			.containsEntry("status", "SUCCEEDED")
+			.containsEntry("payment_intent_id", "pi_" + bookingId);
+		assertThat(nightsBooked()).containsOnly(2);
+	}
+
+	@Test
+	void aDeliveryStripeDidntSignChangesNothing() {
+		String forged = checkoutCompleted("evt_forged_" + bookingId, sessionId, "pi_forged");
+
+		api().contentType(ContentType.JSON)
+			.header("Stripe-Signature", signature(forged, clock.instant(), "whsec_not_stripes"))
+			.body(forged)
+			.when().post("/webhook/payment")
+			.then()
+				.statusCode(400)
+				.body("type", equalTo("urn:roomkeeper:problem:invalid-webhook-signature"));
+		api().contentType(ContentType.JSON).body(forged)
+			.when().post("/webhook/payment")
+			.then().statusCode(400);
+
+		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId)
+			.then().body("status", equalTo("PAYMENT_PENDING"));
+		// Not recorded either, so the real event still applies when it comes
+		assertThat(jdbc.queryForObject("select count(*) from processed_webhook_events where event_id = ?", Long.class,
+				"evt_forged_" + bookingId))
+			.isZero();
+	}
+
+	@Test
+	void deliveriesOfOneEventRacingEachOtherConfirmOnce() throws Exception {
+		String paid = checkoutCompleted("evt_racing_" + bookingId, sessionId, "pi_" + bookingId);
+		List<Callable<Integer>> deliveries = new ArrayList<>();
+		for (int i = 0; i < 6; i++) {
+			deliveries.add(() -> deliver(paid).extract().statusCode());
+		}
+
+		assertThat(runTogether(deliveries)).containsOnly(200);
+
+		assertThat(nightsBooked()).containsOnly(2);
+	}
+
+	@Test
+	void deliveriesInFlightTogetherConfirmOnce() throws Exception {
+		// Another connection holds the booking, so two deliveries of one event both get as far
+		// as they can before either applies it: past reading the payment, which is still pending
+		String paid = checkoutCompleted("evt_overlap_" + bookingId, sessionId, "pi_" + bookingId);
+		List<CompletableFuture<Integer>> deliveries;
+		try (Connection other = dataSource.getConnection()) {
+			other.setAutoCommit(false);
+			try (PreparedStatement lock = other.prepareStatement("select id from bookings where id = ? for update")) {
+				lock.setLong(1, bookingId);
+				lock.executeQuery();
+			}
+			deliveries = List.of(CompletableFuture.supplyAsync(() -> deliver(paid).extract().statusCode()),
+					CompletableFuture.supplyAsync(() -> deliver(paid).extract().statusCode()));
+			await().atMost(Duration.ofSeconds(10)).until(() -> queriesWaitingOnLocks() == 2);
+			other.rollback();
+		}
+
+		for (CompletableFuture<Integer> delivery : deliveries) {
+			assertThat(delivery.get(10, TimeUnit.SECONDS)).isEqualTo(200);
+		}
+		assertThat(nightsBooked()).containsOnly(2);
+	}
+
+	@Test
+	void anotherEventAboutAnAppliedPaymentChangesNothing() {
+		deliver(checkoutCompleted("evt_first_" + bookingId, sessionId, "pi_" + bookingId)).statusCode(200);
+
+		deliver(checkoutCompleted("evt_second_" + bookingId, sessionId, "pi_" + bookingId)).statusCode(200);
+
+		assertThat(nightsBooked()).containsOnly(2);
+	}
+
+	@Test
+	void aCheckoutNotYetPaidConfirmsNothing() {
+		// Completed with a payment method that settles later (a bank transfer, say)
+		deliver(checkoutEvent("evt_unpaid_" + bookingId, "checkout.session.completed", sessionId, "unpaid", null))
+			.statusCode(200);
+
+		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId)
+			.then().body("status", equalTo("PAYMENT_PENDING"));
+		assertThat(nightsBooked()).containsOnly(0);
+	}
+
+	@Test
+	void eventsAboutOtherThingsAreAcknowledgedAndIgnored() {
+		deliver(checkoutEvent("evt_other_" + bookingId, "payment_intent.created", "pi_" + bookingId, "unpaid", null))
+			.statusCode(200);
+		deliver(checkoutCompleted("evt_unknown_" + bookingId, "cs_test_not_ours", "pi_not_ours")).statusCode(200);
+
+		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId)
+			.then().body("status", equalTo("PAYMENT_PENDING"));
+	}
+
+	private long queriesWaitingOnLocks() {
+		return jdbc.queryForObject("""
+				select count(*) from pg_stat_activity
+				where datname = current_database() and wait_event_type = 'Lock'""", Long.class);
+	}
+
+	private List<Integer> nightsBooked() {
+		return jdbc.queryForList("select booked_count from inventory where room_id = ? and date in (?, ?)",
+				Integer.class, roomId, FIRST_NIGHT, FIRST_NIGHT.plusDays(1));
 	}
 
 	private ValidatableResponse deliver(String payload) {

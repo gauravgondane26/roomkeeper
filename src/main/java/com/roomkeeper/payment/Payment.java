@@ -95,4 +95,13 @@ public class Payment {
 		return currency;
 	}
 
+	/** Stripe took the payment; refunds go against {@code paymentIntentId}. */
+	public void succeed(String paymentIntentId) {
+		if (status != PaymentStatus.PENDING) {
+			throw new IllegalStateException("Payment " + id + " is " + status + " and can't succeed");
+		}
+		this.status = PaymentStatus.SUCCEEDED;
+		this.paymentIntentId = paymentIntentId;
+	}
+
 }

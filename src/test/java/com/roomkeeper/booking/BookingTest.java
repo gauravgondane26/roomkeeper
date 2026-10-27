@@ -104,6 +104,20 @@ class BookingTest {
 	}
 
 	@Test
+	void aPaidBookingIsConfirmed() {
+		Booking booking = twoRooms();
+		booking.putGuests(List.of(guest("Asha")), HELD_AT.plusSeconds(60));
+		booking.startPayment(HELD_AT.plusSeconds(120));
+
+		booking.confirm();
+
+		assertThat(booking.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
+		assertThatThrownBy(booking::confirm)
+			.isInstanceOfSatisfying(ApiException.class,
+					ex -> assertThat(ex.type()).isEqualTo(ProblemType.BOOKING_STATE));
+	}
+
+	@Test
 	void guestsCantChangeOncePaymentStarted() {
 		Booking booking = twoRooms();
 		booking.putGuests(List.of(guest("Asha")), HELD_AT.plusSeconds(60));

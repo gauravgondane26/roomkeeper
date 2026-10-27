@@ -189,6 +189,11 @@ public class Booking {
 		moveTo(BookingStatus.PAYMENT_PENDING);
 	}
 
+	/** Stripe reported the payment: the rooms are the guest's. The caller books them. */
+	public void confirm() {
+		moveTo(BookingStatus.CONFIRMED);
+	}
+
 	/** The hold ran out without payment; the caller gives the rooms back. */
 	public void expire() {
 		moveTo(BookingStatus.EXPIRED);

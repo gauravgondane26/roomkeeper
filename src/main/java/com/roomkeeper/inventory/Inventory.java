@@ -106,6 +106,16 @@ public class Inventory {
 		reservedCount += rooms;
 	}
 
+	/** A held booking was paid for: its rooms move from held to booked. */
+	public void confirm(int rooms) {
+		if (reservedCount < rooms) {
+			throw new IllegalStateException("Can't confirm " + rooms + " rooms on " + date + ": only " + reservedCount
+					+ " held");
+		}
+		reservedCount -= rooms;
+		bookedCount += rooms;
+	}
+
 	/** Gives back rooms held by a booking that expired. */
 	public void release(int rooms) {
 		if (reservedCount < rooms) {

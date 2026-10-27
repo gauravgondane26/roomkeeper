@@ -12,4 +12,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 	/** Every attempt to pay for the booking, whatever became of it. */
 	long countByBookingId(Long bookingId);
 
+	Optional<Payment> findByProviderSessionId(String providerSessionId);
+
 }

@@ -191,6 +191,16 @@ else
 fi
 IDEMPOTENCY_KEY=""
 check "Stripe's return page is public" GET /payments/complete.html 200 "Payment received"
+TOKEN=""
+unsigned_event='{"id":"evt_smoke","type":"checkout.session.completed","data":{"object":{"id":"cs_smoke"}}}'
+if [[ -n "${STRIPE_WEBHOOK_SECRET:-}" ]]; then
+  check "a webhook Stripe didn't sign is refused" POST /webhook/payment 400 \
+    "urn:roomkeeper:problem:invalid-webhook-signature" "$unsigned_event"
+else
+  check "without a webhook secret, webhooks answer 503" POST /webhook/payment 503 \
+    "urn:roomkeeper:problem:payments-unavailable" "$unsigned_event"
+fi
+TOKEN=$guest_token
 check "guest lists their bookings" GET /api/v1/users/bookings 200 "\"id\":$booking_id"
 TOKEN=$manager_token
 check "a hotel with bookings can't be deleted" DELETE "/api/v1/admin/hotels/$hotel_id" 409 \

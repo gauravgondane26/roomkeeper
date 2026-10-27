@@ -137,8 +137,8 @@ Goal: a test-card payment confirms a booking exactly once.
 - [x] Stripe client behind an interface, with a fake for tests. `stripe-java` 34 with idempotency keys on sessions and refunds, 5 s/20 s timeouts; without `STRIPE_SECRET_KEY` payments answer 503 (`payments-unavailable`) and everything else works; integration tests always get the in-memory fake
 - [x] `POST /bookings/{id}/payments`: checkout session for the frozen amount, booking moves to Payment pending. Stripe is called between two short transactions, never with the booking locked; a hold that runs out meanwhile gets its session closed; the session stays open until 31 minutes past the hold (Stripe's minimum is 30); Stripe's return pages are static and public
 - [x] Test: a retried payment request returns the same session (same key replays; a new key while it's open gets it back; racing requests open one)
-- [ ] Webhook: verify the signature (bad signature gets 400); in one transaction, dedupe the event, move counts from reserved to booked, confirm the booking
-- [ ] Test: the same webhook delivered twice confirms the booking once
+- [x] Webhook: verify the signature (bad signature gets 400); in one transaction, dedupe the event, move counts from reserved to booked, confirm the booking. Signatures checked with the SDK against our clock (5-minute tolerance stops replays); events read from the raw JSON; another event about a payment already applied changes nothing; unknown sessions and other event types are acknowledged and ignored
+- [x] Test: the same webhook delivered twice confirms the booking once, including two deliveries in flight together (held on the booking's lock), which only the dedupe table stops; checked by disabling it. The design doc's "one outbox row" half comes with the outbox in week 7
 - [ ] Decide how a webhook after hold expiry is handled, update the state diagram, then implement it
 - [ ] Test: a webhook after hold expiry ends confirmed or refunded, never stuck
 - [ ] Handle failed and expired checkout sessions

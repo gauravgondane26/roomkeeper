@@ -35,6 +35,8 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.GET, "/api/v1/hotels/**").permitAll()
 				// Stripe sends the guest back to these static pages after checkout
 				.requestMatchers(HttpMethod.GET, "/payments/*.html").permitAll()
+				// Stripe's webhook proves itself with a signature, checked by the endpoint
+				.requestMatchers(HttpMethod.POST, "/webhook/payment").permitAll()
 				.requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
 				// API docs: Swagger UI is the client
 				.requestMatchers("/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
