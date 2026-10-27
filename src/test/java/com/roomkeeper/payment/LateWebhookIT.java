@@ -26,6 +26,7 @@ import static com.roomkeeper.testsupport.Concurrently.runTogether;
 import static com.roomkeeper.testsupport.HotelBuilder.aHotel;
 import static com.roomkeeper.testsupport.RoomBuilder.aRoom;
 import static com.roomkeeper.testsupport.StripeWebhooks.checkoutCompleted;
+import static com.roomkeeper.testsupport.StripeWebhooks.checkoutEvent;
 import static com.roomkeeper.testsupport.StripeWebhooks.signature;
 import static com.roomkeeper.testsupport.UserBuilder.aUser;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -131,6 +132,12 @@ class LateWebhookIT extends AbstractIntegrationTest {
 		await().until(() -> stripe.wasExpired(sessionId));
 		// Stripe reports the session expired with an event of its own; until then it's still open
 		assertThat(paymentStatus()).isEqualTo("PENDING");
+
+		deliver(checkoutEvent("evt_closed_" + bookingId, "checkout.session.expired", sessionId, "unpaid", null))
+			.statusCode(200);
+
+		assertThat(paymentStatus()).isEqualTo("EXPIRED");
+		assertThat(bookingStatus()).isEqualTo("EXPIRED");
 	}
 
 	@Test

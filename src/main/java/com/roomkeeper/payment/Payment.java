@@ -104,6 +104,23 @@ public class Payment {
 		this.paymentIntentId = paymentIntentId;
 	}
 
+	/** The checkout session closed unpaid: it ran out, or was closed because the hold did. */
+	public void expire() {
+		end(PaymentStatus.EXPIRED);
+	}
+
+	/** A payment that settles later (a bank transfer, say) didn't go through. */
+	public void fail() {
+		end(PaymentStatus.FAILED);
+	}
+
+	private void end(PaymentStatus unpaid) {
+		if (status != PaymentStatus.PENDING) {
+			throw new IllegalStateException("Payment " + id + " is " + status + " and can't become " + unpaid);
+		}
+		this.status = unpaid;
+	}
+
 	/** Stripe gave back in full what it took against {@code paymentIntentId}. */
 	public void refund(String paymentIntentId, String refundId) {
 		if (status == PaymentStatus.REFUNDED) {

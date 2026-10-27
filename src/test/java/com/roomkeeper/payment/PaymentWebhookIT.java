@@ -214,6 +214,76 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 	}
 
 	@Test
+	void aDelayedPaymentThatGoesThroughConfirmsTheBooking() {
+		deliver(checkoutEvent("evt_unpaid_" + bookingId, "checkout.session.completed", sessionId, "unpaid", null))
+			.statusCode(200);
+
+		deliver(checkoutEvent("evt_settled_" + bookingId, "checkout.session.async_payment_succeeded", sessionId, "paid",
+				"pi_" + bookingId))
+			.statusCode(200);
+
+		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId)
+			.then().body("status", equalTo("CONFIRMED"));
+		assertThat(paymentStatus(sessionId)).isEqualTo("SUCCEEDED");
+		assertThat(nightsBooked()).containsOnly(2);
+	}
+
+	@Test
+	void anExpiredSessionLetsTheGuestPayAgainWhileTheRoomsAreHeld() {
+		deliver(checkoutEvent("evt_expired_" + bookingId, "checkout.session.expired", sessionId, "unpaid", null))
+			.statusCode(200);
+
+		assertThat(paymentStatus(sessionId)).isEqualTo("EXPIRED");
+		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId)
+			.then().body("status", equalTo("PAYMENT_PENDING"));
+		assertTheGuestCanPayAgain();
+	}
+
+	@Test
+	void aFailedPaymentLetsTheGuestPayAgainWhileTheRoomsAreHeld() {
+		// Completed with a payment method that settles later, which then didn't go through
+		deliver(checkoutEvent("evt_unpaid_" + bookingId, "checkout.session.completed", sessionId, "unpaid", null))
+			.statusCode(200);
+
+		deliver(checkoutEvent("evt_failed_" + bookingId, "checkout.session.async_payment_failed", sessionId, "unpaid",
+				null))
+			.statusCode(200);
+
+		assertThat(paymentStatus(sessionId)).isEqualTo("FAILED");
+		assertThat(nightsBooked()).containsOnly(0);
+		assertTheGuestCanPayAgain();
+	}
+
+	@Test
+	void aSessionReportedClosedAfterItWasPaidStaysPaid() {
+		// Stripe doesn't promise to deliver events in order
+		deliver(checkoutCompleted("evt_paid_" + bookingId, sessionId, "pi_" + bookingId)).statusCode(200);
+
+		deliver(checkoutEvent("evt_expired_" + bookingId, "checkout.session.expired", sessionId, "unpaid", null))
+			.statusCode(200);
+
+		assertThat(paymentStatus(sessionId)).isEqualTo("SUCCEEDED");
+		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId)
+			.then().body("status", equalTo("CONFIRMED"));
+	}
+
+	@Test
+	void aPaymentOnASessionAlreadyClosedIsRefunded() {
+		// Stripe never takes payment on an expired session; if it ever reports one, the money goes back
+		deliver(checkoutEvent("evt_expired_" + bookingId, "checkout.session.expired", sessionId, "unpaid", null))
+			.statusCode(200);
+
+		deliver(checkoutCompleted("evt_paid_" + bookingId, sessionId, "pi_" + bookingId)).statusCode(200);
+
+		assertThat(paymentStatus(sessionId)).isEqualTo("REFUNDED");
+		assertThat(stripe.refundsOf("pi_" + bookingId)).isOne();
+		// The rooms are still held, for the guest to pay for again
+		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId)
+			.then().body("status", equalTo("PAYMENT_PENDING"));
+		assertThat(nightsBooked()).containsOnly(0);
+	}
+
+	@Test
 	void eventsAboutOtherThingsAreAcknowledgedAndIgnored() {
 		deliver(checkoutEvent("evt_other_" + bookingId, "payment_intent.created", "pi_" + bookingId, "unpaid", null))
 			.statusCode(200);
@@ -221,6 +291,25 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 
 		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId)
 			.then().body("status", equalTo("PAYMENT_PENDING"));
+	}
+
+	/** A new checkout session for the booking, then paying on it confirms the booking. */
+	private void assertTheGuestCanPayAgain() {
+		idempotentApi(guest).when().post("/api/v1/bookings/{id}/payments", bookingId).then().statusCode(201);
+		List<String> sessions = stripe.checkoutsFor(bookingId).stream().map(checkout -> checkout.session().id()).toList();
+		assertThat(sessions).hasSize(2).doesNotHaveDuplicates();
+		String secondSession = sessions.getLast();
+		assertThat(paymentStatus(secondSession)).isEqualTo("PENDING");
+
+		deliver(checkoutCompleted("evt_second_" + bookingId, secondSession, "pi_second_" + bookingId)).statusCode(200);
+
+		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId)
+			.then().body("status", equalTo("CONFIRMED"));
+		assertThat(nightsBooked()).containsOnly(2);
+	}
+
+	private String paymentStatus(String session) {
+		return jdbc.queryForObject("select status from payments where provider_session_id = ?", String.class, session);
 	}
 
 	private long queriesWaitingOnLocks() {

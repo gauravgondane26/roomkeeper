@@ -9,10 +9,10 @@ public enum PaymentStatus {
 	/** Paid; the booking is confirmed. */
 	SUCCEEDED,
 
-	/** The checkout session expired unpaid. */
+	/** The checkout session closed unpaid: it ran out, or was closed when the hold ran out. */
 	EXPIRED,
 
-	/** The payment failed. */
+	/** A delayed payment (a bank transfer, say) didn't go through. */
 	FAILED,
 
 	/** Paid, then refunded in full: the booking couldn't take it. */

@@ -21,15 +21,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Every pair of statuses, checked against the state diagram in the design doc: a hold can
  * time out at any point before it's confirmed, and a confirmed booking can only be
- * cancelled. Guests can be changed while the booking is still on hold, and a payment that
- * arrives after the hold ran out can still confirm it.
+ * cancelled. Guests can be changed while the booking is still on hold, the guest can pay
+ * again if a checkout session ends unpaid, and a payment that arrives after the hold ran
+ * out can still confirm it.
  */
 class BookingStatusTest {
 
 	private static final Map<BookingStatus, Set<BookingStatus>> DIAGRAM = Map.of(
 			RESERVED, EnumSet.of(GUESTS_ADDED, EXPIRED),
 			GUESTS_ADDED, EnumSet.of(GUESTS_ADDED, PAYMENT_PENDING, EXPIRED),
-			PAYMENT_PENDING, EnumSet.of(CONFIRMED, EXPIRED),
+			// A new checkout session after the last one expired or failed
+			PAYMENT_PENDING, EnumSet.of(PAYMENT_PENDING, CONFIRMED, EXPIRED),
 			CONFIRMED, EnumSet.of(CANCELLED),
 			EXPIRED, EnumSet.of(CONFIRMED),
 			CANCELLED, EnumSet.noneOf(BookingStatus.class));

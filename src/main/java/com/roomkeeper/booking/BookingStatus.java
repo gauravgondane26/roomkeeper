@@ -24,7 +24,8 @@ public enum BookingStatus {
 			case RESERVED -> EnumSet.of(GUESTS_ADDED, EXPIRED);
 			// Guests can be changed while the rooms are still held
 			case GUESTS_ADDED -> EnumSet.of(GUESTS_ADDED, PAYMENT_PENDING, EXPIRED);
-			case PAYMENT_PENDING -> EnumSet.of(CONFIRMED, EXPIRED);
+			// Paying again, in a new checkout session, after the last one ended unpaid
+			case PAYMENT_PENDING -> EnumSet.of(PAYMENT_PENDING, CONFIRMED, EXPIRED);
 			case CONFIRMED -> EnumSet.of(CANCELLED);
 			case EXPIRED -> EnumSet.of(CONFIRMED);
 			case CANCELLED -> EnumSet.noneOf(BookingStatus.class);

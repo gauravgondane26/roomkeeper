@@ -81,6 +81,21 @@ class BookingTest {
 	}
 
 	@Test
+	void theGuestCanPayAgainWhileTheRoomsAreHeld() {
+		// Their checkout session expired or its payment failed
+		Booking booking = twoRooms();
+		booking.putGuests(List.of(guest("Asha")), HELD_AT.plusSeconds(60));
+		booking.startPayment(HELD_AT.plusSeconds(120));
+
+		booking.startPayment(HELD_AT.plusSeconds(300));
+
+		assertThat(booking.getStatus()).isEqualTo(BookingStatus.PAYMENT_PENDING);
+		assertThatThrownBy(() -> booking.startPayment(EXPIRES_AT))
+			.isInstanceOfSatisfying(ApiException.class,
+					ex -> assertThat(ex.type()).isEqualTo(ProblemType.HOLD_EXPIRED));
+	}
+
+	@Test
 	void payingNeedsTheGuestsFirst() {
 		Booking booking = twoRooms();
 

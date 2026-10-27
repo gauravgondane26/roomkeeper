@@ -4,6 +4,8 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Consumer;
 
 import com.roomkeeper.booking.Booking;
 import com.roomkeeper.booking.BookingRepository;
@@ -28,11 +30,23 @@ import org.springframework.transaction.support.TransactionTemplate;
  * full: Stripe is called outside the transaction, never with the booking or its nights
  * locked, and the event is recorded only once the refund is made. Until then Stripe keeps
  * redelivering it, and the refund's idempotency key means no delivery refunds twice.
+ * <p>
+ * A session that closes unpaid, or whose delayed payment fails, ends its payment; while the
+ * rooms are still held the guest can open a new session.
  */
 @Service
 public class PaymentWebhookService {
 
 	static final String CHECKOUT_COMPLETED = "checkout.session.completed";
+
+	/** A completed checkout's delayed payment (a bank transfer, say) went through... */
+	static final String ASYNC_PAYMENT_SUCCEEDED = "checkout.session.async_payment_succeeded";
+
+	/** ...or didn't. */
+	static final String ASYNC_PAYMENT_FAILED = "checkout.session.async_payment_failed";
+
+	/** The session closed unpaid: it ran out, or we closed it because the hold ran out. */
+	static final String CHECKOUT_EXPIRED = "checkout.session.expired";
 
 	private static final Logger log = LoggerFactory.getLogger(PaymentWebhookService.class);
 
@@ -69,6 +83,10 @@ public class PaymentWebhookService {
 	private record Refund(long bookingId, long paymentId, String paymentIntentId) {
 	}
 
+	/** A checkout session's payment, and its booking, locked. */
+	private record Locked(Booking booking, Payment payment) {
+	}
+
 	public void handle(PaymentEvent event) {
 		Refund refund = transaction.execute(status -> {
 			Refund owed = apply(event);
@@ -89,24 +107,45 @@ public class PaymentWebhookService {
 			log.info("Stripe event {} was already applied; ignoring this delivery", event.id());
 			return null;
 		}
-		if (CHECKOUT_COMPLETED.equals(event.type()) && event.paid()) {
-			return paid(event);
+		return switch (event.type()) {
+			case CHECKOUT_COMPLETED, ASYNC_PAYMENT_SUCCEEDED -> event.paid() ? paid(event) : null;
+			case CHECKOUT_EXPIRED -> {
+				unpaid(event, Payment::expire);
+				yield null;
+			}
+			case ASYNC_PAYMENT_FAILED -> {
+				unpaid(event, Payment::fail);
+				yield null;
+			}
+			case null, default -> null;
+		};
+	}
+
+	/**
+	 * The session's payment, read once its booking is locked: the booking first, then its
+	 * nights in date order, as every writer locks them, and every change to a payment holds
+	 * its booking's lock. Empty for a session that isn't ours.
+	 */
+	private Optional<Locked> lock(PaymentEvent event) {
+		Long bookingId = payments.findBookingIdBySessionId(event.sessionId()).orElse(null);
+		if (bookingId == null) {
+			// Another environment sharing the Stripe account, a session from before a reset, or
+			// one closed straight away because the hold ran out while it was being opened
+			log.warn("Stripe reported on unknown checkout session {}; ignoring it", event.sessionId());
+			return Optional.empty();
 		}
-		return null;
+		Booking booking = bookings.lockById(bookingId).orElseThrow();
+		return Optional.of(new Locked(booking, payments.findByProviderSessionId(event.sessionId()).orElseThrow()));
 	}
 
 	/** Books the rooms and confirms the booking, or returns the refund owed if it can't take the payment. */
 	private Refund paid(PaymentEvent event) {
-		Long bookingId = payments.findBookingIdBySessionId(event.sessionId()).orElse(null);
-		if (bookingId == null) {
-			// Another environment sharing the Stripe account, or a session from before a reset
-			log.warn("Stripe reported a payment for unknown checkout session {}; ignoring it", event.sessionId());
+		Locked locked = lock(event).orElse(null);
+		if (locked == null) {
 			return null;
 		}
-		// The booking first, then its nights in date order, as every writer locks them. The
-		// payment is read once the booking is locked, since every change to it holds that lock.
-		Booking booking = bookings.lockById(bookingId).orElseThrow();
-		Payment payment = payments.findByProviderSessionId(event.sessionId()).orElseThrow();
+		Booking booking = locked.booking();
+		Payment payment = locked.payment();
 		if (payment.getStatus() == PaymentStatus.SUCCEEDED || payment.getStatus() == PaymentStatus.REFUNDED) {
 			// Another event about a payment already applied (a new event id, not a redelivery)
 			return null;
@@ -124,9 +163,17 @@ public class PaymentWebhookService {
 			payment.succeed(event.paymentIntentId());
 			return null;
 		}
-		log.warn("Booking {} is {} and can't take the payment from checkout session {}; refunding it", bookingId,
-				booking.getStatus(), event.sessionId());
-		return new Refund(bookingId, payment.getId(), event.paymentIntentId());
+		log.warn("Booking {} is {} and can't take the payment from checkout session {} ({}); refunding it",
+				booking.getId(), booking.getStatus(), event.sessionId(), payment.getStatus());
+		return new Refund(booking.getId(), payment.getId(), event.paymentIntentId());
+	}
+
+	/** Ends the session's payment unpaid, unless it was paid or ended already. */
+	private void unpaid(PaymentEvent event, Consumer<Payment> end) {
+		lock(event).map(Locked::payment)
+			// Stripe doesn't promise to deliver events in order
+			.filter(payment -> payment.getStatus() == PaymentStatus.PENDING)
+			.ifPresent(end);
 	}
 
 	/** Books the rooms still held for the booking and confirms it. */

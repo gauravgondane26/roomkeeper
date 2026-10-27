@@ -22,6 +22,36 @@ class PaymentTest {
 	}
 
 	@Test
+	void aSessionThatClosesUnpaidExpires() {
+		Payment payment = openSession();
+
+		payment.expire();
+
+		assertThat(payment.getStatus()).isEqualTo(PaymentStatus.EXPIRED);
+		assertThatThrownBy(payment::expire).isInstanceOf(IllegalStateException.class);
+	}
+
+	@Test
+	void aPaymentThatDoesntGoThroughFails() {
+		Payment payment = openSession();
+
+		payment.fail();
+
+		assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
+		assertThatThrownBy(payment::fail).isInstanceOf(IllegalStateException.class);
+	}
+
+	@Test
+	void onlyAnOpenSessionCanEndUnpaid() {
+		Payment payment = openSession();
+		payment.succeed("pi_1");
+
+		assertThatThrownBy(payment::expire).isInstanceOf(IllegalStateException.class);
+		assertThatThrownBy(payment::fail).isInstanceOf(IllegalStateException.class);
+		assertThat(payment.getStatus()).isEqualTo(PaymentStatus.SUCCEEDED);
+	}
+
+	@Test
 	void aPaymentTheBookingCantTakeIsRefunded() {
 		Payment payment = openSession();
 

@@ -183,7 +183,10 @@ public class Booking {
 		}
 	}
 
-	/** The guest is paying: the rooms stay held until the payment confirms or the hold runs out. */
+	/**
+	 * The guest is paying, or paying again after a checkout session ended unpaid: the rooms
+	 * stay held until a payment confirms or the hold runs out.
+	 */
 	public void startPayment(Instant now) {
 		requirePaymentCanStart(now);
 		moveTo(BookingStatus.PAYMENT_PENDING);

@@ -111,6 +111,7 @@ stateDiagram-v2
     [*] --> Reserved
     Reserved --> GuestsAdded: add guests
     GuestsAdded --> PaymentPending: start payment
+    PaymentPending --> PaymentPending: session ended unpaid, pay again
     PaymentPending --> Confirmed: payment webhook
     Reserved --> Expired: hold timeout
     GuestsAdded --> Expired: hold timeout
@@ -126,7 +127,7 @@ Any state before Confirmed can time out. A Confirmed booking can only end by can
 1. **Init.** `POST /bookings/init` locks the inventory rows for every night in the range, checks availability, increments `reserved_count`, and creates the booking as Reserved with `hold_expires_at` set 10 minutes out. The price is calculated and frozen here.
 2. **Add guests.** Attach saved guests, validated against room capacity. The hold clock keeps running.
 3. **Start payment.** Create a Stripe checkout session for the frozen amount. The `Idempotency-Key` header means a retried click returns the same session instead of creating a second one.
-4. **Webhook.** Verify the Stripe signature, then in one transaction: insert the event id into `processed_webhook_events` (a duplicate fails here and is ignored), move the counts from reserved to booked, mark the booking Confirmed, and write an outbox event.
+4. **Webhook.** Verify the Stripe signature, then in one transaction: insert the event id into `processed_webhook_events` (a duplicate fails here and is ignored), move the counts from reserved to booked, mark the booking Confirmed, and write an outbox event. A session that closes unpaid (`checkout.session.expired`) or whose delayed payment fails (`checkout.session.async_payment_failed`) ends its payment; while the rooms are still held, the guest can start a new payment. A delayed payment that goes through (`checkout.session.async_payment_succeeded`) confirms like any other.
 5. **Expiry.** A scheduled job runs every minute, takes a Redis lock so only one instance runs it, and releases any holds past `hold_expires_at`. For a hold that was being paid for, it then asks Stripe to close the checkout session.
 6. **Cancel.** Decrement `booked_count`, call Stripe for the refund, and write an outbox event. A cancellation policy (full refund up to 48 hours before check-in, for example) lives in plain domain code so it's easy to unit test.
 
