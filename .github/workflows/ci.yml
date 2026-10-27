@@ -1,16 +1,20 @@
 name: CI
 
+# Pull requests run from their branch; pushes only from main, so a branch with an
+# open pull request isn't built twice
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
   contents: read
 
-# A newer push to the same branch cancels the run in progress
+# A newer push to a pull request cancels its run in progress. Runs on main are never
+# cancelled, so every commit there gets a result.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   build:
@@ -18,9 +22,19 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v7
+      # Actions are pinned to commit SHAs, which can't be moved like tags; Dependabot
+      # updates the SHA and the version comment together
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history, so the migration check can diff against the base commit
+          fetch-depth: 0
 
-      - uses: actions/setup-java@v6
+      - name: Applied migrations are unchanged
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: scripts/check-migrations.sh "$BASE"
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
           java-version: 25
@@ -31,13 +45,13 @@ jobs:
 
       # Testcontainers uses the Docker engine on GitHub-hosted runners.
       # Unit tests already ran; their coverage data is still in target/jacoco.exec,
-      # so the report covers both kinds of test.
-      - name: Integration tests and coverage report
+      # so the report and the coverage floor cover both kinds of test.
+      - name: Integration tests, coverage report and floor
         run: ./mvnw -B -ntp verify -DskipUnitTests
 
       - name: Upload coverage report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: jacoco-report
           path: target/site/jacoco/
@@ -45,7 +59,7 @@ jobs:
 
       - name: Upload test reports on failure
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: test-reports
           path: |

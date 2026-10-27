@@ -12,7 +12,7 @@ Java 25, Spring Boot 4, Postgres, Redis. Design: docs/Hotel Booking Backend Proj
 
 ## Layout
 - Package by feature under `com.roomkeeper`: auth, user, hotel, inventory, search, pricing, booking, payment, outbox, common.
-- Migrations in src/main/resources/db/migration (Flyway). Never edit an applied migration.
+- Migrations in src/main/resources/db/migration (Flyway). Never edit an applied migration; CI fails on a change to one already on main.
 - Unit tests are `*Test` (Surefire). Tests that need containers or the full app are `*IT` (Failsafe).
 
 ## Rules

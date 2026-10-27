@@ -1,0 +1,51 @@
+# Weekly update pull requests, each tested by CI before it can be merged.
+# Minor and patch updates come grouped, one pull request per ecosystem; major
+# versions come one at a time. Commit prefixes follow the project's commit types.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
+    groups:
+      maven:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  # Base images in the Dockerfile. Java 25 is the chosen LTS, so no major bumps.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
+    ignore:
+      - dependency-name: eclipse-temurin
+        update-types: [version-update:semver-major]
+
+  # Postgres and Redis in compose.yaml. Major upgrades are a deliberate move (Postgres
+  # needs its data migrated) and have to match the test containers in Containers.java.
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
+    ignore:
+      - dependency-name: postgres
+        update-types: [version-update:semver-major]
+      - dependency-name: redis
+        update-types: [version-update:semver-major]

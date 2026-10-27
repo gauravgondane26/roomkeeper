@@ -117,6 +117,14 @@ Goal: no oversell under load, and holds always release.
 
 **Done when:** the 50-thread test passes reliably and expired holds return their rooms.
 
+## CI hardening (before week 6)
+
+- [x] CI runs on pushes to `main` and on pull requests; runs on `main` are never cancelled by a newer push, so every commit there gets a result
+- [x] CI fails when a change modifies, renames, or deletes a migration already on `main` (`scripts/check-migrations.sh`); adding one is fine
+- [x] Dependabot: weekly Maven, GitHub Actions, Dockerfile, and Compose updates, minor and patch grouped; no automatic major bumps for Java, Postgres, or Redis
+- [x] Actions pinned to commit SHAs, with the version in a comment for Dependabot
+- [x] Coverage floor: `verify` fails below 94% of lines or 83% of branches
+
 ## Week 6: Payments
 
 Goal: a test-card payment confirms a booking exactly once.
@@ -171,7 +179,10 @@ Goal: the system is observable, load tested, and explained.
 - [ ] Rate-limit public search; Redis `maxmemory` with `volatile-ttl` eviction so caches go before tokens
 - [ ] Trusted-proxy setup so rate limits see the real client IP; test with forwarded headers from trusted and untrusted sources
 - [ ] Refresh token reuse detection (token families)
-- [ ] Dependency and code scanning in CI (Dependabot, CodeQL)
+- [ ] Code scanning in CI with CodeQL (Dependabot came early, under CI hardening)
+- [ ] Branch protection on `main`: the CI check must pass before a merge
+- [ ] Scan the Docker image (Trivy or Grype); on green `main`, publish it to GHCR tagged with the commit SHA, with an SBOM and provenance
+- [ ] Nightly workflow that repeats the concurrency tests 10 to 20 times to catch rare races and flaky tests
 - [ ] Reprice `hotel_min_price` when the pricing settings change
 - [ ] Search in one query (`count(*) over ()`) instead of a count and a page query
 - [ ] Inventory admin can reset a night's total to follow the room type again

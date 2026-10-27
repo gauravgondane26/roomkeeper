@@ -24,6 +24,10 @@
 		<mapstruct.version>1.6.3</mapstruct.version>
 		<!-- CI runs unit tests in their own step, then `verify -DskipUnitTests` for the rest -->
 		<skipUnitTests>false</skipUnitTests>
+		<!-- verify fails below these: a little under the coverage when they were set, so
+		     it can't slip unnoticed. Raise them as coverage grows; don't lower them. -->
+		<coverage.line.minimum>0.94</coverage.line.minimum>
+		<coverage.branch.minimum>0.83</coverage.branch.minimum>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -168,6 +172,32 @@
 						<goals>
 							<goal>report</goal>
 						</goals>
+					</execution>
+					<execution>
+						<id>check</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<rule>
+									<element>BUNDLE</element>
+									<limits>
+										<limit>
+											<counter>LINE</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>${coverage.line.minimum}</minimum>
+										</limit>
+										<limit>
+											<counter>BRANCH</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>${coverage.branch.minimum}</minimum>
+										</limit>
+									</limits>
+								</rule>
+							</rules>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>
