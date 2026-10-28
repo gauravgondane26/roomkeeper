@@ -84,7 +84,8 @@ public class PaymentService {
 	}
 
 	private Plan plan(long userId, long bookingId) {
-		Booking booking = bookings.findByIdAndUserId(bookingId, userId).orElseThrow(() -> new BookingNotFoundException(bookingId));
+		Booking booking = bookings.findByIdAndUserId(bookingId, userId)
+			.orElseThrow(() -> new BookingNotFoundException(bookingId));
 		// Count before looking for an open payment: a racing request's payment committed between
 		// the two queries is then found open, rather than counted as an attempt of its own
 		long attempt = payments.countByBookingId(bookingId) + 1;
@@ -100,7 +101,8 @@ public class PaymentService {
 
 	private StartedPayment record(long userId, long bookingId, CheckoutRequest checkout, CheckoutSession session) {
 		// Locked, so the expiry job and other requests for this booking wait their turn
-		Booking booking = bookings.lockOwned(bookingId, userId).orElseThrow(() -> new BookingNotFoundException(bookingId));
+		Booking booking = bookings.lockOwned(bookingId, userId)
+			.orElseThrow(() -> new BookingNotFoundException(bookingId));
 		Optional<Payment> open = payments.findByBookingIdAndStatus(bookingId, PaymentStatus.PENDING);
 		if (open.isPresent()) {
 			// A racing request recorded it first; with the same Stripe key it's the same session

@@ -124,10 +124,10 @@ public class BookingService {
 	@Transactional
 	public BookingResponse putGuests(long userId, long bookingId, BookingGuestsRequest request) {
 		// Locked, so the expiry job can't release the rooms halfway through
-		Booking booking = bookings.lockOwned(bookingId, userId).orElseThrow(() -> new BookingNotFoundException(bookingId));
-		List<Guest> staying = new LinkedHashSet<>(request.guestIds()).stream()
-			.map(guestId -> guests.findOwned(userId, guestId))
-			.toList();
+		Booking booking = bookings.lockOwned(bookingId, userId)
+			.orElseThrow(() -> new BookingNotFoundException(bookingId));
+		// One query for every guest, while the booking is locked
+		List<Guest> staying = guests.findAllOwned(userId, new LinkedHashSet<>(request.guestIds()));
 		Instant now = clock.instant();
 		booking.putGuests(staying, now);
 		return mapper.toResponse(booking, now);
@@ -135,7 +135,8 @@ public class BookingService {
 
 	/** The user's booking: 404 if it doesn't exist or is someone else's. */
 	private Booking findOwned(long userId, long bookingId) {
-		return bookings.findByIdAndUserId(bookingId, userId).orElseThrow(() -> new BookingNotFoundException(bookingId));
+		return bookings.findByIdAndUserId(bookingId, userId)
+			.orElseThrow(() -> new BookingNotFoundException(bookingId));
 	}
 
 	/** The stay's last night, after checking the stay is 1 to {@value #MAX_NIGHTS} nights from the hotel's today. */

@@ -1,5 +1,6 @@
 package com.roomkeeper.booking;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -11,5 +12,8 @@ public interface GuestRepository extends JpaRepository<Guest, Long> {
 	List<Guest> findByUserIdAndRemovedAtIsNullOrderById(Long userId);
 
 	Optional<Guest> findByIdAndUserIdAndRemovedAtIsNull(Long id, Long userId);
+
+	/** Those of the user's saved guests that have these ids, in no particular order. */
+	List<Guest> findByIdInAndUserIdAndRemovedAtIsNull(Collection<Long> ids, Long userId);
 
 }

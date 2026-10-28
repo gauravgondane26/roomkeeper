@@ -217,8 +217,8 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 		deliverWebhook(checkoutEvent("evt_unpaid_" + bookingId, "checkout.session.completed", sessionId, "unpaid", null))
 			.statusCode(200);
 
-		deliverWebhook(checkoutEvent("evt_settled_" + bookingId, "checkout.session.async_payment_succeeded", sessionId, "paid",
-				"pi_" + bookingId))
+		deliverWebhook(checkoutEvent("evt_settled_" + bookingId, "checkout.session.async_payment_succeeded", sessionId,
+				"paid", "pi_" + bookingId))
 			.statusCode(200);
 
 		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId)
@@ -244,8 +244,8 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 		deliverWebhook(checkoutEvent("evt_unpaid_" + bookingId, "checkout.session.completed", sessionId, "unpaid", null))
 			.statusCode(200);
 
-		deliverWebhook(checkoutEvent("evt_failed_" + bookingId, "checkout.session.async_payment_failed", sessionId, "unpaid",
-				null))
+		deliverWebhook(checkoutEvent("evt_failed_" + bookingId, "checkout.session.async_payment_failed", sessionId,
+				"unpaid", null))
 			.statusCode(200);
 
 		assertThat(paymentStatus(sessionId)).isEqualTo("FAILED");
@@ -284,7 +284,8 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 
 	@Test
 	void eventsAboutOtherThingsAreAcknowledgedAndIgnored() {
-		deliverWebhook(checkoutEvent("evt_other_" + bookingId, "payment_intent.created", "pi_" + bookingId, "unpaid", null))
+		deliverWebhook(
+				checkoutEvent("evt_other_" + bookingId, "payment_intent.created", "pi_" + bookingId, "unpaid", null))
 			.statusCode(200);
 		deliverWebhook(checkoutCompleted("evt_unknown_" + bookingId, "cs_test_not_ours", "pi_not_ours")).statusCode(200);
 
@@ -300,7 +301,8 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 		String secondSession = sessions.getLast();
 		assertThat(paymentStatus(secondSession)).isEqualTo("PENDING");
 
-		deliverWebhook(checkoutCompleted("evt_second_" + bookingId, secondSession, "pi_second_" + bookingId)).statusCode(200);
+		deliverWebhook(checkoutCompleted("evt_second_" + bookingId, secondSession, "pi_second_" + bookingId))
+			.statusCode(200);
 
 		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId)
 			.then().body("status", equalTo("CONFIRMED"));

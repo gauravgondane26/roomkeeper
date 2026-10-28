@@ -1,7 +1,12 @@
 package com.roomkeeper.booking;
 
 import java.time.Clock;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.ProblemType;
@@ -54,8 +59,24 @@ public class GuestService {
 
 	/** The user's guest, if it exists and wasn't removed: 404 otherwise. */
 	Guest findOwned(long userId, long guestId) {
-		return guests.findByIdAndUserIdAndRemovedAtIsNull(guestId, userId)
-			.orElseThrow(() -> new ApiException(ProblemType.NOT_FOUND, "Guest " + guestId + " not found"));
+		return guests.findByIdAndUserIdAndRemovedAtIsNull(guestId, userId).orElseThrow(() -> notFound(guestId));
+	}
+
+	/**
+	 * The user's guests with these ids, in the same order, loaded in one query: 404 for the
+	 * first that doesn't exist, isn't theirs, or was removed.
+	 */
+	List<Guest> findAllOwned(long userId, Collection<Long> guestIds) {
+		Map<Long, Guest> found = guests.findByIdInAndUserIdAndRemovedAtIsNull(guestIds, userId)
+			.stream()
+			.collect(Collectors.toMap(Guest::getId, Function.identity()));
+		return guestIds.stream()
+			.map(guestId -> Optional.ofNullable(found.get(guestId)).orElseThrow(() -> notFound(guestId)))
+			.toList();
+	}
+
+	private static ApiException notFound(long guestId) {
+		return new ApiException(ProblemType.NOT_FOUND, "Guest " + guestId + " not found");
 	}
 
 }
