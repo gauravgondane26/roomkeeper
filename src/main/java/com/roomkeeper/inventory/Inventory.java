@@ -2,6 +2,8 @@ package com.roomkeeper.inventory;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 import com.roomkeeper.pricing.Night;
 
@@ -86,6 +88,21 @@ public class Inventory {
 	/** Rooms booked or held on this night: the total can't go below this. */
 	public int sold() {
 		return bookedCount + reservedCount;
+	}
+
+	/**
+	 * A stay of {@code rooms} rooms from {@code checkIn} up to {@code checkOut} can be sold on
+	 * these, its nights: there's a row for every night (a night without one isn't on sale yet),
+	 * and each is open with the rooms free.
+	 */
+	public static boolean canSellStay(List<Inventory> nights, LocalDate checkIn, LocalDate checkOut, int rooms) {
+		return nights.size() == ChronoUnit.DAYS.between(checkIn, checkOut)
+				&& nights.stream().allMatch(night -> night.canSell(rooms));
+	}
+
+	/** Some night has no room left to sell. */
+	public static boolean anySoldOut(List<Inventory> nights) {
+		return nights.stream().anyMatch(night -> night.getAvailable() == 0);
 	}
 
 	/** Open, with at least {@code rooms} rooms free. */

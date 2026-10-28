@@ -59,6 +59,11 @@ class BookingTest {
 	}
 
 	@Test
+	void theStaysLastNightIsTheNightBeforeCheckOut() {
+		assertThat(twoRooms().lastNight()).isEqualTo(LocalDate.parse("2026-03-11"));
+	}
+
+	@Test
 	void theHoldRunsOutAtItsExpiryTime() {
 		Booking booking = twoRooms();
 

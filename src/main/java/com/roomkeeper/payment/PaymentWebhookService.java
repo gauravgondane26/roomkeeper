@@ -2,7 +2,6 @@ package com.roomkeeper.payment;
 
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -178,8 +177,8 @@ public class PaymentWebhookService {
 
 	/** Books the rooms still held for the booking and confirms it. */
 	private boolean confirmHeld(Booking booking) {
-		LocalDate lastNight = booking.getCheckOut().minusDays(1);
-		List<Inventory> nights = inventory.lockNights(booking.getRoom().getId(), booking.getCheckIn(), lastNight);
+		List<Inventory> nights = inventory.lockNights(booking.getRoom().getId(), booking.getCheckIn(),
+				booking.lastNight());
 		// The rooms are still held for it, even if the hold's time just ran out: the expiry job
 		// hasn't released them, and it can't now while the booking is locked
 		nights.forEach(night -> night.confirm(booking.getRoomsCount()));
@@ -200,17 +199,15 @@ public class PaymentWebhookService {
 			return false;
 		}
 		int count = booking.getRoomsCount();
-		LocalDate lastNight = booking.getCheckOut().minusDays(1);
+		LocalDate lastNight = booking.lastNight();
 		List<Inventory> nights = inventory.lockNights(room.getId(), booking.getCheckIn(), lastNight);
-		boolean everyNight = nights.size() == ChronoUnit.DAYS.between(booking.getCheckIn(), booking.getCheckOut());
-		if (!everyNight || nights.stream().anyMatch(night -> !night.canSell(count))) {
+		if (!Inventory.canSellStay(nights, booking.getCheckIn(), booking.getCheckOut(), count)) {
 			return false;
 		}
 		nights.forEach(night -> night.book(count));
 		booking.confirm();
-		boolean soldOut = nights.stream().anyMatch(night -> night.getAvailable() == 0);
-		events.publishEvent(
-				InventoryChangedEvent.sale(hotel.getId(), hotel.getCity(), booking.getCheckIn(), lastNight, soldOut));
+		events.publishEvent(InventoryChangedEvent.sale(hotel.getId(), hotel.getCity(), booking.getCheckIn(), lastNight,
+				Inventory.anySoldOut(nights)));
 		return true;
 	}
 

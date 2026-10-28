@@ -118,6 +118,11 @@ public class Booking {
 		return checkOut;
 	}
 
+	/** The stay's last night: the one before check-out. */
+	public LocalDate lastNight() {
+		return checkOut.minusDays(1);
+	}
+
 	public int getRoomsCount() {
 		return roomsCount;
 	}

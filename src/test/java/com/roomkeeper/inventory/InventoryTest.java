@@ -1,6 +1,7 @@
 package com.roomkeeper.inventory;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +30,30 @@ class InventoryTest {
 		assertThatThrownBy(() -> night.confirm(2)).isInstanceOf(IllegalStateException.class);
 		assertThat(night.getReservedCount()).isEqualTo(1);
 		assertThat(night.getBookedCount()).isZero();
+	}
+
+	@Test
+	void aStaySellsWhenEveryNightIsOnSaleWithTheRoomsFree() {
+		LocalDate tuesday = LocalDate.parse("2026-03-10");
+		LocalDate thursday = tuesday.plusDays(2);
+		Inventory first = new Inventory(7L, tuesday, 2);
+		Inventory second = new Inventory(7L, tuesday.plusDays(1), 2);
+
+		assertThat(Inventory.canSellStay(List.of(first, second), tuesday, thursday, 2)).isTrue();
+		assertThat(Inventory.canSellStay(List.of(first, second), tuesday, thursday, 3)).as("too many rooms").isFalse();
+		assertThat(Inventory.canSellStay(List.of(first), tuesday, thursday, 1)).as("a night not on sale yet").isFalse();
+		second.markClosed(true);
+		assertThat(Inventory.canSellStay(List.of(first, second), tuesday, thursday, 1)).as("a night closed").isFalse();
+	}
+
+	@Test
+	void aNightWithNoRoomLeftIsSoldOut() {
+		Inventory open = new Inventory(7L, LocalDate.parse("2026-03-10"), 2);
+		Inventory full = new Inventory(7L, LocalDate.parse("2026-03-11"), 1);
+		full.hold(1);
+
+		assertThat(Inventory.anySoldOut(List.of(open))).isFalse();
+		assertThat(Inventory.anySoldOut(List.of(open, full))).isTrue();
 	}
 
 	@Test

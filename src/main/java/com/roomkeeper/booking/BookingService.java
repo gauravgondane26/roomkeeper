@@ -82,9 +82,7 @@ public class BookingService {
 		// Locked until commit, in date order like every other writer, so two requests for the last
 		// room can't both see it free, and two overlapping stays can't deadlock each other
 		List<Inventory> nights = inventory.lockNights(room.getId(), request.checkIn(), lastNight);
-		// A night without a row isn't on sale yet
-		boolean everyNight = nights.size() == ChronoUnit.DAYS.between(request.checkIn(), request.checkOut());
-		if (!everyNight || nights.stream().anyMatch(night -> !night.canSell(count))) {
+		if (!Inventory.canSellStay(nights, request.checkIn(), request.checkOut(), count)) {
 			throw new SoldOutException(room.getId(), count, request.checkIn(), request.checkOut());
 		}
 		// Priced before the hold, as the guest saw it
@@ -95,9 +93,8 @@ public class BookingService {
 		Instant now = clock.instant();
 		Booking booking = bookings.save(new Booking(userId, room, request.checkIn(), request.checkOut(), count,
 				quote.total(), now.plus(properties.holdDuration()), now));
-		boolean soldOut = nights.stream().anyMatch(night -> night.getAvailable() == 0);
-		events.publishEvent(
-				InventoryChangedEvent.sale(hotel.getId(), hotel.getCity(), request.checkIn(), lastNight, soldOut));
+		events.publishEvent(InventoryChangedEvent.sale(hotel.getId(), hotel.getCity(), request.checkIn(), lastNight,
+				Inventory.anySoldOut(nights)));
 		return mapper.toResponse(booking, now);
 	}
 
@@ -127,7 +124,7 @@ public class BookingService {
 	@Transactional
 	public BookingResponse putGuests(long userId, long bookingId, BookingGuestsRequest request) {
 		// Locked, so the expiry job can't release the rooms halfway through
-		Booking booking = bookings.lockOwned(bookingId, userId).orElseThrow(() -> notFound(bookingId));
+		Booking booking = bookings.lockOwned(bookingId, userId).orElseThrow(() -> new BookingNotFoundException(bookingId));
 		List<Guest> staying = new LinkedHashSet<>(request.guestIds()).stream()
 			.map(guestId -> guests.findOwned(userId, guestId))
 			.toList();
@@ -138,11 +135,7 @@ public class BookingService {
 
 	/** The user's booking: 404 if it doesn't exist or is someone else's. */
 	private Booking findOwned(long userId, long bookingId) {
-		return bookings.findByIdAndUserId(bookingId, userId).orElseThrow(() -> notFound(bookingId));
-	}
-
-	private static ApiException notFound(long bookingId) {
-		return new ApiException(ProblemType.NOT_FOUND, "Booking " + bookingId + " not found");
+		return bookings.findByIdAndUserId(bookingId, userId).orElseThrow(() -> new BookingNotFoundException(bookingId));
 	}
 
 	/** The stay's last night, after checking the stay is 1 to {@value #MAX_NIGHTS} nights from the hotel's today. */

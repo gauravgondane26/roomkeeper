@@ -90,9 +90,10 @@ class HoldReleaser {
 		}
 		boolean paying = booking.getStatus() == BookingStatus.PAYMENT_PENDING;
 		Room room = booking.getRoom();
-		LocalDate lastNight = booking.getCheckOut().minusDays(1);
+		LocalDate lastNight = booking.lastNight();
 		List<Inventory> nights = inventory.lockNights(room.getId(), booking.getCheckIn(), lastNight);
-		boolean reopened = nights.stream().anyMatch(night -> night.getAvailable() == 0);
+		// A night with no room left before the release has one again after it
+		boolean reopened = Inventory.anySoldOut(nights);
 		nights.forEach(night -> night.release(booking.getRoomsCount()));
 		booking.expire();
 

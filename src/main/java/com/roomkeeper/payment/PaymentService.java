@@ -7,9 +7,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import com.roomkeeper.booking.Booking;
+import com.roomkeeper.booking.BookingNotFoundException;
 import com.roomkeeper.booking.BookingRepository;
 import com.roomkeeper.common.error.ApiException;
-import com.roomkeeper.common.error.ProblemType;
 import com.roomkeeper.hotel.Room;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,7 +84,7 @@ public class PaymentService {
 	}
 
 	private Plan plan(long userId, long bookingId) {
-		Booking booking = bookings.findByIdAndUserId(bookingId, userId).orElseThrow(() -> notFound(bookingId));
+		Booking booking = bookings.findByIdAndUserId(bookingId, userId).orElseThrow(() -> new BookingNotFoundException(bookingId));
 		// Count before looking for an open payment: a racing request's payment committed between
 		// the two queries is then found open, rather than counted as an attempt of its own
 		long attempt = payments.countByBookingId(bookingId) + 1;
@@ -100,7 +100,7 @@ public class PaymentService {
 
 	private StartedPayment record(long userId, long bookingId, CheckoutRequest checkout, CheckoutSession session) {
 		// Locked, so the expiry job and other requests for this booking wait their turn
-		Booking booking = bookings.lockOwned(bookingId, userId).orElseThrow(() -> notFound(bookingId));
+		Booking booking = bookings.lockOwned(bookingId, userId).orElseThrow(() -> new BookingNotFoundException(bookingId));
 		Optional<Payment> open = payments.findByBookingIdAndStatus(bookingId, PaymentStatus.PENDING);
 		if (open.isPresent()) {
 			// A racing request recorded it first; with the same Stripe key it's the same session
@@ -133,10 +133,6 @@ public class PaymentService {
 			// Unpaid sessions expire on their own; a late payment is confirmed or refunded
 			log.warn("Couldn't close checkout session {}", session.id(), ex);
 		}
-	}
-
-	private static ApiException notFound(long bookingId) {
-		return new ApiException(ProblemType.NOT_FOUND, "Booking " + bookingId + " not found");
 	}
 
 }
