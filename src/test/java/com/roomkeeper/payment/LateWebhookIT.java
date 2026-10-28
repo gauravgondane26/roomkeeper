@@ -15,7 +15,6 @@ import com.roomkeeper.testsupport.FakePaymentGateway;
 import com.roomkeeper.testsupport.MutableClock;
 import com.roomkeeper.testsupport.MutableClockConfig;
 import io.restassured.http.ContentType;
-import io.restassured.response.ValidatableResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +26,6 @@ import static com.roomkeeper.testsupport.HotelBuilder.aHotel;
 import static com.roomkeeper.testsupport.RoomBuilder.aRoom;
 import static com.roomkeeper.testsupport.StripeWebhooks.checkoutCompleted;
 import static com.roomkeeper.testsupport.StripeWebhooks.checkoutEvent;
-import static com.roomkeeper.testsupport.StripeWebhooks.signature;
 import static com.roomkeeper.testsupport.UserBuilder.aUser;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -82,12 +80,7 @@ class LateWebhookIT extends AbstractIntegrationTest {
 		roomId = firstRoomOf(manager, hotelId);
 		guest = signUpAndLogIn(aUser().build());
 		bookingId = hold(guest);
-		long asha = api(guest).contentType(ContentType.JSON).body(Map.of("name", "Asha", "age", 30, "gender", "FEMALE"))
-			.when().post("/api/v1/users/guests")
-			.then().statusCode(201).extract().jsonPath().getLong("id");
-		api(guest).contentType(ContentType.JSON).body(Map.of("guestIds", List.of(asha)))
-			.when().post("/api/v1/bookings/{id}/guests", bookingId)
-			.then().statusCode(200);
+		putAGuestOn(guest, bookingId);
 		idempotentApi(guest).when().post("/api/v1/bookings/{id}/payments", bookingId).then().statusCode(201);
 		sessionId = stripe.checkoutsFor(bookingId).getFirst().session().id();
 		paymentIntentId = "pi_late_" + bookingId;
@@ -99,7 +92,7 @@ class LateWebhookIT extends AbstractIntegrationTest {
 
 	@Test
 	void aLatePaymentConfirmsTheBookingWhileTheRoomIsStillFree() {
-		deliver(checkoutCompleted("evt_late_" + bookingId, sessionId, paymentIntentId)).statusCode(200);
+		deliverWebhook(checkoutCompleted("evt_late_" + bookingId, sessionId, paymentIntentId)).statusCode(200);
 
 		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId)
 			.then().body("status", equalTo("CONFIRMED"));
@@ -114,7 +107,7 @@ class LateWebhookIT extends AbstractIntegrationTest {
 	void aLatePaymentIsRefundedWhenTheRoomWasTakenMeanwhile() {
 		hold(signUpAndLogIn(aUser().build()));
 
-		deliver(checkoutCompleted("evt_late_" + bookingId, sessionId, paymentIntentId)).statusCode(200);
+		deliverWebhook(checkoutCompleted("evt_late_" + bookingId, sessionId, paymentIntentId)).statusCode(200);
 
 		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId)
 			.then().body("status", equalTo("EXPIRED"));
@@ -133,7 +126,7 @@ class LateWebhookIT extends AbstractIntegrationTest {
 		// Stripe reports the session expired with an event of its own; until then it's still open
 		assertThat(paymentStatus()).isEqualTo("PENDING");
 
-		deliver(checkoutEvent("evt_closed_" + bookingId, "checkout.session.expired", sessionId, "unpaid", null))
+		deliverWebhook(checkoutEvent("evt_closed_" + bookingId, "checkout.session.expired", sessionId, "unpaid", null))
 			.statusCode(200);
 
 		assertThat(paymentStatus()).isEqualTo("EXPIRED");
@@ -144,7 +137,7 @@ class LateWebhookIT extends AbstractIntegrationTest {
 	void aLatePaymentThatSellsOutTheRoomTakesTheHotelOutOfSearch() {
 		await().untilAsserted(() -> searchFinds(1));
 
-		deliver(checkoutCompleted("evt_late_" + bookingId, sessionId, paymentIntentId)).statusCode(200);
+		deliverWebhook(checkoutCompleted("evt_late_" + bookingId, sessionId, paymentIntentId)).statusCode(200);
 
 		await().untilAsserted(() -> searchFinds(0));
 	}
@@ -154,9 +147,9 @@ class LateWebhookIT extends AbstractIntegrationTest {
 		hold(signUpAndLogIn(aUser().build()));
 		String paid = checkoutCompleted("evt_late_" + bookingId, sessionId, paymentIntentId);
 
-		deliver(paid).statusCode(200);
-		deliver(paid).statusCode(200);
-		deliver(checkoutCompleted("evt_another_" + bookingId, sessionId, paymentIntentId)).statusCode(200);
+		deliverWebhook(paid).statusCode(200);
+		deliverWebhook(paid).statusCode(200);
+		deliverWebhook(checkoutCompleted("evt_another_" + bookingId, sessionId, paymentIntentId)).statusCode(200);
 
 		assertThat(stripe.refundsOf(paymentIntentId)).isOne();
 		assertThat(paymentStatus()).isEqualTo("REFUNDED");
@@ -168,7 +161,7 @@ class LateWebhookIT extends AbstractIntegrationTest {
 		String paid = checkoutCompleted("evt_late_racing_" + bookingId, sessionId, paymentIntentId);
 		List<Callable<Integer>> deliveries = new ArrayList<>();
 		for (int i = 0; i < 6; i++) {
-			deliveries.add(() -> deliver(paid).extract().statusCode());
+			deliveries.add(() -> deliverWebhook(paid).extract().statusCode());
 		}
 
 		assertThat(runTogether(deliveries)).containsOnly(200);
@@ -183,7 +176,7 @@ class LateWebhookIT extends AbstractIntegrationTest {
 		String paid = checkoutCompleted("evt_late_" + bookingId, sessionId, paymentIntentId);
 		stripe.failNextRefund();
 
-		deliver(paid)
+		deliverWebhook(paid)
 			.statusCode(503)
 			.body("type", equalTo("urn:roomkeeper:problem:payments-unavailable"));
 		// Not recorded, so Stripe's retry isn't ignored as a duplicate
@@ -192,7 +185,7 @@ class LateWebhookIT extends AbstractIntegrationTest {
 			.isZero();
 		assertThat(paymentStatus()).isEqualTo("PENDING");
 
-		deliver(paid).statusCode(200);
+		deliverWebhook(paid).statusCode(200);
 
 		assertThat(stripe.refundsOf(paymentIntentId)).isOne();
 		assertThat(paymentStatus()).isEqualTo("REFUNDED");
@@ -202,7 +195,7 @@ class LateWebhookIT extends AbstractIntegrationTest {
 	void aLatePaymentIsRefundedWhenTheHotelWentOffSale() {
 		api(manager).when().patch("/api/v1/admin/hotels/{id}/deactivate", hotelId).then().statusCode(200);
 
-		deliver(checkoutCompleted("evt_late_" + bookingId, sessionId, paymentIntentId)).statusCode(200);
+		deliverWebhook(checkoutCompleted("evt_late_" + bookingId, sessionId, paymentIntentId)).statusCode(200);
 
 		assertThat(bookingStatus()).isEqualTo("EXPIRED");
 		assertThat(paymentStatus()).isEqualTo("REFUNDED");
@@ -214,7 +207,7 @@ class LateWebhookIT extends AbstractIntegrationTest {
 		// Stripe retries an event for up to three days, so a payment can be reported this late
 		clock.setInstant(HELD_AT.plus(Duration.ofDays(2)));
 
-		deliver(checkoutCompleted("evt_late_" + bookingId, sessionId, paymentIntentId)).statusCode(200);
+		deliverWebhook(checkoutCompleted("evt_late_" + bookingId, sessionId, paymentIntentId)).statusCode(200);
 
 		assertThat(bookingStatus()).isEqualTo("EXPIRED");
 		assertThat(paymentStatus()).isEqualTo("REFUNDED");
@@ -247,14 +240,6 @@ class LateWebhookIT extends AbstractIntegrationTest {
 		api().queryParam("city", city).queryParam("checkIn", "2026-03-10").queryParam("checkOut", "2026-03-12")
 			.when().get("/api/v1/hotels/search")
 			.then().statusCode(200).body("totalHotels", equalTo(hotels));
-	}
-
-	private ValidatableResponse deliver(String payload) {
-		return api().contentType(ContentType.JSON)
-			.header("Stripe-Signature", signature(payload, clock.instant()))
-			.body(payload)
-			.when().post("/webhook/payment")
-			.then();
 	}
 
 }

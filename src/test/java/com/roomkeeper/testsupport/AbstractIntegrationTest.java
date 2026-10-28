@@ -1,7 +1,9 @@
 package com.roomkeeper.testsupport;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -52,6 +54,9 @@ public abstract class AbstractIntegrationTest {
 
 	@Autowired
 	private JdbcTemplate database;
+
+	@Autowired
+	private Clock applicationClock;
 
 	@Value("${roomkeeper.admin.email}")
 	private String adminEmail;
@@ -191,6 +196,36 @@ public abstract class AbstractIntegrationTest {
 	protected void sellRooms(long roomId, String night, int booked, int reserved) {
 		database.update("update inventory set booked_count = ?, reserved_count = ? where room_id = ? and date = ?",
 				booked, reserved, roomId, LocalDate.parse(night));
+	}
+
+	/** Saves a guest ("Asha") for the user and puts her on their booking. */
+	protected void putAGuestOn(String token, long bookingId) {
+		long asha = api(token).contentType(ContentType.JSON).body(Map.of("name", "Asha", "age", 30, "gender", "FEMALE"))
+			.when().post("/api/v1/users/guests")
+			.then().statusCode(201).extract().jsonPath().getLong("id");
+		api(token).contentType(ContentType.JSON).body(Map.of("guestIds", List.of(asha)))
+			.when().post("/api/v1/bookings/{id}/guests", bookingId)
+			.then().statusCode(200);
+	}
+
+	/** Delivers a webhook as Stripe would, signed at the application clock's time. */
+	protected ValidatableResponse deliverWebhook(String payload) {
+		return api().contentType(ContentType.JSON)
+			.header("Stripe-Signature", StripeWebhooks.signature(payload, applicationClock.instant()))
+			.body(payload)
+			.when().post("/webhook/payment")
+			.then();
+	}
+
+	/**
+	 * Inserts a guest user directly and returns their id, for tests that need many users:
+	 * signing them up through the API would hit the signup rate limit.
+	 */
+	protected long insertGuestUser() {
+		return database.queryForObject("""
+				insert into users (email, password_hash, name, role, created_at)
+				values (?, 'not-a-real-hash', 'Racing Guest', 'GUEST', now()) returning id""",
+				Long.class, "racer-" + UUID.randomUUID() + "@example.com");
 	}
 
 	/** Adds a room type to the hotel and returns its id. */

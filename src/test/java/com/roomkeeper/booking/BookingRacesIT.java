@@ -5,12 +5,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import com.roomkeeper.auth.AccessTokenService;
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
@@ -21,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import static com.roomkeeper.testsupport.Concurrently.runTogether;
 import static com.roomkeeper.testsupport.HotelBuilder.aHotel;
 import static com.roomkeeper.testsupport.RoomBuilder.aRoom;
 import static com.roomkeeper.testsupport.UserBuilder.aUser;
@@ -62,7 +58,7 @@ class BookingRacesIT extends AbstractIntegrationTest {
 
 		List<Callable<Response>> requests = new ArrayList<>();
 		for (int i = 0; i < GUESTS; i++) {
-			String guest = accessTokens.issue(insertGuest(), Role.GUEST).value();
+			String guest = accessTokens.issue(insertGuestUser(), Role.GUEST).value();
 			requests.add(() -> idempotentApi(guest).contentType(ContentType.JSON).body(stay).post("/api/v1/bookings/init"));
 		}
 		for (int total : new int[] { 12, 9, 14, 8, 11 }) {
@@ -100,35 +96,8 @@ class BookingRacesIT extends AbstractIntegrationTest {
 		});
 	}
 
-	/** Starts every request at the same moment and waits for all the responses, in order. */
-	private static List<Response> runTogether(List<Callable<Response>> requests) throws Exception {
-		CountDownLatch start = new CountDownLatch(1);
-		List<Response> responses = new ArrayList<>();
-		try (ExecutorService pool = Executors.newFixedThreadPool(requests.size())) {
-			List<Future<Response>> futures = new ArrayList<>();
-			for (Callable<Response> request : requests) {
-				futures.add(pool.submit(() -> {
-					start.await();
-					return request.call();
-				}));
-			}
-			start.countDown();
-			for (Future<Response> future : futures) {
-				responses.add(future.get());
-			}
-		}
-		return responses;
-	}
-
 	private static boolean isProblem(Response response, int status, String type) {
 		return response.statusCode() == status && type.equals(response.jsonPath().getString("type"));
-	}
-
-	private long insertGuest() {
-		return jdbc.queryForObject("""
-				insert into users (email, password_hash, name, role, created_at)
-				values (?, 'not-a-real-hash', 'Racing Guest', 'GUEST', now()) returning id""",
-				Long.class, "racer-" + UUID.randomUUID() + "@example.com");
 	}
 
 }

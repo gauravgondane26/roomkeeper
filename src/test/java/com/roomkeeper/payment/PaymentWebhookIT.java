@@ -22,7 +22,6 @@ import com.roomkeeper.testsupport.FakePaymentGateway;
 import com.roomkeeper.testsupport.MutableClock;
 import com.roomkeeper.testsupport.MutableClockConfig;
 import io.restassured.http.ContentType;
-import io.restassured.response.ValidatableResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,12 +81,7 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 			.body(Map.of("roomId", roomId, "checkIn", "2026-03-10", "checkOut", "2026-03-12", "rooms", 2))
 			.when().post("/api/v1/bookings/init")
 			.then().statusCode(201).extract().jsonPath().getLong("id");
-		long asha = api(guest).contentType(ContentType.JSON).body(Map.of("name", "Asha", "age", 30, "gender", "FEMALE"))
-			.when().post("/api/v1/users/guests")
-			.then().statusCode(201).extract().jsonPath().getLong("id");
-		api(guest).contentType(ContentType.JSON).body(Map.of("guestIds", List.of(asha)))
-			.when().post("/api/v1/bookings/{id}/guests", bookingId)
-			.then().statusCode(200);
+		putAGuestOn(guest, bookingId);
 		idempotentApi(guest).when().post("/api/v1/bookings/{id}/payments", bookingId).then().statusCode(201);
 		sessionId = stripe.checkoutsFor(bookingId).getFirst().session().id();
 	}
@@ -96,8 +90,8 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 	void theSameWebhookDeliveredTwiceConfirmsTheBookingOnce() {
 		String paid = checkoutCompleted("evt_paid_" + bookingId, sessionId, "pi_" + bookingId);
 
-		deliver(paid).statusCode(200);
-		deliver(paid).statusCode(200);
+		deliverWebhook(paid).statusCode(200);
+		deliverWebhook(paid).statusCode(200);
 
 		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId)
 			.then().body("status", equalTo("CONFIRMED"));
@@ -111,7 +105,7 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 
 	@Test
 	void aPaidCheckoutConfirmsTheBookingAndRecordsThePayment() {
-		deliver(checkoutCompleted("evt_" + bookingId, sessionId, "pi_" + bookingId)).statusCode(200);
+		deliverWebhook(checkoutCompleted("evt_" + bookingId, sessionId, "pi_" + bookingId)).statusCode(200);
 
 		api(guest).when().get("/api/v1/bookings/{id}", bookingId).then().body("status", equalTo("CONFIRMED"));
 		assertThat(jdbc.queryForMap("select status, payment_intent_id from payments where provider_session_id = ?",
@@ -126,7 +120,7 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 		// The expiry job hasn't run yet, so the rooms are still held for the booking
 		clock.advance(Duration.ofMinutes(10));
 
-		deliver(checkoutCompleted("evt_just_late_" + bookingId, sessionId, "pi_" + bookingId)).statusCode(200);
+		deliverWebhook(checkoutCompleted("evt_just_late_" + bookingId, sessionId, "pi_" + bookingId)).statusCode(200);
 		job.run();
 
 		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId)
@@ -163,7 +157,7 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 		String paid = checkoutCompleted("evt_racing_" + bookingId, sessionId, "pi_" + bookingId);
 		List<Callable<Integer>> deliveries = new ArrayList<>();
 		for (int i = 0; i < 6; i++) {
-			deliveries.add(() -> deliver(paid).extract().statusCode());
+			deliveries.add(() -> deliverWebhook(paid).extract().statusCode());
 		}
 
 		assertThat(runTogether(deliveries)).containsOnly(200);
@@ -186,8 +180,8 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 				lock.setLong(1, bookingId);
 				lock.executeQuery();
 			}
-			List<Future<Integer>> deliveries = List.of(pool.submit(() -> deliver(paid).extract().statusCode()),
-					pool.submit(() -> deliver(paid).extract().statusCode()));
+			List<Future<Integer>> deliveries = List.of(pool.submit(() -> deliverWebhook(paid).extract().statusCode()),
+					pool.submit(() -> deliverWebhook(paid).extract().statusCode()));
 			await().atMost(Duration.ofSeconds(10)).until(() -> queriesWaitingOnLocks() == 2);
 			other.rollback();
 
@@ -200,9 +194,9 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 
 	@Test
 	void anotherEventAboutAnAppliedPaymentChangesNothing() {
-		deliver(checkoutCompleted("evt_first_" + bookingId, sessionId, "pi_" + bookingId)).statusCode(200);
+		deliverWebhook(checkoutCompleted("evt_first_" + bookingId, sessionId, "pi_" + bookingId)).statusCode(200);
 
-		deliver(checkoutCompleted("evt_second_" + bookingId, sessionId, "pi_" + bookingId)).statusCode(200);
+		deliverWebhook(checkoutCompleted("evt_second_" + bookingId, sessionId, "pi_" + bookingId)).statusCode(200);
 
 		assertThat(nightsBooked()).containsOnly(2);
 	}
@@ -210,7 +204,7 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 	@Test
 	void aCheckoutNotYetPaidConfirmsNothing() {
 		// Completed with a payment method that settles later (a bank transfer, say)
-		deliver(checkoutEvent("evt_unpaid_" + bookingId, "checkout.session.completed", sessionId, "unpaid", null))
+		deliverWebhook(checkoutEvent("evt_unpaid_" + bookingId, "checkout.session.completed", sessionId, "unpaid", null))
 			.statusCode(200);
 
 		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId)
@@ -220,10 +214,10 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 
 	@Test
 	void aDelayedPaymentThatGoesThroughConfirmsTheBooking() {
-		deliver(checkoutEvent("evt_unpaid_" + bookingId, "checkout.session.completed", sessionId, "unpaid", null))
+		deliverWebhook(checkoutEvent("evt_unpaid_" + bookingId, "checkout.session.completed", sessionId, "unpaid", null))
 			.statusCode(200);
 
-		deliver(checkoutEvent("evt_settled_" + bookingId, "checkout.session.async_payment_succeeded", sessionId, "paid",
+		deliverWebhook(checkoutEvent("evt_settled_" + bookingId, "checkout.session.async_payment_succeeded", sessionId, "paid",
 				"pi_" + bookingId))
 			.statusCode(200);
 
@@ -235,7 +229,7 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 
 	@Test
 	void anExpiredSessionLetsTheGuestPayAgainWhileTheRoomsAreHeld() {
-		deliver(checkoutEvent("evt_expired_" + bookingId, "checkout.session.expired", sessionId, "unpaid", null))
+		deliverWebhook(checkoutEvent("evt_expired_" + bookingId, "checkout.session.expired", sessionId, "unpaid", null))
 			.statusCode(200);
 
 		assertThat(paymentStatus(sessionId)).isEqualTo("EXPIRED");
@@ -247,10 +241,10 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 	@Test
 	void aFailedPaymentLetsTheGuestPayAgainWhileTheRoomsAreHeld() {
 		// Completed with a payment method that settles later, which then didn't go through
-		deliver(checkoutEvent("evt_unpaid_" + bookingId, "checkout.session.completed", sessionId, "unpaid", null))
+		deliverWebhook(checkoutEvent("evt_unpaid_" + bookingId, "checkout.session.completed", sessionId, "unpaid", null))
 			.statusCode(200);
 
-		deliver(checkoutEvent("evt_failed_" + bookingId, "checkout.session.async_payment_failed", sessionId, "unpaid",
+		deliverWebhook(checkoutEvent("evt_failed_" + bookingId, "checkout.session.async_payment_failed", sessionId, "unpaid",
 				null))
 			.statusCode(200);
 
@@ -262,9 +256,9 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 	@Test
 	void aSessionReportedClosedAfterItWasPaidStaysPaid() {
 		// Stripe doesn't promise to deliver events in order
-		deliver(checkoutCompleted("evt_paid_" + bookingId, sessionId, "pi_" + bookingId)).statusCode(200);
+		deliverWebhook(checkoutCompleted("evt_paid_" + bookingId, sessionId, "pi_" + bookingId)).statusCode(200);
 
-		deliver(checkoutEvent("evt_expired_" + bookingId, "checkout.session.expired", sessionId, "unpaid", null))
+		deliverWebhook(checkoutEvent("evt_expired_" + bookingId, "checkout.session.expired", sessionId, "unpaid", null))
 			.statusCode(200);
 
 		assertThat(paymentStatus(sessionId)).isEqualTo("SUCCEEDED");
@@ -275,10 +269,10 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 	@Test
 	void aPaymentOnASessionAlreadyClosedIsRefunded() {
 		// Stripe never takes payment on an expired session; if it ever reports one, the money goes back
-		deliver(checkoutEvent("evt_expired_" + bookingId, "checkout.session.expired", sessionId, "unpaid", null))
+		deliverWebhook(checkoutEvent("evt_expired_" + bookingId, "checkout.session.expired", sessionId, "unpaid", null))
 			.statusCode(200);
 
-		deliver(checkoutCompleted("evt_paid_" + bookingId, sessionId, "pi_" + bookingId)).statusCode(200);
+		deliverWebhook(checkoutCompleted("evt_paid_" + bookingId, sessionId, "pi_" + bookingId)).statusCode(200);
 
 		assertThat(paymentStatus(sessionId)).isEqualTo("REFUNDED");
 		assertThat(stripe.refundsOf("pi_" + bookingId)).isOne();
@@ -290,9 +284,9 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 
 	@Test
 	void eventsAboutOtherThingsAreAcknowledgedAndIgnored() {
-		deliver(checkoutEvent("evt_other_" + bookingId, "payment_intent.created", "pi_" + bookingId, "unpaid", null))
+		deliverWebhook(checkoutEvent("evt_other_" + bookingId, "payment_intent.created", "pi_" + bookingId, "unpaid", null))
 			.statusCode(200);
-		deliver(checkoutCompleted("evt_unknown_" + bookingId, "cs_test_not_ours", "pi_not_ours")).statusCode(200);
+		deliverWebhook(checkoutCompleted("evt_unknown_" + bookingId, "cs_test_not_ours", "pi_not_ours")).statusCode(200);
 
 		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId)
 			.then().body("status", equalTo("PAYMENT_PENDING"));
@@ -306,7 +300,7 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 		String secondSession = sessions.getLast();
 		assertThat(paymentStatus(secondSession)).isEqualTo("PENDING");
 
-		deliver(checkoutCompleted("evt_second_" + bookingId, secondSession, "pi_second_" + bookingId)).statusCode(200);
+		deliverWebhook(checkoutCompleted("evt_second_" + bookingId, secondSession, "pi_second_" + bookingId)).statusCode(200);
 
 		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId)
 			.then().body("status", equalTo("CONFIRMED"));
@@ -326,14 +320,6 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 	private List<Integer> nightsBooked() {
 		return jdbc.queryForList("select booked_count from inventory where room_id = ? and date in (?, ?)",
 				Integer.class, roomId, FIRST_NIGHT, FIRST_NIGHT.plusDays(1));
-	}
-
-	private ValidatableResponse deliver(String payload) {
-		return api().contentType(ContentType.JSON)
-			.header("Stripe-Signature", signature(payload, clock.instant()))
-			.body(payload)
-			.when().post("/webhook/payment")
-			.then();
 	}
 
 }

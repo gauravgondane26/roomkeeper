@@ -69,12 +69,7 @@ class PaymentStartIT extends AbstractIntegrationTest {
 		JsonPath booking = hold().extract().jsonPath();
 		bookingId = booking.getLong("id");
 		amount = booking.get("amount");
-		long asha = api(guest).contentType(ContentType.JSON).body(Map.of("name", "Asha", "age", 30, "gender", "FEMALE"))
-			.when().post("/api/v1/users/guests")
-			.then().statusCode(201).extract().jsonPath().getLong("id");
-		api(guest).contentType(ContentType.JSON).body(Map.of("guestIds", List.of(asha)))
-			.when().post("/api/v1/bookings/{id}/guests", bookingId)
-			.then().statusCode(200);
+		putAGuestOn(guest, bookingId);
 	}
 
 	@Test

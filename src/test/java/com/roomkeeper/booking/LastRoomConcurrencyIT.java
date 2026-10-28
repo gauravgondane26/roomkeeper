@@ -5,7 +5,6 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -56,7 +55,7 @@ class LastRoomConcurrencyIT extends AbstractIntegrationTest {
 		// Tokens issued directly: signing up 50 guests would hit the signup rate limit
 		List<String> tokens = new ArrayList<>();
 		for (int i = 0; i < GUESTS; i++) {
-			tokens.add(accessTokens.issue(insertGuest(), Role.GUEST).value());
+			tokens.add(accessTokens.issue(insertGuestUser(), Role.GUEST).value());
 		}
 
 		CountDownLatch start = new CountDownLatch(1);
@@ -88,13 +87,6 @@ class LastRoomConcurrencyIT extends AbstractIntegrationTest {
 		assertThat(jdbc.queryForList("select reserved_count from inventory where room_id = ? and date in (?, ?)",
 				Integer.class, roomId, checkIn, checkIn.plusDays(1)))
 			.containsExactly(1, 1);
-	}
-
-	private long insertGuest() {
-		return jdbc.queryForObject("""
-				insert into users (email, password_hash, name, role, created_at)
-				values (?, 'not-a-real-hash', 'Racing Guest', 'GUEST', now()) returning id""",
-				Long.class, "racer-" + UUID.randomUUID() + "@example.com");
 	}
 
 }
