@@ -31,15 +31,13 @@ class InventoryAdminIT extends AbstractIntegrationTest {
 
 	private String manager;
 
-	private long hotelId;
-
 	private long roomId;
 
 	@BeforeEach
 	void activateAHotelWithOneRoomType() {
 		clock.setInstant(Instant.parse("2026-03-10T09:00:00Z"));
 		manager = signUpAndLogIn(aUser().asHotelManager().build());
-		hotelId = createHotel(manager, aHotel().build());
+		long hotelId = createHotel(manager, aHotel().build());
 		roomId = createRoom(manager, hotelId, aRoom().withTotalCount(5).build());
 		activateHotel(manager, hotelId);
 	}

@@ -152,8 +152,4 @@ public class Hotel {
 		this.reviewedAt = at;
 	}
 
-	public Instant getCreatedAt() {
-		return createdAt;
-	}
-
 }

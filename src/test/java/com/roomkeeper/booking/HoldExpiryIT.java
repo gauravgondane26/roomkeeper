@@ -39,14 +39,12 @@ class HoldExpiryIT extends AbstractIntegrationTest {
 	@Autowired
 	JdbcTemplate jdbc;
 
-	private String manager;
-
 	private long roomId;
 
 	@BeforeEach
 	void openAHotelWithOneRoom() {
 		clock.setInstant(HELD_AT);
-		manager = signUpAndLogIn(aUser().asHotelManager().build());
+		String manager = signUpAndLogIn(aUser().asHotelManager().build());
 		roomId = firstRoomOf(manager, activeHotel(manager, aHotel().build(), aRoom().withTotalCount(1).build()));
 	}
 

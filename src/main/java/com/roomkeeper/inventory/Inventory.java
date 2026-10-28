@@ -58,10 +58,6 @@ public class Inventory {
 		this.totalCount = totalCount;
 	}
 
-	public Long getId() {
-		return id;
-	}
-
 	public LocalDate getDate() {
 		return date;
 	}

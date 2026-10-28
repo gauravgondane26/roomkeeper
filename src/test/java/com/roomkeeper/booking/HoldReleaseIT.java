@@ -42,8 +42,6 @@ class HoldReleaseIT extends AbstractIntegrationTest {
 	@Autowired
 	JdbcTemplate jdbc;
 
-	private String manager;
-
 	private String guest;
 
 	private String city;
@@ -55,7 +53,7 @@ class HoldReleaseIT extends AbstractIntegrationTest {
 	@BeforeEach
 	void openAHotel() {
 		clock.setInstant(HELD_AT);
-		manager = signUpAndLogIn(aUser().asHotelManager().build());
+		String manager = signUpAndLogIn(aUser().asHotelManager().build());
 		guest = signUpAndLogIn(aUser().build());
 		city = "Expiry-" + UUID.randomUUID();
 		hotelId = activeHotel(manager, aHotel().inCity(city).build(),
@@ -90,7 +88,7 @@ class HoldReleaseIT extends AbstractIntegrationTest {
 	@Test
 	void leavesConfirmedBookingsAlone() {
 		long booking = hold(1);
-		// Paid for (payments come in week 6): the rooms are booked, not held
+		// Confirmed directly, standing in for a paid webhook: the rooms are booked, not held
 		jdbc.update("update bookings set status = 'CONFIRMED' where id = ?", booking);
 		jdbc.update("update inventory set reserved_count = 0, booked_count = 1 where room_id = ?"
 				+ " and date between '2026-03-10' and '2026-03-11'", roomId);

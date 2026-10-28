@@ -84,8 +84,4 @@ public class Room {
 		this.totalCount = totalCount;
 	}
 
-	public Instant getCreatedAt() {
-		return createdAt;
-	}
-
 }

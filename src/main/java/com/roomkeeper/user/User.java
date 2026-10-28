@@ -70,8 +70,4 @@ public class User {
 		return role;
 	}
 
-	public Instant getCreatedAt() {
-		return createdAt;
-	}
-
 }
