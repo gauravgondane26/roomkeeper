@@ -160,7 +160,7 @@ Goal: the full lifecycle works, including the unhappy paths.
 - [x] `GET /admin/hotels/{id}/bookings`: the hotel's bookings, newest first, paged like the guest's own list and in the same shape (guests included); only its manager (403 otherwise, 404 for no such hotel)
 - [x] `GET /admin/hotels/{id}/reports`: revenue and occupancy over a date range. Decided: revenue by night stayed, each paid booking's amount less refunds spread over its nights (so a cancellation counts what was kept). Up to 366 nights, one SQL query; rooms booked and on sale come from inventory (a closed night counts only rooms in use), so holds and cancellations don't count as sold; totals, occupancy (4 places) and average daily rate (none when nothing sold); nights shown to the paisa, the total summed exactly
 - [ ] Decide whether deactivating a hotel cancels and refunds its future bookings or honours them
-- [ ] Drop the unused `inventory (date, room_id)` index if the reports don't need it (see [query plans](query-plans.md))
+- [x] Drop the unused `inventory (date, room_id)` index if the reports don't need it (see [query plans](query-plans.md)): they don't. `scripts/explain-report.sql` (1.1 million inventory rows, 150,000 paid bookings) shows the report and the repricing read reach inventory through `(room_id, date)`, as every inventory query does, so V13 drops it. The same plan showed the report re-reading bookings once per night; joining once halved its time (25 ms to 13 ms)
 - [ ] Signup always gives the same response, so it can't reveal registered emails; an already registered email's owner gets an email through the outbox instead
 
 **Done when:** every path in the state diagram is covered by a test.

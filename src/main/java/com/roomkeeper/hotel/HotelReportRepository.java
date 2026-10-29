@@ -44,12 +44,18 @@ class HotelReportRepository {
 				    where r.hotel_id = :hotelId and b.check_in <= :to and b.check_out > :from
 				      and p.status in ('SUCCEEDED', 'REFUND_PENDING', 'REFUNDED')
 				    group by b.id, b.check_in, b.check_out
+				),
+				revenue as (
+				    select n.date, sum(k.kept / (k.check_out - k.check_in)) as revenue
+				    from nights n
+				    join kept k on n.date >= k.check_in and n.date < k.check_out
+				    group by n.date
 				)
 				select n.date, coalesce(s.booked, 0) as rooms_booked, coalesce(s.available, 0) as rooms_available,
-				       coalesce((select sum(k.kept / (k.check_out - k.check_in)) from kept k
-				                 where n.date >= k.check_in and n.date < k.check_out), 0) as revenue
+				       coalesce(v.revenue, 0) as revenue
 				from nights n
 				left join stock s on s.date = n.date
+				left join revenue v on v.date = n.date
 				order by n.date""")
 			.param("hotelId", hotelId)
 			.param("from", from)

@@ -161,7 +161,7 @@ As built: the writer only runs inside the caller's transaction. The publisher ta
 ### Pricing and search
 
 - **Pricing** is a chain of small rules applied per night: base price, then surge factor, occupancy, weekend, and holiday adjustments. Each rule is a class with its own unit tests, composed with the decorator or strategy pattern.
-- **Search** finds hotels in a city where every night in the range has enough rooms available. In SQL that's a `GROUP BY` with `HAVING COUNT(*) = number_of_nights`. Indexes on `inventory (date, room_id)` and `hotels (city, active)` keep it fast, and `hotel_min_price` handles the "from $X a night" listing without scanning inventory. Check the query plans with `EXPLAIN ANALYZE` and put them in the README.
+- **Search** finds hotels in a city where every night in the range has enough rooms available. In SQL that's a `GROUP BY` with `HAVING COUNT(*) = number_of_nights`. The unique index on `inventory (room_id, date)` and the index on `hotels (city, active)` keep it fast (a planned `inventory (date, room_id)` index turned out unused and was dropped; see the query plans), and `hotel_min_price` handles the "from $X a night" listing without scanning inventory. Check the query plans with `EXPLAIN ANALYZE` and put them in the README.
 
 ## Redis
 
