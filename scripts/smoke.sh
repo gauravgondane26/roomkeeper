@@ -218,6 +218,7 @@ check "an unpaid booking can't be cancelled" POST "/api/v1/bookings/$booking_id/
   "urn:roomkeeper:problem:booking-state"
 TOKEN=$manager_token
 check "manager lists the hotel's bookings" GET "/api/v1/admin/hotels/$hotel_id/bookings" 200 "\"id\":$booking_id"
+check "manager reads the hotel's report" GET "/api/v1/admin/hotels/$hotel_id/reports?from=$stay_in&to=$stay_out" 200   '"roomNightsAvailable":'
 check "a hotel with bookings can't be deleted" DELETE "/api/v1/admin/hotels/$hotel_id" 409 \
   "urn:roomkeeper:problem:has-bookings"
 check "manager takes the hotel off sale" PATCH "/api/v1/admin/hotels/$hotel_id/deactivate" 200 '"active":false'

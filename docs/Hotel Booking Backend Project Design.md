@@ -89,7 +89,7 @@ The endpoints mirror the original repo, plus a few that make the hard parts visi
 | Inventory admin | `GET` and `PATCH /admin/inventory/rooms/{roomId}` | Bulk update a date range: close dates, change surge, change totals |
 | Booking | `POST /bookings/init`, `POST /bookings/{id}/guests`, `POST /bookings/{id}/payments`, `POST /bookings/{id}/cancel`, `GET /bookings/{id}/status` | `init` and `payments` require an `Idempotency-Key` header |
 | User | `GET` and `PATCH /users/profile`, `GET /users/bookings`, CRUD on `/users/guests` |  |
-| Reports | `GET /admin/hotels/{id}/bookings`, `GET /admin/hotels/{id}/reports` | Revenue and occupancy over a date range |
+| Reports | `GET /admin/hotels/{id}/bookings`, `GET /admin/hotels/{id}/reports` | Revenue and occupancy over a date range; revenue by night stayed (each paid booking's amount less refunds, spread over its nights) |
 | Webhook | `POST /webhook/payment` | Signature verified, no JWT |
 | Ops | `/actuator/health`, `/actuator/prometheus` | Not exposed publicly in production |
 
