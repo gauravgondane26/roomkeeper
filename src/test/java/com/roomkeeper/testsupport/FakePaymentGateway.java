@@ -1,5 +1,6 @@
 package com.roomkeeper.testsupport;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,7 +39,11 @@ public class FakePaymentGateway implements PaymentGateway {
 
 	private final Map<String, String> refundsByKey = new ConcurrentHashMap<>();
 
-	private final List<String> refundedPaymentIntents = new CopyOnWriteArrayList<>();
+	/** A refund actually made: against which payment, and how much. */
+	private record MadeRefund(String paymentIntentId, BigDecimal amount) {
+	}
+
+	private final List<MadeRefund> refunds = new CopyOnWriteArrayList<>();
 
 	private final AtomicBoolean failNextCheckout = new AtomicBoolean();
 
@@ -69,12 +74,12 @@ public class FakePaymentGateway implements PaymentGateway {
 	}
 
 	@Override
-	public String refund(String paymentIntentId, String idempotencyKey) {
+	public String refund(String paymentIntentId, BigDecimal amount, String idempotencyKey) {
 		if (failNextRefund.getAndSet(false)) {
 			throw new ApiException(ProblemType.PAYMENTS_UNAVAILABLE, "Fake Stripe is down");
 		}
 		return refundsByKey.computeIfAbsent(idempotencyKey, key -> {
-			refundedPaymentIntents.add(paymentIntentId);
+			refunds.add(new MadeRefund(paymentIntentId, amount));
 			return "re_test_fake_" + ids.incrementAndGet();
 		});
 	}
@@ -105,7 +110,15 @@ public class FakePaymentGateway implements PaymentGateway {
 
 	/** How many refunds were actually made against the payment. */
 	public long refundsOf(String paymentIntentId) {
-		return refundedPaymentIntents.stream().filter(paymentIntentId::equals).count();
+		return refunds.stream().filter(refund -> refund.paymentIntentId().equals(paymentIntentId)).count();
+	}
+
+	/** How much was refunded against the payment, over all its refunds. */
+	public BigDecimal refundedAmountOf(String paymentIntentId) {
+		return refunds.stream()
+			.filter(refund -> refund.paymentIntentId().equals(paymentIntentId))
+			.map(MadeRefund::amount)
+			.reduce(BigDecimal.ZERO, BigDecimal::add);
 	}
 
 }

@@ -50,6 +50,10 @@ public class Payment {
 	@Column(name = "refund_id")
 	private String refundId;
 
+	// Given back, or to be: all of the amount, or a cancellation's share of it
+	@Column(name = "refunded_amount", precision = 10, scale = 2)
+	private BigDecimal refundedAmount;
+
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
@@ -95,6 +99,14 @@ public class Payment {
 		return currency;
 	}
 
+	public String getPaymentIntentId() {
+		return paymentIntentId;
+	}
+
+	public BigDecimal getRefundedAmount() {
+		return refundedAmount;
+	}
+
 	/** Stripe took the payment; refunds go against {@code paymentIntentId}. */
 	public void succeed(String paymentIntentId) {
 		if (status != PaymentStatus.PENDING) {
@@ -121,10 +133,31 @@ public class Payment {
 		this.status = unpaid;
 	}
 
-	/** Stripe gave back in full what it took against {@code paymentIntentId}. */
+	/**
+	 * The booking was cancelled: {@code amount} of the payment is to go back, and will once
+	 * the refund is made. Only a paid payment, and no more than was paid.
+	 */
+	public void refundDue(BigDecimal amount) {
+		if (status != PaymentStatus.SUCCEEDED) {
+			throw new IllegalStateException("Payment " + id + " is " + status + "; only a paid one can be refunded");
+		}
+		if (amount.signum() <= 0 || amount.compareTo(this.amount) > 0) {
+			throw new IllegalArgumentException("Can't refund " + amount + " of a payment of " + this.amount);
+		}
+		this.status = PaymentStatus.REFUND_PENDING;
+		this.refundedAmount = amount;
+	}
+
+	/**
+	 * Stripe gave back, against {@code paymentIntentId}, the refund that was due, or all of
+	 * the payment if none was (one the booking couldn't take).
+	 */
 	public void refund(String paymentIntentId, String refundId) {
 		if (status == PaymentStatus.REFUNDED) {
 			throw new IllegalStateException("Payment " + id + " is already refunded");
+		}
+		if (refundedAmount == null) {
+			refundedAmount = amount;
 		}
 		this.status = PaymentStatus.REFUNDED;
 		this.paymentIntentId = paymentIntentId;

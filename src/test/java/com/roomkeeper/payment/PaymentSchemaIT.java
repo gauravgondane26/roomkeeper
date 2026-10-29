@@ -104,9 +104,41 @@ class PaymentSchemaIT extends AbstractDataTest {
 
 	@Test
 	void rejectsARefundWithoutItsRefundId() {
-		assertThatThrownBy(() -> insertPayment("cs_test_1", "REFUNDED", "pi_test_1", null))
+		assertThatThrownBy(() -> insertPayment("cs_test_1", "REFUNDED", "pi_test_1", null, new BigDecimal("8000.00")))
 			.isInstanceOf(DataIntegrityViolationException.class)
 			.hasMessageContaining("payments_refunded_has_refund_id");
+	}
+
+	@Test
+	void recordsARefundOfPartOfThePayment() {
+		insertPayment("cs_test_1", "REFUND_PENDING", "pi_test_1", null, new BigDecimal("4000.00"));
+		jdbc.update("update payments set status = 'REFUNDED', refund_id = 're_test_1' where booking_id = ?", bookingId);
+
+		assertThat(jdbc.queryForObject("select refunded_amount from payments where booking_id = ?", BigDecimal.class,
+				bookingId))
+			.isEqualByComparingTo("4000.00");
+	}
+
+	@Test
+	void rejectsARefundDueWithoutItsAmount() {
+		assertThatThrownBy(() -> insertPayment("cs_test_1", "REFUND_PENDING", "pi_test_1", null, null))
+			.isInstanceOf(DataIntegrityViolationException.class)
+			.hasMessageContaining("payments_refund_has_amount");
+	}
+
+	@Test
+	void rejectsRefundingMoreThanWasPaid() {
+		assertThatThrownBy(
+				() -> insertPayment("cs_test_1", "REFUNDED", "pi_test_1", "re_test_1", new BigDecimal("8000.01")))
+			.isInstanceOf(DataIntegrityViolationException.class)
+			.hasMessageContaining("payments_refund_within_amount");
+	}
+
+	@Test
+	void rejectsARefundDueWithoutThePaymentIntent() {
+		assertThatThrownBy(() -> insertPayment("cs_test_1", "REFUND_PENDING", null, null, new BigDecimal("4000.00")))
+			.isInstanceOf(DataIntegrityViolationException.class)
+			.hasMessageContaining("payments_paid_has_payment_intent");
 	}
 
 	@Test
@@ -136,11 +168,17 @@ class PaymentSchemaIT extends AbstractDataTest {
 	}
 
 	private void insertPayment(String sessionId, String status, String paymentIntentId, String refundId) {
+		insertPayment(sessionId, status, paymentIntentId, refundId, null);
+	}
+
+	/** A payment of 8000.00, with this much refunded or due back. */
+	private void insertPayment(String sessionId, String status, String paymentIntentId, String refundId,
+			BigDecimal refundedAmount) {
 		jdbc.update("""
 				insert into payments (booking_id, provider_session_id, checkout_url, status, amount, currency,
-				                      payment_intent_id, refund_id, created_at)
-				values (?, ?, 'https://checkout.stripe.com/c/pay/' || ?, ?, 8000.00, 'inr', ?, ?, now())""",
-				bookingId, sessionId, sessionId, status, paymentIntentId, refundId);
+				                      payment_intent_id, refund_id, refunded_amount, created_at)
+				values (?, ?, 'https://checkout.stripe.com/c/pay/' || ?, ?, 8000.00, 'inr', ?, ?, ?, now())""",
+				bookingId, sessionId, sessionId, status, paymentIntentId, refundId, refundedAmount);
 	}
 
 }

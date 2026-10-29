@@ -52,12 +52,41 @@ class PaymentTest {
 	}
 
 	@Test
-	void aPaymentTheBookingCantTakeIsRefunded() {
+	void aPaymentTheBookingCantTakeIsRefundedInFull() {
 		Payment payment = openSession();
 
 		payment.refund("pi_1", "re_1");
 
 		assertThat(payment.getStatus()).isEqualTo(PaymentStatus.REFUNDED);
+		assertThat(payment.getRefundedAmount()).isEqualByComparingTo("8000.00");
+	}
+
+	@Test
+	void aCancellationMakesARefundDueThenItsMade() {
+		Payment payment = openSession();
+		payment.succeed("pi_1");
+
+		payment.refundDue(new BigDecimal("4000.00"));
+
+		assertThat(payment.getStatus()).isEqualTo(PaymentStatus.REFUND_PENDING);
+		assertThat(payment.getRefundedAmount()).isEqualByComparingTo("4000.00");
+
+		payment.refund("pi_1", "re_1");
+
+		assertThat(payment.getStatus()).isEqualTo(PaymentStatus.REFUNDED);
+		assertThat(payment.getRefundedAmount()).as("the share that was due").isEqualByComparingTo("4000.00");
+	}
+
+	@Test
+	void onlyAPaidPaymentCanHaveARefundDue() {
+		Payment open = openSession();
+		assertThatThrownBy(() -> open.refundDue(new BigDecimal("4000.00"))).isInstanceOf(IllegalStateException.class);
+
+		Payment paid = openSession();
+		paid.succeed("pi_1");
+		assertThatThrownBy(() -> paid.refundDue(new BigDecimal("8000.01"))).as("more than was paid")
+			.isInstanceOf(IllegalArgumentException.class);
+		assertThat(paid.getStatus()).isEqualTo(PaymentStatus.SUCCEEDED);
 	}
 
 	@Test

@@ -15,7 +15,10 @@ public enum PaymentStatus {
 	/** A delayed payment (a bank transfer, say) didn't go through. */
 	FAILED,
 
-	/** Paid, then refunded in full: the booking couldn't take it. */
+	/** Paid, and the booking was cancelled: the refund that's due hasn't been made yet. */
+	REFUND_PENDING,
+
+	/** Paid, then given back, in full or a cancellation's share (the refunded amount). */
 	REFUNDED
 
 }

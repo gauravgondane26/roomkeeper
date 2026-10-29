@@ -1,5 +1,6 @@
 package com.roomkeeper.payment;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
@@ -86,7 +87,7 @@ public class PaymentWebhookService {
 	}
 
 	/** A payment Stripe took that its booking can't take, to give back in full. */
-	private record Refund(long bookingId, long paymentId, String paymentIntentId) {
+	private record Refund(long bookingId, long paymentId, String paymentIntentId, BigDecimal amount) {
 	}
 
 	/** A checkout session's payment, and its booking, locked. */
@@ -172,7 +173,7 @@ public class PaymentWebhookService {
 		}
 		log.warn("Booking {} is {} and can't take the payment from checkout session {} ({}); refunding it",
 				booking.getId(), booking.getStatus(), event.sessionId(), payment.getStatus());
-		return new Refund(booking.getId(), payment.getId(), event.paymentIntentId());
+		return new Refund(booking.getId(), payment.getId(), event.paymentIntentId(), payment.getAmount());
 	}
 
 	/** What the guest's confirmation says. */
@@ -230,7 +231,8 @@ public class PaymentWebhookService {
 	/** Refunds the payment, then records the event and the refund together. */
 	private void refund(PaymentEvent event, Refund refund) {
 		// One key per payment, so however many deliveries and events get here, Stripe refunds it once
-		String refundId = gateway.refund(refund.paymentIntentId(), "refund-payment-" + refund.paymentId());
+		String refundId = gateway.refund(refund.paymentIntentId(), refund.amount(),
+				"refund-payment-" + refund.paymentId());
 		transaction.executeWithoutResult(status -> {
 			if (!processedEvents.recordFirstDelivery(event.id(), clock.instant())) {
 				// A delivery of this event racing this one recorded it first

@@ -150,6 +150,21 @@ class BookingTest {
 	}
 
 	@Test
+	void onlyAConfirmedBookingCanBeCancelled() {
+		Booking booking = twoRooms();
+		assertThatThrownBy(booking::cancel).as("a hold")
+			.isInstanceOfSatisfying(ApiException.class,
+					ex -> assertThat(ex.type()).isEqualTo(ProblemType.BOOKING_STATE));
+		booking.putGuests(List.of(guest("Asha")), HELD_AT.plusSeconds(60));
+		booking.startPayment(HELD_AT.plusSeconds(120));
+		booking.confirm();
+
+		booking.cancel();
+
+		assertThat(booking.getStatus()).isEqualTo(BookingStatus.CANCELLED);
+	}
+
+	@Test
 	void guestsCantChangeOncePaymentStarted() {
 		Booking booking = twoRooms();
 		booking.putGuests(List.of(guest("Asha")), HELD_AT.plusSeconds(60));

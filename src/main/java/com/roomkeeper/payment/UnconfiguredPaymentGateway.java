@@ -1,5 +1,7 @@
 package com.roomkeeper.payment;
 
+import java.math.BigDecimal;
+
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.ProblemType;
 
@@ -17,7 +19,7 @@ class UnconfiguredPaymentGateway implements PaymentGateway {
 	}
 
 	@Override
-	public String refund(String paymentIntentId, String idempotencyKey) {
+	public String refund(String paymentIntentId, BigDecimal amount, String idempotencyKey) {
 		throw notConfigured();
 	}
 

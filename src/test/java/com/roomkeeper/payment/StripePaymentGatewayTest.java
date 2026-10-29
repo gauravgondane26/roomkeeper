@@ -6,6 +6,7 @@ import java.time.Instant;
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.ProblemType;
 import com.stripe.StripeClient;
+import com.stripe.param.RefundCreateParams;
 import com.stripe.param.checkout.SessionCreateParams;
 import org.junit.jupiter.api.Test;
 
@@ -54,6 +55,14 @@ class StripePaymentGatewayTest {
 	}
 
 	@Test
+	void refundsTheAmountDueInPaise() {
+		RefundCreateParams params = StripePaymentGateway.refundParams("pi_test_1", new BigDecimal("4000.50"));
+
+		assertThat(params.getPaymentIntent()).isEqualTo("pi_test_1");
+		assertThat(params.getAmount()).isEqualTo(400_050L);
+	}
+
+	@Test
 	void refusesAmountsFinerThanAPaisa() {
 		assertThat(StripePaymentGateway.minorUnits(new BigDecimal("0.01"))).isEqualTo(1L);
 
@@ -75,7 +84,8 @@ class StripePaymentGatewayTest {
 			.isInstanceOfSatisfying(ApiException.class,
 					ex -> assertThat(ex.type()).isEqualTo(ProblemType.PAYMENTS_UNAVAILABLE));
 		assertThatThrownBy(() -> gateway.expireCheckoutSession("cs_test_1")).isInstanceOf(ApiException.class);
-		assertThatThrownBy(() -> gateway.refund("pi_test_1", "refund-1")).isInstanceOf(ApiException.class);
+		assertThatThrownBy(() -> gateway.refund("pi_test_1", new BigDecimal("8000.00"), "refund-1"))
+			.isInstanceOf(ApiException.class);
 	}
 
 }

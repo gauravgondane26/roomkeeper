@@ -205,6 +205,11 @@ public class Booking {
 		moveTo(BookingStatus.CONFIRMED);
 	}
 
+	/** The guest cancelled the confirmed booking; the caller puts the rooms back on sale and refunds. */
+	public void cancel() {
+		moveTo(BookingStatus.CANCELLED);
+	}
+
 	/** The hold ran out without payment; the caller gives the rooms back. */
 	public void expire() {
 		moveTo(BookingStatus.EXPIRED);

@@ -141,6 +141,15 @@ public class Inventory {
 		bookedCount += rooms;
 	}
 
+	/** Puts rooms of a cancelled booking back on sale. */
+	public void unbook(int rooms) {
+		if (bookedCount < rooms) {
+			throw new IllegalStateException("Can't unbook " + rooms + " rooms on " + date + ": only " + bookedCount
+					+ " booked");
+		}
+		bookedCount -= rooms;
+	}
+
 	/** Gives back rooms held by a booking that expired. */
 	public void release(int rooms) {
 		if (reservedCount < rooms) {

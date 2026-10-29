@@ -57,6 +57,19 @@ class InventoryTest {
 	}
 
 	@Test
+	void unbookingPutsCancelledRoomsBackOnSale() {
+		Inventory night = new Inventory(7L, LocalDate.parse("2026-03-10"), 5);
+		night.book(3);
+
+		night.unbook(2);
+
+		assertThat(night.getBookedCount()).isEqualTo(1);
+		assertThat(night.getAvailable()).isEqualTo(4);
+		assertThatThrownBy(() -> night.unbook(2)).as("more than are booked").isInstanceOf(IllegalStateException.class);
+		assertThat(night.getBookedCount()).isEqualTo(1);
+	}
+
+	@Test
 	void bookingRoomsStraightAwayTakesThemFromSale() {
 		Inventory night = new Inventory(7L, LocalDate.parse("2026-03-10"), 5);
 		night.hold(2);

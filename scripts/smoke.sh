@@ -213,6 +213,9 @@ else
 fi
 TOKEN=$guest_token
 check "guest lists their bookings" GET /api/v1/users/bookings 200 "\"id\":$booking_id"
+# Week 7: only a paid booking can be cancelled
+check "an unpaid booking can't be cancelled" POST "/api/v1/bookings/$booking_id/cancel" 409 \
+  "urn:roomkeeper:problem:booking-state"
 TOKEN=$manager_token
 check "a hotel with bookings can't be deleted" DELETE "/api/v1/admin/hotels/$hotel_id" 409 \
   "urn:roomkeeper:problem:has-bookings"

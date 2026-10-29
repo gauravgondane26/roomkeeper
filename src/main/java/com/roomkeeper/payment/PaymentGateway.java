@@ -1,5 +1,7 @@
 package com.roomkeeper.payment;
 
+import java.math.BigDecimal;
+
 /**
  * The payment provider (Stripe), behind an interface so tests use a fake. Each call either
  * succeeds or throws an {@code ApiException} of type {@code payments-unavailable}.
@@ -13,9 +15,9 @@ public interface PaymentGateway {
 	void expireCheckoutSession(String sessionId);
 
 	/**
-	 * Refunds a payment in full and returns the refund's id. The same idempotency key never
-	 * refunds twice.
+	 * Refunds {@code amount} of a payment and returns the refund's id. The same idempotency
+	 * key never refunds twice.
 	 */
-	String refund(String paymentIntentId, String idempotencyKey);
+	String refund(String paymentIntentId, BigDecimal amount, String idempotencyKey);
 
 }

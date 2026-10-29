@@ -57,11 +57,11 @@ class StripePaymentGateway implements PaymentGateway {
 	}
 
 	@Override
-	public String refund(String paymentIntentId, String idempotencyKey) {
+	public String refund(String paymentIntentId, BigDecimal amount, String idempotencyKey) {
 		try {
 			return stripe.v1()
 				.refunds()
-				.create(RefundCreateParams.builder().setPaymentIntent(paymentIntentId).build(),
+				.create(refundParams(paymentIntentId, amount),
 						RequestOptions.builder().setIdempotencyKey(idempotencyKey).build())
 				.getId();
 		}
@@ -91,6 +91,10 @@ class StripePaymentGateway implements PaymentGateway {
 			.setSuccessUrl(properties.successUrl())
 			.setCancelUrl(properties.cancelUrl())
 			.build();
+	}
+
+	static RefundCreateParams refundParams(String paymentIntentId, BigDecimal amount) {
+		return RefundCreateParams.builder().setPaymentIntent(paymentIntentId).setAmount(minorUnits(amount)).build();
 	}
 
 	/** Stripe takes amounts in the currency's smallest unit: 8000.00 rupees is 800000 paise. */
