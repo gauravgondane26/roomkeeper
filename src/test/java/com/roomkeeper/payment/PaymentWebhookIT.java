@@ -115,6 +115,17 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 			.containsEntry("status", "SUCCEEDED")
 			.containsEntry("payment_intent_id", "pi_" + bookingId);
 		assertThat(nightsBooked()).containsOnly(2);
+		// The guest's confirmation, written with the booking, says what they booked and paid
+		assertThat(jdbc.queryForMap("""
+				select payload ->> 'userId' as user_id, payload ->> 'checkIn' as check_in,
+				       payload ->> 'checkOut' as check_out, payload ->> 'rooms' as rooms,
+				       payload ->> 'currency' as currency
+				from outbox_events where type = 'BOOKING_CONFIRMED' and aggregate_id = ?""", bookingId))
+			.containsEntry("check_in", "2026-03-10")
+			.containsEntry("check_out", "2026-03-12")
+			.containsEntry("rooms", "2")
+			.containsEntry("currency", "inr")
+			.extractingByKey("user_id").isNotNull();
 	}
 
 	@Test
@@ -192,6 +203,7 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 			}
 		}
 		assertThat(nightsBooked()).containsOnly(2);
+		assertThat(confirmationsInTheOutbox()).isEqualTo(1);
 	}
 
 	@Test

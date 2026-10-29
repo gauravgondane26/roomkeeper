@@ -13,6 +13,8 @@ import com.roomkeeper.hotel.Room;
 import com.roomkeeper.inventory.Inventory;
 import com.roomkeeper.inventory.InventoryChangedEvent;
 import com.roomkeeper.inventory.InventoryRepository;
+import com.roomkeeper.outbox.BookingConfirmed;
+import com.roomkeeper.outbox.OutboxWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -22,7 +24,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * Applies verified Stripe events, each in one transaction that first records the event's id:
  * a redelivered event finds its id already recorded and changes nothing, so a payment
- * confirms its booking, or is refunded, exactly once however often Stripe sends it.
+ * confirms its booking, or is refunded, exactly once however often Stripe sends it. A
+ * confirmation writes the guest's confirmation to the outbox in the same transaction, so
+ * that goes out once too.
  * <p>
  * A payment that arrives after its booking's hold ran out and was released books the same
  * rooms again if they're still on sale. A payment the booking can't take is refunded in
@@ -61,19 +65,22 @@ public class PaymentWebhookService {
 
 	private final ApplicationEventPublisher events;
 
+	private final OutboxWriter outbox;
+
 	private final TransactionTemplate transaction;
 
 	private final Clock clock;
 
 	public PaymentWebhookService(ProcessedWebhookEvents processedEvents, PaymentRepository payments,
 			BookingRepository bookings, InventoryRepository inventory, PaymentGateway gateway,
-			ApplicationEventPublisher events, TransactionTemplate transaction, Clock clock) {
+			ApplicationEventPublisher events, OutboxWriter outbox, TransactionTemplate transaction, Clock clock) {
 		this.processedEvents = processedEvents;
 		this.payments = payments;
 		this.bookings = bookings;
 		this.inventory = inventory;
 		this.gateway = gateway;
 		this.events = events;
+		this.outbox = outbox;
 		this.transaction = transaction;
 		this.clock = clock;
 	}
@@ -160,11 +167,20 @@ public class PaymentWebhookService {
 		}
 		if (taken) {
 			payment.succeed(event.paymentIntentId());
+			outbox.write(confirmation(booking, payment));
 			return null;
 		}
 		log.warn("Booking {} is {} and can't take the payment from checkout session {} ({}); refunding it",
 				booking.getId(), booking.getStatus(), event.sessionId(), payment.getStatus());
 		return new Refund(booking.getId(), payment.getId(), event.paymentIntentId());
+	}
+
+	/** What the guest's confirmation says. */
+	private static BookingConfirmed confirmation(Booking booking, Payment payment) {
+		Room room = booking.getRoom();
+		return new BookingConfirmed(booking.getId(), booking.getUserId(), room.getHotel().getName(), room.getType(),
+				booking.getCheckIn(), booking.getCheckOut(), booking.getRoomsCount(), payment.getAmount(),
+				payment.getCurrency());
 	}
 
 	/** Ends the session's payment unpaid, unless it was paid or ended already. */

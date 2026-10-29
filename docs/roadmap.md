@@ -151,8 +151,8 @@ Goal: a test-card payment confirms a booking exactly once.
 Goal: the full lifecycle works, including the unhappy paths.
 
 - [x] Migration: `outbox_events`: the design doc's columns plus `attempts`, `last_error` and `failed_at`, so an event that keeps failing is parked after 10 attempts rather than retried forever (decided); a partial index on waiting events. The outbox carries notifications only; booking repricing stays after-commit (decided)
-- [ ] Outbox writer; webhook confirmation writes its event in the same transaction
-- [ ] Test: a duplicate webhook still produces exactly one outbox row
+- [x] Outbox writer; webhook confirmation writes its event in the same transaction. `OutboxWriter` only writes inside the caller's transaction (MANDATORY), so an event can't outlive a change that rolled back; each event type has its own payload record (`BookingConfirmed`: booking, user, hotel, room type, dates, rooms, amount, currency), carrying the details as they were
+- [x] Test: a duplicate webhook still produces exactly one outbox row, including two deliveries in flight together; a late payment that's refunded writes none
 - [ ] Outbox publisher job with a Redis lock (`lock:outbox`); fake email consumer that tolerates duplicates
 - [ ] Cancellation policy as plain domain code, with unit tests
 - [ ] `POST /bookings/{id}/cancel`: restore inventory, refund, write an outbox event
