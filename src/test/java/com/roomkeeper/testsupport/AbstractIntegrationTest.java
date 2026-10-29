@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -112,12 +113,16 @@ public abstract class AbstractIntegrationTest {
 		return await().atMost(Duration.ofSeconds(5)).until(() -> redis.keys(keyPattern), keys -> !keys.isEmpty());
 	}
 
-	/** Signs the user up and returns their id. */
+	/**
+	 * Signs the user up and returns their id. Signup doesn't say (its answer is the same for
+	 * a registered email), so the id is read from the database.
+	 */
 	protected long signUp(TestUser user) {
-		return api().contentType(ContentType.JSON).body(user.signupRequest())
+		api().contentType(ContentType.JSON).body(user.signupRequest())
 			.when().post("/api/v1/auth/signup")
-			.then().statusCode(201)
-			.extract().jsonPath().getLong("id");
+			.then().statusCode(202);
+		return database.queryForObject("select id from users where email = ?", Long.class,
+				user.email().strip().toLowerCase(Locale.ROOT));
 	}
 
 	/** Logs the user in and returns their access token. */

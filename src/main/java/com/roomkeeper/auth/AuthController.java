@@ -1,6 +1,6 @@
 package com.roomkeeper.auth;
 
-import com.roomkeeper.user.UserResponse;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -24,9 +24,14 @@ public class AuthController {
 	}
 
 	@PostMapping("/signup")
-	@ResponseStatus(HttpStatus.CREATED)
-	public UserResponse signup(@Valid @RequestBody SignupRequest request) {
-		return authService.signup(request);
+	@ResponseStatus(HttpStatus.ACCEPTED)
+	@Operation(summary = "Sign up",
+			description = "Always 202 with the same message, whether or not the email is already registered, so "
+					+ "signup can't reveal who has an account. A new account can log in at once and gets a welcome "
+					+ "email; a registered address's owner is emailed that someone tried to sign up with it.")
+	public SignupResponse signup(@Valid @RequestBody SignupRequest request) {
+		authService.signup(request);
+		return SignupResponse.ACCEPTED;
 	}
 
 	@PostMapping("/login")

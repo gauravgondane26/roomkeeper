@@ -5,12 +5,13 @@ import java.util.function.Supplier;
 
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.ProblemType;
+import com.roomkeeper.outbox.AccountCreated;
+import com.roomkeeper.outbox.OutboxWriter;
+import com.roomkeeper.outbox.SignupForExistingAccount;
 import com.roomkeeper.user.Emails;
 import com.roomkeeper.user.Role;
 import com.roomkeeper.user.User;
-import com.roomkeeper.user.UserMapper;
 import com.roomkeeper.user.UserRepository;
-import com.roomkeeper.user.UserResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -18,6 +19,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class AuthService {
@@ -26,7 +28,9 @@ public class AuthService {
 
 	private final UserRepository users;
 
-	private final UserMapper userMapper;
+	private final OutboxWriter outbox;
+
+	private final TransactionTemplate transaction;
 
 	private final PasswordEncoder passwordEncoder;
 
@@ -44,10 +48,12 @@ public class AuthService {
 	 */
 	private final String dummyPasswordHash;
 
-	public AuthService(UserRepository users, UserMapper userMapper, PasswordEncoder passwordEncoder, AccessTokenService accessTokens,
-			RefreshTokenStore refreshTokens, AuthProperties properties, Clock clock) {
+	public AuthService(UserRepository users, OutboxWriter outbox, TransactionTemplate transaction,
+			PasswordEncoder passwordEncoder, AccessTokenService accessTokens, RefreshTokenStore refreshTokens,
+			AuthProperties properties, Clock clock) {
 		this.users = users;
-		this.userMapper = userMapper;
+		this.outbox = outbox;
+		this.transaction = transaction;
 		this.passwordEncoder = passwordEncoder;
 		this.accessTokens = accessTokens;
 		this.refreshTokens = refreshTokens;
@@ -56,21 +62,33 @@ public class AuthService {
 		this.dummyPasswordHash = passwordEncoder.encode("dummy-password-for-unknown-emails");
 	}
 
-	@Transactional
-	public UserResponse signup(SignupRequest request) {
+	/**
+	 * Creates the account if the email is new, and the same from the outside if it isn't:
+	 * the caller always gets the same answer, so signup can't tell anyone which emails are
+	 * registered. The password is hashed either way, so the time taken doesn't tell either.
+	 * A new account's owner is welcomed by email; a registered address's owner is told
+	 * someone tried to sign up with it.
+	 */
+	public void signup(SignupRequest request) {
 		String email = Emails.normalize(request.email());
-		if (users.existsByEmail(email)) {
-			throw new EmailAlreadyRegisteredException();
-		}
+		String passwordHash = passwordEncoder.encode(request.password());
 		Role role = request.role() != null ? request.role().role() : Role.GUEST;
-		User user = new User(email, passwordEncoder.encode(request.password()), request.name().strip(), role,
-				clock.instant());
 		try {
-			return userMapper.toResponse(users.saveAndFlush(user));
+			transaction.executeWithoutResult(status -> {
+				User owner = users.findByEmail(email).orElse(null);
+				if (owner != null) {
+					outbox.write(new SignupForExistingAccount(owner.getId()));
+					return;
+				}
+				User user = users.saveAndFlush(
+						new User(email, passwordHash, request.name().strip(), role, clock.instant()));
+				outbox.write(new AccountCreated(user.getId()));
+			});
 		}
 		catch (DataIntegrityViolationException ex) {
-			// Two signups with the same email raced past the check; the unique index caught it
-			throw new EmailAlreadyRegisteredException();
+			// Signups with this email raced past the check and another won; its owner is told of this one
+			transaction.executeWithoutResult(status -> users.findByEmail(email)
+				.ifPresent(owner -> outbox.write(new SignupForExistingAccount(owner.getId()))));
 		}
 	}
 

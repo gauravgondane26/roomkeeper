@@ -7,17 +7,17 @@ import java.util.Optional;
 
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.ProblemType;
+import com.roomkeeper.outbox.OutboxWriter;
 import com.roomkeeper.testsupport.MutableClock;
 import com.roomkeeper.user.Role;
 import com.roomkeeper.user.User;
-import com.roomkeeper.user.UserMapper;
 import com.roomkeeper.user.UserRepository;
 import org.junit.jupiter.api.Test;
-import org.mapstruct.factory.Mappers;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -42,7 +42,9 @@ class AuthServiceRedisDownTest {
 
 	private final RefreshTokenStore refreshTokens = mock(RefreshTokenStore.class);
 
-	private final AuthService authService = new AuthService(users, Mappers.getMapper(UserMapper.class), passwordEncoder,
+	// Signup isn't exercised here, so it needs no outbox or transactions
+	private final AuthService authService = new AuthService(users, mock(OutboxWriter.class),
+			mock(TransactionTemplate.class), passwordEncoder,
 			new AccessTokenService(JwtConfig.encoder(JwtConfig.secretKey(SECRET)), properties, clock), refreshTokens,
 			properties, clock);
 

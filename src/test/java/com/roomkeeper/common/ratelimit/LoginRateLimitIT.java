@@ -67,7 +67,7 @@ class LoginRateLimitIT extends AbstractIntegrationTest {
 
 		api().contentType(ContentType.JSON).body(user.signupRequest())
 			.when().post("/api/v1/auth/signup")
-			.then().statusCode(201);
+			.then().statusCode(202);
 	}
 
 	private ValidatableResponse logIn(String email, String password) {

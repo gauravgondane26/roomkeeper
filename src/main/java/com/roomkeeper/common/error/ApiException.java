@@ -4,7 +4,7 @@ import org.springframework.http.ProblemDetail;
 
 /**
  * An error to report to the client as a problem detail. Throw it directly, or subclass it
- * for errors worth naming (e.g. {@code EmailAlreadyRegisteredException}).
+ * for errors worth naming (e.g. {@code SoldOutException}).
  */
 public class ApiException extends RuntimeException {
 

@@ -30,7 +30,7 @@ The app listens on port 8080. Postgres and Redis are published on 15432 and 1637
 
 Swagger UI is the client: open http://localhost:8080/swagger-ui.html.
 
-1. `POST /api/v1/auth/signup` with an email, a password (at least 8 characters, at most 72 bytes: BCrypt's limit), and a name. Add `"role": "HOTEL_MANAGER"` to manage hotels.
+1. `POST /api/v1/auth/signup` with an email, a password (at least 8 characters, at most 72 bytes: BCrypt's limit), and a name. Add `"role": "HOTEL_MANAGER"` to manage hotels. The answer is always 202 with the same message, even for an email that's already registered, so signup can't be used to find out who has an account. A new account can log in at once and gets a welcome email; if the email was already registered, nothing changes and its owner is emailed that someone tried to sign up with it.
 2. `POST /api/v1/auth/login` returns an `accessToken` (valid 15 minutes) and a `refreshToken` (valid 7 days, single use).
 3. Click **Authorize** and paste the access token. Routes with a lock icon now work.
 4. When the access token expires, `POST /api/v1/auth/refresh` with the refresh token returns a new pair. `POST /api/v1/auth/logout` revokes it.

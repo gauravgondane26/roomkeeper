@@ -74,9 +74,9 @@ check "Swagger UI is public" GET /swagger-ui/index.html 200 "Swagger UI"
 check "anonymous request is a 401 problem" GET /api/v1/does-not-exist 401 "urn:roomkeeper:problem:unauthorized"
 email="smoke-$(date +%s)-$RANDOM@example.com"
 signup_body="{\"email\":\"$email\",\"password\":\"smoke-test-password\",\"name\":\"Smoke Test\"}"
-check "signup creates a guest" POST /api/v1/auth/signup 201 '"role":"GUEST"' "$signup_body"
-check "duplicate signup is a 409 problem" POST /api/v1/auth/signup 409 \
-  "urn:roomkeeper:problem:email-already-registered" "$signup_body"
+check "signup is accepted" POST /api/v1/auth/signup 202 '"message":' "$signup_body"
+check "signing up again with the email answers the same" POST /api/v1/auth/signup 202 '"message":' \
+  "$signup_body"
 check "login returns a bearer token" POST /api/v1/auth/login 200 '"tokenType":"Bearer"' \
   "{\"email\":\"$email\",\"password\":\"smoke-test-password\"}"
 check "wrong password is a 401 problem" POST /api/v1/auth/login 401 \
@@ -116,7 +116,7 @@ check "refresh after logout is rejected" POST /api/v1/auth/refresh 401 \
 TOKEN=$guest_token
 check "guests can't manage hotels" GET /api/v1/admin/hotels 403 "urn:roomkeeper:problem:forbidden"
 manager_email="smoke-manager-$(date +%s)-$RANDOM@example.com"
-check "signup creates a hotel manager" POST /api/v1/auth/signup 201 '"role":"HOTEL_MANAGER"' \
+check "signup creates a hotel manager" POST /api/v1/auth/signup 202 '"message":' \
   "{\"email\":\"$manager_email\",\"password\":\"smoke-test-password\",\"name\":\"Smoke Manager\",\"role\":\"HOTEL_MANAGER\"}"
 TOKEN=$(login "$manager_email")
 # A city of its own, so searches only find this run's hotel

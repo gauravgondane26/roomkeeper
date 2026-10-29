@@ -81,7 +81,7 @@ The endpoints mirror the original repo, plus a few that make the hard parts visi
 
 | Module | Endpoints | Notes |
 | --- | --- | --- |
-| Auth | `POST /auth/signup`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` | Login is rate limited. Logout revokes the refresh token |
+| Auth | `POST /auth/signup`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` | Login is rate limited. Logout revokes the refresh token. Signup answers 202 the same way for a new or a registered email (the owner of a registered one is emailed instead), so it can't reveal who has an account |
 | Browse | `GET /hotels/search`, `GET /hotels/{id}/info` | Search takes city, dates, rooms, and pagination. Cached |
 | Hotel admin | CRUD on `/admin/hotels`, `PATCH /admin/hotels/{id}/activate`, `PATCH /admin/hotels/{id}/deactivate` | Activation generates a year of inventory rows, and an hourly job keeps it a year ahead as each hotel's midnight passes. A hotel or room type with bookings can be deactivated but not deleted. Deactivating honours paid bookings (off sale may be a pause); guests can still cancel them under the normal policy |
 | Room admin | CRUD on `/admin/hotels/{id}/rooms` | Owner-only |

@@ -65,7 +65,7 @@ class OutboxPublisherIT extends AbstractIntegrationTest {
 		publisher.run();
 		publisher.run();
 
-		assertThat(emails.sentTo(guest.email())).extracting(Email::subject)
+		assertThat(confirmations()).extracting(Email::subject)
 			.containsExactly("Your stay at Seaside Inn is confirmed", "Your stay at Hill View is confirmed");
 		assertThat(jdbc.queryForList("select published_at is not null from outbox_events where id in (?, ?)",
 				Boolean.class, first, second))
@@ -82,7 +82,7 @@ class OutboxPublisherIT extends AbstractIntegrationTest {
 		publisher.run();
 
 		assertThat(emails.deliveriesOf("outbox-" + event)).isEqualTo(2);
-		assertThat(emails.sentTo(guest.email())).hasSize(1);
+		assertThat(confirmations()).hasSize(1);
 		assertThat(jdbc.queryForObject("select published_at is not null from outbox_events where id = ?",
 				Boolean.class, event))
 			.isTrue();
@@ -126,7 +126,7 @@ class OutboxPublisherIT extends AbstractIntegrationTest {
 		runTogether(runs);
 
 		assertThat(events).allSatisfy(event -> assertThat(emails.deliveriesOf("outbox-" + event)).isEqualTo(1));
-		assertThat(emails.sentTo(guest.email())).hasSize(20);
+		assertThat(confirmations()).hasSize(20);
 	}
 
 	@Test
@@ -144,6 +144,11 @@ class OutboxPublisherIT extends AbstractIntegrationTest {
 		publisher.run();
 
 		assertThat(emails.deliveriesOf("outbox-" + event)).isEqualTo(1);
+	}
+
+	/** The booking confirmations the guest was sent (signing up sent them a welcome too). */
+	private List<Email> confirmations() {
+		return emails.sentTo(guest.email()).stream().filter(email -> email.subject().endsWith(" is confirmed")).toList();
 	}
 
 	/** Writes a confirmation for the guest at this hotel; returns the outbox event's id. */

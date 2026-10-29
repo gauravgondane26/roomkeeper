@@ -4,7 +4,7 @@ The build plan from the [project design](Hotel%20Booking%20Backend%20Project%20D
 
 Tasks are listed in the order to do them. Where a task names a test, that test is written and committed first.
 
-**Current:** Week 7
+**Current:** Week 8
 
 ## Week 1: Skeleton
 
@@ -161,7 +161,7 @@ Goal: the full lifecycle works, including the unhappy paths.
 - [x] `GET /admin/hotels/{id}/reports`: revenue and occupancy over a date range. Decided: revenue by night stayed, each paid booking's amount less refunds spread over its nights (so a cancellation counts what was kept). Up to 366 nights, one SQL query; rooms booked and on sale come from inventory (a closed night counts only rooms in use), so holds and cancellations don't count as sold; totals, occupancy (4 places) and average daily rate (none when nothing sold); nights shown to the paisa, the total summed exactly
 - [x] Decide whether deactivating a hotel cancels and refunds its future bookings or honours them. Decided: honours them, as it already did, since off sale may be a pause (renovation, a season); guests can still cancel under the normal policy. A test pins it. Closing a hotel for good would want an explicit "cancel all its bookings" action, not this one
 - [x] Drop the unused `inventory (date, room_id)` index if the reports don't need it (see [query plans](query-plans.md)): they don't. `scripts/explain-report.sql` (1.1 million inventory rows, 150,000 paid bookings) shows the report and the repricing read reach inventory through `(room_id, date)`, as every inventory query does, so V13 drops it. The same plan showed the report re-reading bookings once per night; joining once halved its time (25 ms to 13 ms)
-- [ ] Signup always gives the same response, so it can't reveal registered emails; an already registered email's owner gets an email through the outbox instead
+- [x] Signup always gives the same response, so it can't reveal registered emails; an already registered email's owner gets an email through the outbox instead. Decided: always 202 with one message (the 201 user body and the 409 `email-already-registered` type are gone), the password hashed either way so timing doesn't tell; a new account gets a welcome email and a registered address's owner a "someone tried to sign up" email, both through the outbox. Racing signups with one email make one account, and the losers' owner emails come from a fresh transaction after the unique index stops them
 
 **Done when:** every path in the state diagram is covered by a test.
 

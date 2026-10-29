@@ -10,6 +10,12 @@ public enum OutboxEventType {
 	BOOKING_CANCELLED,
 
 	/** A cancellation made a refund due: it's made through the payment provider. */
-	REFUND_DUE
+	REFUND_DUE,
+
+	/** Someone signed up with a new email: they're welcomed. */
+	ACCOUNT_CREATED,
+
+	/** Someone signed up with a registered email: its owner is told. */
+	SIGNUP_FOR_EXISTING_ACCOUNT
 
 }

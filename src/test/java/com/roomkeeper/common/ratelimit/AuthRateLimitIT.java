@@ -14,7 +14,7 @@ import static org.hamcrest.Matchers.notNullValue;
 
 /**
  * Signup and refresh are rate limited per client IP like login, each with its own bucket:
- * signup so emails can't be checked in bulk (it says when one is already registered),
+ * signup so it can't be hammered (it no longer says whether an email is registered),
  * refresh so it can't be hammered.
  */
 class AuthRateLimitIT extends AbstractIntegrationTest {
@@ -22,7 +22,7 @@ class AuthRateLimitIT extends AbstractIntegrationTest {
 	@Test
 	void the21stSignupInAnHourIsRejectedWith429() {
 		for (int i = 1; i <= 20; i++) {
-			postSignup(aUser().build()).statusCode(201);
+			postSignup(aUser().build()).statusCode(202);
 		}
 
 		postSignup(aUser().build())
