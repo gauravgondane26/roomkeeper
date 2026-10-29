@@ -40,6 +40,7 @@ public enum ProblemType {
 	SOLD_OUT("sold-out", HttpStatus.CONFLICT, "Sold out"),
 	HOLD_EXPIRED("hold-expired", HttpStatus.CONFLICT, "Hold expired"),
 	BOOKING_STATE("booking-state", HttpStatus.CONFLICT, "Not allowed in the booking's status"),
+	CANCELLATION_CLOSED("cancellation-closed", HttpStatus.CONFLICT, "Cancellation closed"),
 	HAS_BOOKINGS("has-bookings", HttpStatus.CONFLICT, "Has bookings"),
 	IDEMPOTENCY_KEY_REQUIRED("idempotency-key-required", HttpStatus.BAD_REQUEST, "Idempotency key required"),
 	IDEMPOTENCY_KEY_IN_USE("idempotency-key-in-use", HttpStatus.CONFLICT, "Idempotency key in use"),

@@ -154,7 +154,7 @@ Goal: the full lifecycle works, including the unhappy paths.
 - [x] Outbox writer; webhook confirmation writes its event in the same transaction. `OutboxWriter` only writes inside the caller's transaction (MANDATORY), so an event can't outlive a change that rolled back; each event type has its own payload record (`BookingConfirmed`: booking, user, hotel, room type, dates, rooms, amount, currency), carrying the details as they were
 - [x] Test: a duplicate webhook still produces exactly one outbox row, including two deliveries in flight together; a late payment that's refunded writes none
 - [x] Outbox publisher job with a Redis lock (`lock:outbox`); fake email consumer that tolerates duplicates. Every 5 s; each event in its own transaction, locked with `for update skip locked`; a failed attempt is recorded in a second transaction, and the 10th parks the event; each event is tried at most once a run. The confirmation email's idempotency key is the outbox event's id, and the fake sender keeps one email per key, as a provider would
-- [ ] Cancellation policy as plain domain code, with unit tests
+- [x] Cancellation policy as plain domain code, with unit tests. Decided: a full refund with at least 48 hours' notice, 50% with less, and no cancelling once the stay has begun (409 `cancellation-closed`); a stay begins at 2 PM hotel time on its check-in date. Notice is counted in elapsed hours (a clock change doesn't move it); the half is rounded to the paisa in the guest's favour
 - [ ] `POST /bookings/{id}/cancel`: restore inventory, refund, write an outbox event
 - [ ] Test: cancelling restores inventory and calls the refund exactly once
 - [ ] `GET /admin/hotels/{id}/bookings`
