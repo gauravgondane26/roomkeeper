@@ -70,6 +70,10 @@ class CancellationIT extends AbstractIntegrationTest {
 
 	private String city;
 
+	private String manager;
+
+	private long hotelId;
+
 	private long roomId;
 
 	private long bookingId;
@@ -79,10 +83,10 @@ class CancellationIT extends AbstractIntegrationTest {
 	@BeforeEach
 	void payForBothRooms() {
 		clock.setInstant(BOOKED_AT);
-		String manager = signUpAndLogIn(aUser().asHotelManager().build());
+		manager = signUpAndLogIn(aUser().asHotelManager().build());
 		city = "Cancel-" + UUID.randomUUID();
-		roomId = firstRoomOf(manager,
-				activeHotel(manager, aHotel().inCity(city).build(), aRoom().withTotalCount(2).build()));
+		hotelId = activeHotel(manager, aHotel().inCity(city).build(), aRoom().withTotalCount(2).build());
+		roomId = firstRoomOf(manager, hotelId);
 		guestUser = aUser().build();
 		guest = signUpAndLogIn(guestUser);
 		bookingId = idempotentApi(guest).contentType(ContentType.JSON)
@@ -172,6 +176,21 @@ class CancellationIT extends AbstractIntegrationTest {
 
 		api(guest).when().post("/api/v1/bookings/{id}/cancel", hold)
 			.then().statusCode(409).body("type", equalTo("urn:roomkeeper:problem:booking-state"));
+	}
+
+	@Test
+	void aHotelTakenOffSaleHonoursItsPaidBookingsWhichCanStillBeCancelled() {
+		// Decided: off sale is a pause, not a closure, so guests keep the stays they paid for
+		api(manager).when().patch("/api/v1/admin/hotels/{id}/deactivate", hotelId).then().statusCode(200);
+
+		assertThat(bookingStatus()).isEqualTo("CONFIRMED");
+		assertThat(nightsBooked()).containsOnly(2);
+
+		cancel().statusCode(200).body("status", equalTo("CANCELLED"));
+		publisher.run();
+
+		assertThat(stripe.refundsOf(paymentIntentId)).isOne();
+		assertThat(nightsBooked()).containsOnly(0);
 	}
 
 	@Test

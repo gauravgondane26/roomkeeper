@@ -83,7 +83,7 @@ The endpoints mirror the original repo, plus a few that make the hard parts visi
 | --- | --- | --- |
 | Auth | `POST /auth/signup`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` | Login is rate limited. Logout revokes the refresh token |
 | Browse | `GET /hotels/search`, `GET /hotels/{id}/info` | Search takes city, dates, rooms, and pagination. Cached |
-| Hotel admin | CRUD on `/admin/hotels`, `PATCH /admin/hotels/{id}/activate`, `PATCH /admin/hotels/{id}/deactivate` | Activation generates a year of inventory rows, and an hourly job keeps it a year ahead as each hotel's midnight passes. A hotel or room type with bookings can be deactivated but not deleted |
+| Hotel admin | CRUD on `/admin/hotels`, `PATCH /admin/hotels/{id}/activate`, `PATCH /admin/hotels/{id}/deactivate` | Activation generates a year of inventory rows, and an hourly job keeps it a year ahead as each hotel's midnight passes. A hotel or room type with bookings can be deactivated but not deleted. Deactivating honours paid bookings (off sale may be a pause); guests can still cancel them under the normal policy |
 | Room admin | CRUD on `/admin/hotels/{id}/rooms` | Owner-only |
 | Moderation | `GET /moderation/hotels`, `PATCH /moderation/hotels/{id}/approve`, `PATCH /moderation/hotels/{id}/reject` | Admins only. A hotel can't be activated until it's approved |
 | Inventory admin | `GET` and `PATCH /admin/inventory/rooms/{roomId}` | Bulk update a date range: close dates, change surge, change totals |
