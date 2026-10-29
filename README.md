@@ -69,6 +69,8 @@ Changing a room type's `totalCount` later updates every future night of that roo
 
 Requests that create something take an `Idempotency-Key` header: any string of 1 to 255 visible ASCII characters (a UUID works), new for each request and the same when retrying it. A retry within 24 hours gets the first response back, with `Idempotent-Replayed: true`, instead of a second booking. Without the header it's 400 `idempotency-key-required`; the same key on a different request is 422 `idempotency-key-reused`; a retry while the first request is still running is 409 `idempotency-key-in-use`. A failed request doesn't keep its key, so it can be retried as is. If Redis is down these requests get 503 rather than risk running twice.
 
+Side effects such as the guest's confirmation email are written to an outbox table in the same transaction as the booking change, and a job (`lock:outbox`, every 5 seconds) sends them. Delivery is at least once, and each email carries its outbox event's id as an idempotency key, so a resend is ignored. For now the email sender is a fake that logs each email. An event that fails 10 times is parked (`failed_at`, `last_error`) instead of retried forever.
+
 A job runs every minute and gives back the rooms of holds that ran out unpaid; a Redis lock (`lock:hold-expiry`) makes sure only one instance runs it. A hold past its time already reads `EXPIRED` before the job gets to it. If the guest was paying, the job also closes their Stripe checkout session, which would otherwise stay open for half an hour.
 
 ### Trying a payment end to end (Stripe test mode)

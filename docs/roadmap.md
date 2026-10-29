@@ -153,7 +153,7 @@ Goal: the full lifecycle works, including the unhappy paths.
 - [x] Migration: `outbox_events`: the design doc's columns plus `attempts`, `last_error` and `failed_at`, so an event that keeps failing is parked after 10 attempts rather than retried forever (decided); a partial index on waiting events. The outbox carries notifications only; booking repricing stays after-commit (decided)
 - [x] Outbox writer; webhook confirmation writes its event in the same transaction. `OutboxWriter` only writes inside the caller's transaction (MANDATORY), so an event can't outlive a change that rolled back; each event type has its own payload record (`BookingConfirmed`: booking, user, hotel, room type, dates, rooms, amount, currency), carrying the details as they were
 - [x] Test: a duplicate webhook still produces exactly one outbox row, including two deliveries in flight together; a late payment that's refunded writes none
-- [ ] Outbox publisher job with a Redis lock (`lock:outbox`); fake email consumer that tolerates duplicates
+- [x] Outbox publisher job with a Redis lock (`lock:outbox`); fake email consumer that tolerates duplicates. Every 5 s; each event in its own transaction, locked with `for update skip locked`; a failed attempt is recorded in a second transaction, and the 10th parks the event; each event is tried at most once a run. The confirmation email's idempotency key is the outbox event's id, and the fake sender keeps one email per key, as a provider would
 - [ ] Cancellation policy as plain domain code, with unit tests
 - [ ] `POST /bookings/{id}/cancel`: restore inventory, refund, write an outbox event
 - [ ] Test: cancelling restores inventory and calls the refund exactly once

@@ -15,11 +15,17 @@ import org.hibernate.type.SqlTypes;
 
 /**
  * A side effect of a change, saved in the change's own transaction and published to its
- * consumers afterwards, at least once.
+ * consumers afterwards, at least once. An event its consumers keep failing on is parked
+ * after {@value #MAX_ATTEMPTS} attempts, and no longer retried.
  */
 @Entity
 @Table(name = "outbox_events")
 public class OutboxEvent {
+
+	static final int MAX_ATTEMPTS = 10;
+
+	/** Longer errors are cut short; the log has the full stack trace. */
+	private static final int MAX_ERROR_LENGTH = 1_000;
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,6 +45,18 @@ public class OutboxEvent {
 
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
+
+	@Column(name = "published_at")
+	private Instant publishedAt;
+
+	@Column(nullable = false)
+	private int attempts;
+
+	@Column(name = "last_error")
+	private String lastError;
+
+	@Column(name = "failed_at")
+	private Instant failedAt;
 
 	protected OutboxEvent() {
 	}
@@ -69,6 +87,29 @@ public class OutboxEvent {
 
 	public Instant getCreatedAt() {
 		return createdAt;
+	}
+
+	public int getAttempts() {
+		return attempts;
+	}
+
+	/** Failed too often to be retried. */
+	public boolean isParked() {
+		return failedAt != null;
+	}
+
+	/** Its consumers have taken it. */
+	void markPublished(Instant at) {
+		publishedAt = at;
+	}
+
+	/** A consumer failed on it: it's tried again next run, unless that was its last attempt. */
+	void recordFailure(String error, Instant at) {
+		attempts++;
+		lastError = error.length() > MAX_ERROR_LENGTH ? error.substring(0, MAX_ERROR_LENGTH) : error;
+		if (attempts >= MAX_ATTEMPTS) {
+			failedAt = at;
+		}
 	}
 
 }

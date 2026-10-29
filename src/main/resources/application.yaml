@@ -54,6 +54,9 @@ roomkeeper:
   inventory:
     # Hourly, at five past: each hotel's newest night opens within an hour of its midnight
     roll-cron: "0 5 * * * *"
+  outbox:
+    # How often the publisher sends waiting events (emails); its lock's lease is 4s
+    publish-interval: 5s
   cache:
     hotel-info-ttl: 10m
     search-ttl: 60s

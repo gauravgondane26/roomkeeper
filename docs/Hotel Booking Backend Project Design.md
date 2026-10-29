@@ -156,6 +156,8 @@ Networks retry, users double-click, and Stripe sends webhooks at least once.
 
 Confirmation emails and notifications shouldn't happen inside the booking transaction, but they also can't get lost. The booking transaction writes a row to `outbox_events`, and a scheduled publisher sends whatever hasn't been published yet. Delivery is at least once, so consumers have to tolerate duplicates. For this project the "consumer" can be a log or a fake email sender.
 
+As built: the writer only runs inside the caller's transaction. The publisher takes `lock:outbox`, then sends each waiting event in its own transaction: it locks the row (`for update skip locked`, so runs that overlap split the queue), hands it to the consumers for its type, and marks it published. If a consumer throws, that transaction rolls back and a second one counts the attempt; after 10 the event is parked with its last error rather than retried forever. The email consumer uses the outbox event's id as the email's idempotency key, as a real provider's would be, so an event delivered twice sends one email. Booking repricing stays on its own after-commit executor: prices must update within milliseconds, and a lost recompute only leaves a stale "from" price.
+
 ### Pricing and search
 
 - **Pricing** is a chain of small rules applied per night: base price, then surge factor, occupancy, weekend, and holiday adjustments. Each rule is a class with its own unit tests, composed with the decorator or strategy pattern.
