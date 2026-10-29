@@ -130,7 +130,7 @@ public class HotelService {
 	}
 
 	/** The hotel, if it exists and the caller owns it: 404 or 403 otherwise. */
-	Hotel findOwned(long ownerId, long hotelId) {
+	public Hotel findOwned(long ownerId, long hotelId) {
 		Hotel hotel = hotels.findById(hotelId)
 			.orElseThrow(() -> new ApiException(ProblemType.NOT_FOUND, "Hotel " + hotelId + " not found"));
 		if (!hotel.getOwnerId().equals(ownerId)) {

@@ -217,6 +217,7 @@ check "guest lists their bookings" GET /api/v1/users/bookings 200 "\"id\":$booki
 check "an unpaid booking can't be cancelled" POST "/api/v1/bookings/$booking_id/cancel" 409 \
   "urn:roomkeeper:problem:booking-state"
 TOKEN=$manager_token
+check "manager lists the hotel's bookings" GET "/api/v1/admin/hotels/$hotel_id/bookings" 200 "\"id\":$booking_id"
 check "a hotel with bookings can't be deleted" DELETE "/api/v1/admin/hotels/$hotel_id" 409 \
   "urn:roomkeeper:problem:has-bookings"
 check "manager takes the hotel off sale" PATCH "/api/v1/admin/hotels/$hotel_id/deactivate" 200 '"active":false'

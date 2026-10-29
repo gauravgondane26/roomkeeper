@@ -22,6 +22,10 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 	@EntityGraph(attributePaths = { "room", "room.hotel" })
 	Page<Booking> findByUserId(Long userId, Pageable pageable);
 
+	/** Every booking for any of the hotel's room types. */
+	@EntityGraph(attributePaths = { "room", "room.hotel" })
+	Page<Booking> findByRoomHotelId(Long hotelId, Pageable pageable);
+
 	/**
 	 * The user's booking, locked (SELECT ... FOR UPDATE) until the transaction ends, so the
 	 * expiry job and the guest's own changes to it take turns.

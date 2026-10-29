@@ -6,11 +6,13 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.function.Function;
 
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.InvalidFieldException;
 import com.roomkeeper.common.error.ProblemType;
 import com.roomkeeper.hotel.Hotel;
+import com.roomkeeper.hotel.HotelService;
 import com.roomkeeper.hotel.Room;
 import com.roomkeeper.hotel.RoomRepository;
 import com.roomkeeper.inventory.Inventory;
@@ -21,6 +23,7 @@ import com.roomkeeper.pricing.PricingChain;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +40,8 @@ public class BookingService {
 
 	private final RoomRepository rooms;
 
+	private final HotelService hotels;
+
 	private final GuestService guests;
 
 	private final InventoryRepository inventory;
@@ -51,11 +56,12 @@ public class BookingService {
 
 	private final Clock clock;
 
-	public BookingService(BookingRepository bookings, RoomRepository rooms, GuestService guests,
+	public BookingService(BookingRepository bookings, RoomRepository rooms, HotelService hotels, GuestService guests,
 			InventoryRepository inventory, PricingChain pricing, BookingMapper mapper, BookingProperties properties,
 			ApplicationEventPublisher events, Clock clock) {
 		this.bookings = bookings;
 		this.rooms = rooms;
+		this.hotels = hotels;
 		this.guests = guests;
 		this.inventory = inventory;
 		this.pricing = pricing;
@@ -111,9 +117,21 @@ public class BookingService {
 	/** The user's bookings, newest first. */
 	@Transactional(readOnly = true)
 	public BookingPageResponse list(long userId, BookingPageRequest request) {
+		return page(request, pageable -> bookings.findByUserId(userId, pageable));
+	}
+
+	/** The bookings at a hotel the manager owns, newest first: 404 or 403 for anyone else's. */
+	@Transactional(readOnly = true)
+	public BookingPageResponse listForHotel(long ownerId, long hotelId, BookingPageRequest request) {
+		hotels.findOwned(ownerId, hotelId);
+		return page(request, pageable -> bookings.findByRoomHotelId(hotelId, pageable));
+	}
+
+	/** One page of the bookings the query finds, newest first. */
+	private BookingPageResponse page(BookingPageRequest request, Function<Pageable, Page<Booking>> query) {
 		int page = request.page() != null ? request.page() : 0;
 		int size = request.size() != null ? request.size() : DEFAULT_PAGE_SIZE;
-		Page<Booking> found = bookings.findByUserId(userId,
+		Page<Booking> found = query.apply(
 				PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))));
 		Instant now = clock.instant();
 		return new BookingPageResponse(found.map(booking -> mapper.toResponse(booking, now)).getContent(), page, size,
