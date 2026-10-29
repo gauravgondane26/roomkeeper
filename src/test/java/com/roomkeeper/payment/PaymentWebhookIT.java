@@ -87,7 +87,7 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 	}
 
 	@Test
-	void theSameWebhookDeliveredTwiceConfirmsTheBookingOnce() {
+	void theSameWebhookDeliveredTwiceConfirmsTheBookingOnceAndCreatesOneOutboxRow() {
 		String paid = checkoutCompleted("evt_paid_" + bookingId, sessionId, "pi_" + bookingId);
 
 		deliverWebhook(paid).statusCode(200);
@@ -101,6 +101,8 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 		assertThat(jdbc.queryForObject("select count(*) from processed_webhook_events where event_id = ?", Long.class,
 				"evt_paid_" + bookingId))
 			.isEqualTo(1);
+		// The guest's confirmation goes out once, however often Stripe reports the payment
+		assertThat(confirmationsInTheOutbox()).isEqualTo(1);
 	}
 
 	@Test
@@ -311,6 +313,12 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 
 	private String paymentStatus(String session) {
 		return jdbc.queryForObject("select status from payments where provider_session_id = ?", String.class, session);
+	}
+
+	private long confirmationsInTheOutbox() {
+		return jdbc.queryForObject(
+				"select count(*) from outbox_events where type = 'BOOKING_CONFIRMED' and aggregate_id = ?", Long.class,
+				bookingId);
 	}
 
 	private long queriesWaitingOnLocks() {
