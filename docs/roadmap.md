@@ -4,7 +4,7 @@ The build plan from the [project design](Hotel%20Booking%20Backend%20Project%20D
 
 Tasks are listed in the order to do them. Where a task names a test, that test is written and committed first.
 
-**Current:** Week 6
+**Current:** Week 7
 
 ## Week 1: Skeleton
 
@@ -112,7 +112,7 @@ Goal: no oversell under load, and holds always release.
 - [x] `PATCH /admin/hotels/{id}/deactivate`: out of search and no new bookings, existing bookings honoured, history kept; admins can also take an approved hotel off sale
 - [x] Every path that changes inventory (init, expiry, the roll job) publishes `InventoryChangedEvent`; a test per path
 - [x] Decide search-cache eviction for bookings: evict only when a night sells out or reopens; the 60 s TTL covers the rest (partial availability for multi-room searches, occupancy repricing). The eviction runs after the cheapest-price recompute, so a search can't re-cache the old price
-- [x] Bookings recompute cheapest prices after commit, so inventory row locks are held as briefly as possible: an after-commit listener on a small bounded async executor (not REQUIRES_NEW on the request thread, which starved the pool); moves to the outbox in week 7
+- [x] Bookings recompute cheapest prices after commit, so inventory row locks are held as briefly as possible: an after-commit listener on a small bounded async executor (not REQUIRES_NEW on the request thread, which starved the pool). Decided in week 7 to keep it there rather than move it to the outbox: prices update milliseconds after a booking, and a dropped recompute only leaves a stale "from" price until the next change, since availability is always read from inventory
 - [x] Test: bookings racing room type edits and inventory admin on the same nights
 
 **Done when:** the 50-thread test passes reliably and expired holds return their rooms.
@@ -150,7 +150,7 @@ Goal: a test-card payment confirms a booking exactly once.
 
 Goal: the full lifecycle works, including the unhappy paths.
 
-- [ ] Migration: `outbox_events`
+- [x] Migration: `outbox_events`: the design doc's columns plus `attempts`, `last_error` and `failed_at`, so an event that keeps failing is parked after 10 attempts rather than retried forever (decided); a partial index on waiting events. The outbox carries notifications only; booking repricing stays after-commit (decided)
 - [ ] Outbox writer; webhook confirmation writes its event in the same transaction
 - [ ] Test: a duplicate webhook still produces exactly one outbox row
 - [ ] Outbox publisher job with a Redis lock (`lock:outbox`); fake email consumer that tolerates duplicates
