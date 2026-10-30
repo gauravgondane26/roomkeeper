@@ -5,6 +5,7 @@ import java.util.Map;
 
 import com.roomkeeper.common.error.ProblemDetailsWriter;
 import com.roomkeeper.common.error.ProblemType;
+import com.roomkeeper.common.metrics.BusinessMetrics;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,9 +18,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
  * Limits the open auth routes per client IP, each with its own bucket
- * ({@code rl:{route}:{ip}}): login so passwords can't be guessed quickly, signup so emails
- * can't be checked in bulk (it says when one is already registered), and refresh so it
- * can't be hammered. Every attempt counts, successful or not.
+ * ({@code rl:{route}:{ip}}): login so passwords can't be guessed quickly, signup so it
+ * can't be used to create accounts or send emails in bulk, and refresh so it can't be
+ * hammered. Every attempt counts, successful or not, and every rejection is counted in the
+ * metrics by route.
  * <p>
  * If Redis is down the request is allowed and a warning logged: availability matters more
  * than strict limits here, and nothing is lost but the protection.
@@ -42,13 +44,16 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
 
 	private final ProblemDetailsWriter problemWriter;
 
+	private final BusinessMetrics metrics;
+
 	/** By path; every limited route is a POST. */
 	private final Map<String, LimitedRoute> routes;
 
 	public AuthRateLimitFilter(RateLimiter rateLimiter, RateLimitProperties properties,
-			ProblemDetailsWriter problemWriter) {
+			ProblemDetailsWriter problemWriter, BusinessMetrics metrics) {
 		this.rateLimiter = rateLimiter;
 		this.problemWriter = problemWriter;
+		this.metrics = metrics;
 		this.routes = Map.of(
 				"/api/v1/auth/login", new LimitedRoute("login", properties.login(), "Too many login attempts"),
 				"/api/v1/auth/signup", new LimitedRoute("signup", properties.signup(), "Too many signups"),
@@ -77,6 +82,7 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
 			chain.doFilter(request, response);
 			return;
 		}
+		metrics.rateLimited(route.name());
 		long retryAfterSeconds = Math.max(1, (decision.retryAfter().toMillis() + 999) / 1000);
 		response.setHeader(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds));
 		problemWriter.write(request, response, ProblemType.RATE_LIMITED

@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 
 import com.roomkeeper.booking.Booking;
 import com.roomkeeper.booking.BookingRepository;
+import com.roomkeeper.common.metrics.BusinessMetrics;
 import com.roomkeeper.hotel.Hotel;
 import com.roomkeeper.hotel.Room;
 import com.roomkeeper.inventory.Inventory;
@@ -68,13 +69,16 @@ public class PaymentWebhookService {
 
 	private final OutboxWriter outbox;
 
+	private final BusinessMetrics metrics;
+
 	private final TransactionTemplate transaction;
 
 	private final Clock clock;
 
 	public PaymentWebhookService(ProcessedWebhookEvents processedEvents, PaymentRepository payments,
 			BookingRepository bookings, InventoryRepository inventory, PaymentGateway gateway,
-			ApplicationEventPublisher events, OutboxWriter outbox, TransactionTemplate transaction, Clock clock) {
+			ApplicationEventPublisher events, OutboxWriter outbox, BusinessMetrics metrics, TransactionTemplate transaction,
+			Clock clock) {
 		this.processedEvents = processedEvents;
 		this.payments = payments;
 		this.bookings = bookings;
@@ -82,6 +86,7 @@ public class PaymentWebhookService {
 		this.gateway = gateway;
 		this.events = events;
 		this.outbox = outbox;
+		this.metrics = metrics;
 		this.transaction = transaction;
 		this.clock = clock;
 	}
@@ -112,6 +117,7 @@ public class PaymentWebhookService {
 	private Refund apply(PaymentEvent event) {
 		if (!processedEvents.recordFirstDelivery(event.id(), clock.instant())) {
 			log.info("Stripe event {} was already applied; ignoring this delivery", event.id());
+			metrics.duplicateWebhookIgnored();
 			return null;
 		}
 		return switch (event.type()) {
@@ -236,6 +242,7 @@ public class PaymentWebhookService {
 		transaction.executeWithoutResult(status -> {
 			if (!processedEvents.recordFirstDelivery(event.id(), clock.instant())) {
 				// A delivery of this event racing this one recorded it first
+				metrics.duplicateWebhookIgnored();
 				return;
 			}
 			bookings.lockById(refund.bookingId()).orElseThrow();

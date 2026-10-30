@@ -46,6 +46,8 @@ public class CacheConfig implements CachingConfigurer {
 				.serializeValuesWith(SerializationPair.fromSerializer(
 						new JacksonJsonRedisSerializer<>(json, HotelSearchResponse.class))))
 			.disableCreateOnMissingCache()
+			// Hits and misses per cache, which Spring binds to Micrometer as cache.gets by result
+			.enableStatistics()
 			.build();
 	}
 

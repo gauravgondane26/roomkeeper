@@ -3,6 +3,8 @@ package com.roomkeeper.common.ratelimit;
 import java.time.Duration;
 
 import com.roomkeeper.common.error.ProblemDetailsWriter;
+import com.roomkeeper.common.metrics.BusinessMetrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.mock.web.MockFilterChain;
@@ -30,7 +32,8 @@ class AuthRateLimitFilterTest {
 	private final RateLimiter rateLimiter = mock(RateLimiter.class);
 
 	private final AuthRateLimitFilter filter = new AuthRateLimitFilter(rateLimiter,
-			new RateLimitProperties(LOGIN, SIGNUP, REFRESH), new ProblemDetailsWriter(JsonMapper.builder().build()));
+			new RateLimitProperties(LOGIN, SIGNUP, REFRESH), new ProblemDetailsWriter(JsonMapper.builder().build()),
+			new BusinessMetrics(new SimpleMeterRegistry()));
 
 	@Test
 	void failsOpenWhenRedisIsDown() throws Exception {

@@ -85,6 +85,20 @@ No real money moves: test-mode keys only work with Stripe's test cards.
 
 `scripts/smoke.sh` reads `.env` as well, so with keys set it opens a real test-mode checkout session and expects webhooks to check signatures.
 
+## Metrics
+
+Besides Spring's HTTP, JVM and connection pool metrics, the app counts what matters to the business. They're Micrometer meters, so in Prometheus `roomkeeper.bookings.created` becomes `roomkeeper_bookings_created_total`, and so on.
+
+| Metric | Counts |
+| --- | --- |
+| `roomkeeper.bookings.created` | New holds; a retried request answered with an earlier booking isn't one |
+| `roomkeeper.holds.expired` | Holds that ran out unpaid, their rooms put back on sale |
+| `roomkeeper.webhooks.duplicates.ignored` | Stripe webhook deliveries ignored because their event was already applied |
+| `roomkeeper.rate.limit.rejections` (tag `route`) | Requests a rate limit answered with 429: `login`, `signup` or `refresh` |
+| `cache.gets` (tags `cache`, `result`) | Hotel info (`hotel`) and search (`search`) cache lookups, `hit` or `miss`; the hit ratio is hits over all gets |
+
+A count made inside a transaction is only added once it commits, so a change that rolls back isn't counted. No HTTP endpoint serves the metrics yet; Prometheus scraping comes with the Grafana dashboard.
+
 ## Tests
 
 ```bash

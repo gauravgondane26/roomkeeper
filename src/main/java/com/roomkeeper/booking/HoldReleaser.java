@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.roomkeeper.common.metrics.BusinessMetrics;
 import com.roomkeeper.hotel.Hotel;
 import com.roomkeeper.hotel.Room;
 import com.roomkeeper.inventory.Inventory;
@@ -37,15 +38,18 @@ class HoldReleaser {
 
 	private final ApplicationEventPublisher events;
 
+	private final BusinessMetrics metrics;
+
 	private final TransactionTemplate transaction;
 
 	private final Clock clock;
 
 	HoldReleaser(BookingRepository bookings, InventoryRepository inventory, ApplicationEventPublisher events,
-			PlatformTransactionManager transactions, Clock clock) {
+			BusinessMetrics metrics, PlatformTransactionManager transactions, Clock clock) {
 		this.bookings = bookings;
 		this.inventory = inventory;
 		this.events = events;
+		this.metrics = metrics;
 		this.transaction = new TransactionTemplate(transactions);
 		this.clock = clock;
 	}
@@ -101,6 +105,7 @@ class HoldReleaser {
 		events.publishEvent(
 				InventoryChangedEvent.sale(hotel.getId(), hotel.getCity(), booking.getCheckIn(), lastNight, reopened));
 		events.publishEvent(new BookingExpiredEvent(booking.getId(), paying));
+		metrics.holdExpired();
 		return true;
 	}
 

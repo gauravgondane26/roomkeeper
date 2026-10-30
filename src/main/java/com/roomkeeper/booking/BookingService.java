@@ -11,6 +11,7 @@ import java.util.function.Function;
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.InvalidFieldException;
 import com.roomkeeper.common.error.ProblemType;
+import com.roomkeeper.common.metrics.BusinessMetrics;
 import com.roomkeeper.hotel.Hotel;
 import com.roomkeeper.hotel.HotelService;
 import com.roomkeeper.hotel.Room;
@@ -54,11 +55,13 @@ public class BookingService {
 
 	private final ApplicationEventPublisher events;
 
+	private final BusinessMetrics metrics;
+
 	private final Clock clock;
 
 	public BookingService(BookingRepository bookings, RoomRepository rooms, HotelService hotels, GuestService guests,
 			InventoryRepository inventory, PricingChain pricing, BookingMapper mapper, BookingProperties properties,
-			ApplicationEventPublisher events, Clock clock) {
+			ApplicationEventPublisher events, BusinessMetrics metrics, Clock clock) {
 		this.bookings = bookings;
 		this.rooms = rooms;
 		this.hotels = hotels;
@@ -68,6 +71,7 @@ public class BookingService {
 		this.mapper = mapper;
 		this.properties = properties;
 		this.events = events;
+		this.metrics = metrics;
 		this.clock = clock;
 	}
 
@@ -101,6 +105,7 @@ public class BookingService {
 				quote.total(), now.plus(properties.holdDuration()), now));
 		events.publishEvent(InventoryChangedEvent.sale(hotel.getId(), hotel.getCity(), request.checkIn(), lastNight,
 				Inventory.anySoldOut(nights)));
+		metrics.bookingCreated();
 		return mapper.toResponse(booking, now);
 	}
 

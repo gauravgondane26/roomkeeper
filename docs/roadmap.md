@@ -169,7 +169,7 @@ Goal: the full lifecycle works, including the unhappy paths.
 
 Goal: the system is observable, load tested, and explained.
 
-- [ ] Business metrics: bookings created, holds expired, duplicate webhooks ignored, rate-limit rejections, cache hit ratio
+- [x] Business metrics: bookings created, holds expired, duplicate webhooks ignored, rate-limit rejections, cache hit ratio. `BusinessMetrics` counts the first four (`roomkeeper.bookings.created`, `roomkeeper.holds.expired`, `roomkeeper.webhooks.duplicates.ignored`, `roomkeeper.rate.limit.rejections` by route), and a count made in a transaction waits for its commit, so a rollback isn't counted. The hit ratio comes from Spring's `cache.gets` by result: the Redis caches record statistics, and `spring-boot-starter-cache` binds them to Micrometer
 - [ ] Prometheus and Grafana in Compose, with a provisioned dashboard
 - [ ] Actuator endpoints locked down in the `prod` profile
 - [ ] Load test with k6 or Gatling against the booking endpoint
