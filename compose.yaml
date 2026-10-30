@@ -30,6 +30,8 @@ services:
       API_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
       # Searches a minute per client IP; raise it for a load test that searches harder
       ROOMKEEPER_RATELIMITS_SEARCH_CAPACITY: ${SEARCH_RATE_LIMIT:-300}
+      # Proxies whose X-Forwarded-For is believed (an IP regex); none by default
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
       # Stripe test-mode keys from your shell or .env; unset, payments answer 503 and the rest works
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}

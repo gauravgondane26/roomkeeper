@@ -27,9 +27,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * If Redis is down the request is allowed and a warning logged: availability matters more
  * than strict limits here, and nothing is lost but the protection.
  * <p>
- * The client is identified by the connection's remote address. Behind a reverse proxy,
- * enable forwarded-header handling (server.forward-headers-strategy) for the real client
- * IP; never trust X-Forwarded-For when not behind one, or clients can spoof it.
+ * The client is identified by the request's remote address: the connection's, or, behind a
+ * proxy listed in TRUSTED_PROXIES, the address that proxy put in X-Forwarded-For (see
+ * application.yaml). X-Forwarded-For from anyone else is ignored, so clients can't spoof it.
  * <p>
  * Registered in {@link RateLimitConfig} rather than by component scanning, so web slice
  * tests (which pick up every Filter component) don't need Redis.

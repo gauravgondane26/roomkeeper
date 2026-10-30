@@ -1,3 +1,14 @@
+server:
+  # Behind a reverse proxy, the client's address comes from X-Forwarded-For, but only when the
+  # request came from a proxy matching TRUSTED_PROXIES (a regex of IP addresses, such as
+  # 10\.0\.0\.\d+); the address taken is the last one that proxy added. Empty, the default,
+  # trusts no one: otherwise any client could claim a new address on every request and never
+  # be rate limited. (Tomcat on its own would trust every private-network address.)
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      internal-proxies: ${TRUSTED_PROXIES:}
+
 spring:
   application:
     name: roomkeeper
