@@ -137,7 +137,7 @@ check "manager lists the hotel's rooms" GET "/api/v1/admin/hotels/$hotel_id/room
 check "a hotel can't go on sale before review" PATCH "/api/v1/admin/hotels/$hotel_id/activate" 409 \
   "urn:roomkeeper:problem:hotel-not-approved"
 manager_token=$TOKEN
-# The development admin from compose.yaml; override with ADMIN_EMAIL / ADMIN_PASSWORD
+# The admin Compose creates, with the password from .env (scripts/init-env.sh)
 TOKEN=$(login "${ADMIN_EMAIL:-admin@roomkeeper.local}" "${ADMIN_PASSWORD:-local-admin-password}")
 check "the hotel is in the review queue" GET /api/v1/moderation/hotels 200 "\"id\":$hotel_id"
 check "admin approves the hotel" PATCH "/api/v1/moderation/hotels/$hotel_id/approve" 200 '"approvalStatus":"APPROVED"'

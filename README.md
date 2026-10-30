@@ -96,6 +96,9 @@ After the load test, one run of the job released all 150,000-odd abandoned holds
 Requires JDK 25 and Docker.
 
 ```bash
+# Once: .env (gitignored) with a random JWT secret and passwords; prints only names
+scripts/init-env.sh
+
 # Whole stack from source: app (prod profile), Postgres 18, Redis 8
 docker compose up -d --build --wait
 scripts/smoke.sh                      # smoke checks over HTTP
@@ -105,7 +108,7 @@ docker compose up -d postgres redis
 ./mvnw spring-boot:run
 ```
 
-The app listens on port 8080, with health probes at `/livez` and `/readyz` (ready while Postgres answers). Actuator (health details, info, and Prometheus metrics) answers only on port 8081, which Compose doesn't publish: on 8080, `/actuator/*` is 404. Postgres and Redis are published on 15432 and 16379 so they don't collide with native installs. Override with `APP_PORT`, `POSTGRES_PORT`, and `REDIS_PORT`.
+The app listens on port 8080, with health probes at `/livez` and `/readyz` (ready while Postgres answers). Actuator (health details, info, and Prometheus metrics) answers only on port 8081, which Compose doesn't publish: on 8080, `/actuator/*` is 404. Postgres and Redis are published on 15432 and 16379, on localhost only, so they don't collide with native installs and aren't reachable from the network. Override with `APP_PORT`, `POSTGRES_PORT`, and `REDIS_PORT`.
 
 ## Using the API
 
@@ -127,7 +130,7 @@ Prices come from a rule chain applied per night: base price, then the night's su
 
 ### Setting up a hotel (as a `HOTEL_MANAGER`)
 
-Anyone can sign up as a manager, but a hotel only goes on sale after an admin approves it. Nobody can sign up as an admin: the first admin account is created at startup from `ADMIN_EMAIL` and `ADMIN_PASSWORD` (locally and in Compose, `admin@roomkeeper.local` / `local-admin-password`).
+Anyone can sign up as a manager, but a hotel only goes on sale after an admin approves it. Nobody can sign up as an admin: the first admin account is created at startup from `ADMIN_EMAIL` and `ADMIN_PASSWORD` (`admin@roomkeeper.local`, with the password from `.env` in Compose; `local-admin-password` when the local profile runs without one).
 
 1. `POST /api/v1/admin/hotels` with a name, city, time zone (such as `Asia/Kolkata`), and optional amenities. New hotels start inactive. Nights are dates in the hotel's time zone, so its "today" starts at its own midnight.
 2. `POST /api/v1/admin/hotels/{hotelId}/rooms` for each room type: type name, base price per night, capacity, and how many rooms of that type exist.
@@ -181,7 +184,7 @@ Besides Spring's HTTP, JVM and connection pool metrics, the app counts what matt
 
 A count made inside a transaction is only added once it commits, so a change that rolls back isn't counted. Prometheus reads them at `/actuator/prometheus` on the management port, 8081 (`MANAGEMENT_PORT`), which isn't published outside the deployment.
 
-To see them, start the stack with Prometheus and Grafana, then open the RoomKeeper dashboard at http://localhost:3000 (no login needed to view; the admin password is `GRAFANA_ADMIN_PASSWORD`, `admin` by default):
+To see them, start the stack with Prometheus and Grafana, then open the RoomKeeper dashboard at http://localhost:3000 (no login needed to view; the admin password is `GRAFANA_ADMIN_PASSWORD` in `.env`):
 
 ```bash
 docker compose --profile metrics up -d --build --wait
@@ -223,6 +226,8 @@ CI runs on every push to `main` and every pull request. It first checks that no 
 | --- | --- | --- |
 | `local` (default) | Running on a developer machine | The Compose services |
 | `test` | The test suite | Testcontainers |
-| `prod` | The Docker image | Environment variables only: `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `JWT_SECRET` (base64, 32+ bytes); optionally `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` (test mode), without which payments answer 503 |
+| `prod` | The Docker image | Environment variables only: `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `JWT_SECRET` (base64, 32+ bytes; the app won't start with a secret committed to this repository); optionally `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` (test mode), without which payments answer 503 |
+
+Compose takes its secrets only from `.env`: `JWT_SECRET`, `POSTGRES_PASSWORD`, `ADMIN_PASSWORD`, `GRAFANA_ADMIN_PASSWORD`, and the optional Stripe keys. A missing one stops Compose with "run scripts/init-env.sh" rather than falling back to a default. The local profile imports `.env` too, for the Postgres password. A Postgres volume keeps the password it was created with: after changing `POSTGRES_PASSWORD`, recreate the volume (`docker compose down -v`, which deletes local data) or change the password inside the database (`scripts/init-env.sh` shows how).
 
 Everything runs in UTC regardless of the host's time zone.

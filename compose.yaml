@@ -2,7 +2,10 @@
 # With Prometheus and Grafana:      docker compose --profile metrics up -d --build --wait
 # Only the services, to run the app from an IDE or `./mvnw spring-boot:run`:
 #                                   docker compose up -d postgres redis
-# Host ports can be overridden with APP_PORT / POSTGRES_PORT / REDIS_PORT.
+# Secrets come from .env (gitignored), never from defaults here: run scripts/init-env.sh once
+# to create it with random values.
+# Host ports can be overridden with APP_PORT / POSTGRES_PORT / REDIS_PORT. Postgres and
+# Redis listen on localhost only.
 # Defaults (15432, 16379) avoid clashing with native Postgres or Redis installs,
 # which on Windows can bind the same port and silently take the connection.
 
@@ -15,14 +18,14 @@ services:
     environment:
       DATABASE_URL: jdbc:postgresql://postgres:5432/roomkeeper
       DATABASE_USERNAME: roomkeeper
-      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-roomkeeper}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?run scripts/init-env.sh to create .env}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      # Same development-only secret as the local profile; set JWT_SECRET to override
-      JWT_SECRET: ${JWT_SECRET:-VrafQC2/RfRzmNJ2WUp9ketFZXrRb41ZQn0ZXAJEyCw=}
-      # Development-only admin, same as the local profile; approves hotels
+      # The prod profile refuses the development secret committed to the repository
+      JWT_SECRET: ${JWT_SECRET:?run scripts/init-env.sh to create .env}
+      # The first admin, created at startup; approves hotels
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@roomkeeper.local}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-local-admin-password}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?run scripts/init-env.sh to create .env}
       # Stripe test-mode keys from your shell or .env; unset, payments answer 503 and the rest works
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
@@ -84,7 +87,7 @@ services:
       # Anyone who can reach localhost:3000 may view; changing things needs the admin login
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?run scripts/init-env.sh to create .env}
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/roomkeeper.json
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
@@ -114,7 +117,7 @@ services:
     environment:
       BASE_URL: http://app:8080
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@roomkeeper.local}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-local-admin-password}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?run scripts/init-env.sh to create .env}
       K6_NO_USAGE_REPORT: "true"
     depends_on:
       - app
@@ -124,9 +127,9 @@ services:
     environment:
       POSTGRES_DB: roomkeeper
       POSTGRES_USER: roomkeeper
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-roomkeeper}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run scripts/init-env.sh to create .env}
     ports:
-      - "${POSTGRES_PORT:-15432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-15432}:5432"
     volumes:
       # Postgres 18 images keep data under /var/lib/postgresql/<major>/
       - postgres-data:/var/lib/postgresql
@@ -139,7 +142,7 @@ services:
   redis:
     image: redis:8-alpine
     ports:
-      - "${REDIS_PORT:-16379}:6379"
+      - "127.0.0.1:${REDIS_PORT:-16379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s

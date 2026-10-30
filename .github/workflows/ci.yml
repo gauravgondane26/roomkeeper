@@ -71,6 +71,7 @@ jobs:
       # profile, and runs the smoke checks against it over HTTP
       - name: Build Docker image and smoke test it
         run: |
+          scripts/init-env.sh
           docker compose up -d --build --wait
           scripts/smoke.sh
 
