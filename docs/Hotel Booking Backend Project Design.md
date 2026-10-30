@@ -173,7 +173,7 @@ Redis makes the system faster and harder to abuse, but Postgres decides what's t
 | Idempotency keys | `SET NX` with status and stored response | `idem:{userId}:{key}` | 24 hours | Fail closed with 503. Better than a duplicate payment |
 | Caching | Spring Cache with a Redis cache manager | `hotel:{id}`, `search:{city hash}:v{version}:{query}`, `search-version:{city hash}` | Hotel info about 10 minutes, search about 60 seconds | Fall through to Postgres |
 | Job locks | `SET NX` with a lease, released by a compare-and-delete Lua script | `lock:hold-expiry`, `lock:outbox`, `lock:inventory-roll` | Lease shorter than the job interval | That run is skipped, the next one catches up |
-| Token revocation | Opaque refresh tokens stored as a hash, single use (rotated on refresh), deleted on logout | `refresh:{sha256(token)}` | Token lifetime (7 days) | Refresh fails, users log in again |
+| Token revocation | Opaque refresh tokens stored as a hash, single use (rotated on refresh). Each login is a family whose key holds its current token's hash; a Lua script rotates only the current token, and an older one presented again deletes the family (reuse detection). Logout deletes the family | `refresh:{sha256(token)}` → `userId:familyId`, `refresh-family:{familyId}` | Token lifetime (7 days) | Refresh fails, users log in again |
 
 Cache invalidation is the subtle part. Hotel details can live in the cache for minutes. Search results depend on availability, so they get a short TTL plus eviction whenever inventory for that hotel changes. Eviction bumps a per-city version that is part of every search key, so it costs one `INCR` instead of a scan for old keys. Write a test for the eviction, since stale availability is the bug users would actually notice.
 

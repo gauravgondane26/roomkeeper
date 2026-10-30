@@ -8,6 +8,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -72,6 +73,47 @@ class RefreshTokenIT extends AbstractIntegrationTest {
 	}
 
 	@Test
+	void reusingARotatedTokenRevokesTheWholeSessionIncludingTheNewestToken() {
+		TestUser user = aUser().build();
+		signUp(user);
+		String stolen = login(user).extract().path("refreshToken");
+		String newest = refresh(stolen).statusCode(200).extract().path("refreshToken");
+
+		refresh(stolen)
+			.statusCode(401)
+			.body("type", equalTo("urn:roomkeeper:problem:invalid-refresh-token"));
+
+		refresh(newest)
+			.statusCode(401)
+			.body("type", equalTo("urn:roomkeeper:problem:invalid-refresh-token"));
+	}
+
+	@Test
+	void reuseRevokesOnlyThatSessionNotTheUsersOthers() {
+		TestUser user = aUser().build();
+		signUp(user);
+		String phone = login(user).extract().path("refreshToken");
+		String laptop = login(user).extract().path("refreshToken");
+		refresh(phone).statusCode(200);
+
+		refresh(phone).statusCode(401);
+
+		refresh(laptop).statusCode(200);
+	}
+
+	@Test
+	void logoutWithAnAlreadyRotatedTokenStillEndsTheSession() {
+		TestUser user = aUser().build();
+		signUp(user);
+		String first = login(user).extract().path("refreshToken");
+		String newest = refresh(first).statusCode(200).extract().path("refreshToken");
+
+		logout(first).statusCode(204);
+
+		refresh(newest).statusCode(401);
+	}
+
+	@Test
 	void concurrentRefreshesWithTheSameTokenSucceedOnlyOnce() throws Exception {
 		TestUser user = aUser().build();
 		signUp(user);
@@ -81,13 +123,18 @@ class RefreshTokenIT extends AbstractIntegrationTest {
 		var ready = new CountDownLatch(threads);
 		var go = new CountDownLatch(1);
 		List<Integer> statuses = new ArrayList<>();
+		var issued = new ConcurrentLinkedQueue<String>();
 		try (var pool = Executors.newFixedThreadPool(threads)) {
 			List<Future<Integer>> results = new ArrayList<>();
 			for (int i = 0; i < threads; i++) {
 				Callable<Integer> attempt = () -> {
 					ready.countDown();
 					go.await();
-					return refresh(refreshToken).extract().statusCode();
+					var response = refresh(refreshToken).extract();
+					if (response.statusCode() == 200) {
+						issued.add(response.path("refreshToken"));
+					}
+					return response.statusCode();
 				};
 				results.add(pool.submit(attempt));
 			}
@@ -100,6 +147,9 @@ class RefreshTokenIT extends AbstractIntegrationTest {
 
 		assertThat(statuses).filteredOn(status -> status == 200).hasSize(1);
 		assertThat(statuses).filteredOn(status -> status == 401).hasSize(threads - 1);
+		// The losers presented a token already used, which can't be told apart from theft,
+		// so the session ends and the winner's new token is refused too
+		refresh(issued.remove()).statusCode(401);
 	}
 
 	@Test
@@ -133,12 +183,18 @@ class RefreshTokenIT extends AbstractIntegrationTest {
 		long userId = signUp(user);
 		String refreshToken = login(user).extract().path("refreshToken");
 
-		String hashedKey = "refresh:" + HexFormat.of().formatHex(
+		String hash = HexFormat.of().formatHex(
 				MessageDigest.getInstance("SHA-256").digest(refreshToken.getBytes(StandardCharsets.US_ASCII)));
+		String tokenKey = "refresh:" + hash;
 		assertThat(redis.hasKey("refresh:" + refreshToken)).isFalse();
-		assertThat(redis.opsForValue().get(hashedKey)).isEqualTo(String.valueOf(userId));
-		assertThat(redis.getExpire(hashedKey)).isBetween(Duration.ofDays(7).minusMinutes(1).toSeconds(),
-				Duration.ofDays(7).toSeconds());
+		String[] owner = redis.opsForValue().get(tokenKey).split(":");
+		assertThat(owner[0]).isEqualTo(String.valueOf(userId));
+		String familyKey = "refresh-family:" + owner[1];
+		assertThat(redis.opsForValue().get(familyKey)).isEqualTo(hash);
+		for (String key : List.of(tokenKey, familyKey)) {
+			assertThat(redis.getExpire(key)).isBetween(Duration.ofDays(7).minusMinutes(1).toSeconds(),
+					Duration.ofDays(7).toSeconds());
+		}
 	}
 
 	@Test

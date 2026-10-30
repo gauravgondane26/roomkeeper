@@ -67,7 +67,7 @@ class AuthServiceRedisDownTest {
 
 	@Test
 	void refreshIsTemporarilyUnavailable() {
-		when(refreshTokens.consume(anyString())).thenThrow(redisDown);
+		when(refreshTokens.rotate(anyString())).thenThrow(redisDown);
 
 		assertThatThrownBy(() -> authService.refresh(new RefreshRequest("some-token")))
 			.isInstanceOfSatisfying(ApiException.class,

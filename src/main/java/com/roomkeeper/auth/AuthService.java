@@ -105,16 +105,19 @@ public class AuthService {
 		return issueTokens(user);
 	}
 
-	/** Exchanges a refresh token for a new pair. The old refresh token stops working. */
+	/**
+	 * Exchanges a refresh token for a new pair in the same session. The old refresh token
+	 * stops working, and presenting it again ends the session.
+	 */
 	@Transactional(readOnly = true)
 	public TokenResponse refresh(RefreshRequest request) {
-		long userId = withRedis(() -> refreshTokens.consume(request.refreshToken()))
+		RefreshTokenStore.Rotation rotation = withRedis(() -> refreshTokens.rotate(request.refreshToken()))
 			.orElseThrow(InvalidRefreshTokenException::new);
-		User user = users.findById(userId).orElseThrow(InvalidRefreshTokenException::new);
-		return issueTokens(user);
+		User user = users.findById(rotation.userId()).orElseThrow(InvalidRefreshTokenException::new);
+		return TokenResponse.of(accessTokens.issue(user.getId(), user.getRole()), rotation.refreshToken(), properties);
 	}
 
-	/** Revokes the refresh token. Unknown tokens are ignored, so this never reveals anything. */
+	/** Ends the refresh token's session. Unknown tokens are ignored, so this never reveals anything. */
 	public void logout(RefreshRequest request) {
 		withRedis(() -> {
 			refreshTokens.revoke(request.refreshToken());
