@@ -124,7 +124,7 @@ class BookingSearchEffectsIT extends AbstractIntegrationTest {
 		await().atMost(AFTER_COMMIT)
 			.untilAsserted(() -> assertThat(minPrices(hotel)).first().isEqualTo(new BigDecimal("4800.00")));
 		assertThat(searchVersion()).isEqualTo(version);
-		assertThat(awaitCached("search:" + SearchQuery.cityKey(city) + ":*")).hasSize(1);
+		assertThat(awaitCached("search:*:" + SearchQuery.cityKey(city) + ":*")).hasSize(1);
 	}
 
 	@Test

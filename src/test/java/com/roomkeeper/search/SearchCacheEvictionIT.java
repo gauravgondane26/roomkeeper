@@ -83,7 +83,7 @@ class SearchCacheEvictionIT extends AbstractIntegrationTest {
 			.when().patch("/api/v1/admin/inventory/rooms/{roomId}", firstRoomOf(manager, hotel))
 			.then().statusCode(200);
 
-		assertThat(awaitCached("search:" + SearchQuery.cityKey(otherCity) + ":*")).hasSize(1);
+		assertThat(awaitCached("search:*:" + SearchQuery.cityKey(otherCity) + ":*")).hasSize(1);
 	}
 
 	@Test

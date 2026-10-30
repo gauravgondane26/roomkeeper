@@ -171,7 +171,7 @@ Redis makes the system faster and harder to abuse, but Postgres decides what's t
 | --- | --- | --- | --- | --- |
 | Rate limiting | Token bucket in a Lua script, so check and decrement are atomic | `rl:{route}:{user or ip}` | About one window | Fail open and log it. Availability beats strict limits here |
 | Idempotency keys | `SET NX` with status and stored response | `idem:{userId}:{key}` | 24 hours | Fail closed with 503. Better than a duplicate payment |
-| Caching | Spring Cache with a Redis cache manager | `hotel:{id}`, `search:{city hash}:v{version}:{query}`, `search-version:{city hash}` | Hotel info about 10 minutes, search about 60 seconds | Fall through to Postgres |
+| Caching | Spring Cache with a Redis cache manager. `{shape}` is a hash of the cached response type's fields, so a deploy that changes one starts that cache fresh | `hotel:{shape}:{id}`, `search:{shape}:{city hash}:v{version}:{query}`, `search-version:{city hash}` | Hotel info about 10 minutes, search about 60 seconds | Fall through to Postgres |
 | Job locks | `SET NX` with a lease, released by a compare-and-delete Lua script | `lock:hold-expiry`, `lock:outbox`, `lock:inventory-roll` | Lease shorter than the job interval | That run is skipped, the next one catches up |
 | Token revocation | Opaque refresh tokens stored as a hash, single use (rotated on refresh). Each login is a family whose key holds its current token's hash; a Lua script rotates only the current token, and an older one presented again deletes the family (reuse detection). Logout deletes the family | `refresh:{sha256(token)}` → `userId:familyId`, `refresh-family:{familyId}` | Token lifetime (7 days) | Refresh fails, users log in again |
 

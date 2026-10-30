@@ -59,7 +59,7 @@ class HotelDeactivationIT extends AbstractIntegrationTest {
 	void guestsCantFindOrBookAHotelTakenOffSale() {
 		search().body("totalHotels", equalTo(1));
 		api().when().get("/api/v1/hotels/{id}/info", hotelId).then().statusCode(200);
-		awaitCached("hotel:" + hotelId);
+		awaitCached("hotel:*:" + hotelId);
 
 		deactivate(manager).statusCode(200).body("active", equalTo(false));
 
