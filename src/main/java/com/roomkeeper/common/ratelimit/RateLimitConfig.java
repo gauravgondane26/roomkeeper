@@ -9,9 +9,9 @@ import org.springframework.context.annotation.Configuration;
 public class RateLimitConfig {
 
 	@Bean
-	AuthRateLimitFilter authRateLimitFilter(RateLimiter rateLimiter, RateLimitProperties properties,
+	RateLimitFilter authRateLimitFilter(RateLimiter rateLimiter, RateLimitProperties properties,
 			ProblemDetailsWriter problemWriter, BusinessMetrics metrics) {
-		return new AuthRateLimitFilter(rateLimiter, properties, problemWriter, metrics);
+		return new RateLimitFilter(rateLimiter, properties, problemWriter, metrics);
 	}
 
 }

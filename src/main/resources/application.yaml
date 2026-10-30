@@ -34,6 +34,10 @@ roomkeeper:
     refresh:
       capacity: 30
       period: 1m
+    # 5 a second on average, bursts of 300: a person never notices
+    search:
+      capacity: 300
+      period: 1m
   pricing:
     occupancy:
       # 20% more once 80% of a room type is booked or held that night

@@ -7,7 +7,9 @@
 // together for two minutes (DURATION):
 //   spread     20 holds a second (SPREAD_RATE) on dates across the year: every one gets its
 //              rooms, fast
-//   browse     10 searches a second (BROWSE_RATE) in the same city: mostly from the cache
+//   browse     4 searches a second (BROWSE_RATE) in the same city: mostly from the cache.
+//              Search allows 5 a second per client IP; above that, start the app with a
+//              higher limit: SEARCH_RATE_LIMIT=1000000 docker compose up -d app
 //   lastRooms  50 guests at once for the last 5 rooms of one night: exactly 5 win, the
 //              rest are told it's sold out, and the night isn't oversold
 // Thresholds make k6 exit non-zero if any of that doesn't hold. To push harder:
@@ -29,7 +31,7 @@ const LAST_ROOMS = 5;
 const RACERS = 50;
 const DAY = 24 * 60 * 60 * 1000;
 const SPREAD_RATE = Number(__ENV.SPREAD_RATE || 20);
-const BROWSE_RATE = Number(__ENV.BROWSE_RATE || 10);
+const BROWSE_RATE = Number(__ENV.BROWSE_RATE || 4);
 const DURATION = __ENV.DURATION || '2m';
 
 const lastRoomsWon = new Counter('last_rooms_won');

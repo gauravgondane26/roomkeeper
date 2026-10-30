@@ -21,7 +21,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-class AuthRateLimitFilterTest {
+class RateLimitFilterTest {
 
 	private static final RateLimitProperties.Rule LOGIN = new RateLimitProperties.Rule(10, Duration.ofMinutes(1));
 
@@ -29,10 +29,12 @@ class AuthRateLimitFilterTest {
 
 	private static final RateLimitProperties.Rule REFRESH = new RateLimitProperties.Rule(30, Duration.ofMinutes(1));
 
+	private static final RateLimitProperties.Rule SEARCH = new RateLimitProperties.Rule(300, Duration.ofMinutes(1));
+
 	private final RateLimiter rateLimiter = mock(RateLimiter.class);
 
-	private final AuthRateLimitFilter filter = new AuthRateLimitFilter(rateLimiter,
-			new RateLimitProperties(LOGIN, SIGNUP, REFRESH), new ProblemDetailsWriter(JsonMapper.builder().build()),
+	private final RateLimitFilter filter = new RateLimitFilter(rateLimiter,
+			new RateLimitProperties(LOGIN, SIGNUP, REFRESH, SEARCH), new ProblemDetailsWriter(JsonMapper.builder().build()),
 			new BusinessMetrics(new SimpleMeterRegistry()));
 
 	@Test
@@ -63,12 +65,27 @@ class AuthRateLimitFilterTest {
 	}
 
 	@Test
+	void publicSearchIsLimitedWithItsOwnBucket() throws Exception {
+		when(rateLimiter.tryAcquire(anyString(), any())).thenReturn(new RateLimiter.Decision(true, Duration.ZERO));
+		var request = new MockHttpServletRequest("GET", "/api/v1/hotels/search");
+		request.setRemoteAddr("203.0.113.7");
+
+		filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+
+		verify(rateLimiter).tryAcquire(eq("rl:search:203.0.113.7"), eq(SEARCH));
+	}
+
+	@Test
 	void ignoresOtherRoutes() throws Exception {
 		var chain = new MockFilterChain();
 
 		filter.doFilter(new MockHttpServletRequest("POST", "/api/v1/auth/logout"), new MockHttpServletResponse(),
 				chain);
 		filter.doFilter(new MockHttpServletRequest("GET", "/api/v1/auth/login"), new MockHttpServletResponse(),
+				new MockFilterChain());
+		filter.doFilter(new MockHttpServletRequest("GET", "/api/v1/hotels/7/info"), new MockHttpServletResponse(),
+				new MockFilterChain());
+		filter.doFilter(new MockHttpServletRequest("POST", "/api/v1/hotels/search"), new MockHttpServletResponse(),
 				new MockFilterChain());
 
 		assertThat(chain.getRequest()).isNotNull();

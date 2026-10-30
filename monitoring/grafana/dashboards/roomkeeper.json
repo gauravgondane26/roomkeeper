@@ -181,7 +181,7 @@
     {
       "type": "stat",
       "title": "Rate-limit rejections",
-      "description": "Login, signup and refresh requests answered 429.",
+      "description": "Login, signup, refresh and search requests answered 429.",
       "targets": [
         {
           "refId": "A",
@@ -641,7 +641,7 @@
     {
       "type": "timeseries",
       "title": "Rate-limit rejections per second",
-      "description": "Requests answered 429, by the route's limit.",
+      "description": "Requests answered 429, by the route's limit: login, signup, refresh and search.",
       "targets": [
         {
           "refId": "A",
@@ -713,6 +713,21 @@
                 "value": {
                   "mode": "fixed",
                   "fixedColor": "#199e70"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "search"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
                 }
               }
             ]

@@ -80,10 +80,11 @@ After the load test, one run of the job released all 150,000-odd abandoned holds
 | Decision | Why | Proved by |
 | --- | --- | --- |
 | Cached searches live 60 seconds under a per-city version; any inventory change that changes what search shows bumps it | Stale availability is the bug guests would notice; a bump is one `INCR`, not a scan for old keys | [`SearchCacheEvictionIT`](src/test/java/com/roomkeeper/search/SearchCacheEvictionIT.java) |
-| With Redis down, caches and rate limits fail open, idempotency keys fail closed (503), and refresh asks the user to log in again | Postgres decides what's true: losing Redis costs speed and some protection, never a booking or a second charge | [`CacheFailOpenTest`](src/test/java/com/roomkeeper/search/CacheFailOpenTest.java), [`AuthRateLimitFilterTest`](src/test/java/com/roomkeeper/common/ratelimit/AuthRateLimitFilterTest.java), [`IdempotencyFilterTest`](src/test/java/com/roomkeeper/common/idempotency/IdempotencyFilterTest.java), [`AuthServiceRedisDownTest`](src/test/java/com/roomkeeper/auth/AuthServiceRedisDownTest.java) |
+| With Redis down, caches and rate limits fail open, idempotency keys fail closed (503), and refresh asks the user to log in again | Postgres decides what's true: losing Redis costs speed and some protection, never a booking or a second charge | [`CacheFailOpenTest`](src/test/java/com/roomkeeper/search/CacheFailOpenTest.java), [`RateLimitFilterTest`](src/test/java/com/roomkeeper/common/ratelimit/RateLimitFilterTest.java), [`IdempotencyFilterTest`](src/test/java/com/roomkeeper/common/idempotency/IdempotencyFilterTest.java), [`AuthServiceRedisDownTest`](src/test/java/com/roomkeeper/auth/AuthServiceRedisDownTest.java) |
 | After a booking, its hotel's cheapest prices are recomputed in the background, with at most one recompute waiting per hotel | A burst of bookings at one hotel queues one recompute, not one per booking; the load test found the per-booking queue dropping 51,501 | [`RepricingBurstIT`](src/test/java/com/roomkeeper/search/RepricingBurstIT.java), [`PendingRecomputesTest`](src/test/java/com/roomkeeper/search/PendingRecomputesTest.java) |
 | Jobs (hold expiry, outbox, inventory roll) run on whichever instance holds a Redis lease | Every instance can schedule them; one runs each time, and a crashed holder's lease runs out | [`JobLocksIT`](src/test/java/com/roomkeeper/common/JobLocksIT.java) |
-| Login, signup and refresh are rate limited per client IP | Password guessing and bulk signups get slow | [`LoginRateLimitIT`](src/test/java/com/roomkeeper/common/ratelimit/LoginRateLimitIT.java), [`AuthRateLimitIT`](src/test/java/com/roomkeeper/common/ratelimit/AuthRateLimitIT.java) |
+| Login, signup, refresh and public search are rate limited per client IP | Password guessing and bulk signups get slow, and nobody can sweep search or dodge its cache to load Postgres | [`LoginRateLimitIT`](src/test/java/com/roomkeeper/common/ratelimit/LoginRateLimitIT.java), [`AuthRateLimitIT`](src/test/java/com/roomkeeper/common/ratelimit/AuthRateLimitIT.java), [`SearchRateLimitIT`](src/test/java/com/roomkeeper/common/ratelimit/SearchRateLimitIT.java) |
+| Redis evicts the keys closest to expiring when full (`maxmemory` 256 MB, `volatile-ttl`) | Cached searches and rate-limit buckets go first; refresh tokens and idempotency keys, which live for days and hours, stay. Without a policy a full Redis refuses writes | [`RedisEvictionIT`](src/test/java/com/roomkeeper/common/RedisEvictionIT.java) |
 | Signup answers the same for a registered email, and emails its owner instead | Signup can't reveal who has an account | [`SignupIT`](src/test/java/com/roomkeeper/auth/SignupIT.java) |
 | Refresh tokens are opaque, stored as a hash in Redis, and single use | Rotation and logout really revoke them, and a stolen copy works once at most | [`RefreshTokenIT`](src/test/java/com/roomkeeper/auth/RefreshTokenIT.java) |
 | The cancellation policy is plain domain code: all back with 48 hours' notice, half with less, nothing once the stay has begun (2 PM hotel time) | Easy to test across time zones and clock changes | [`CancellationPolicyTest`](src/test/java/com/roomkeeper/booking/CancellationPolicyTest.java) |
@@ -119,7 +120,7 @@ Swagger UI is the client: open http://localhost:8080 (it redirects there) or htt
 3. Click **Authorize** and paste the access token. Routes with a lock icon now work.
 4. When the access token expires, `POST /api/v1/auth/refresh` with the refresh token returns a new pair. `POST /api/v1/auth/logout` revokes it.
 
-Per client IP, login allows 10 attempts a minute, signup 20 an hour, and refresh 30 a minute; past that the API answers 429 with a `Retry-After` header. Every error is an RFC 9457 problem detail (`application/problem+json`); match on its `type`, such as `urn:roomkeeper:problem:invalid-credentials`.
+Per client IP, login allows 10 attempts a minute, signup 20 an hour, and refresh 30 a minute, and search (`GET /api/v1/hotels/search`) 300 a minute; past that the API answers 429 with a `Retry-After` header. Every error is an RFC 9457 problem detail (`application/problem+json`); match on its `type`, such as `urn:roomkeeper:problem:invalid-credentials`.
 
 ### Finding a hotel (no login needed)
 
@@ -179,7 +180,7 @@ Besides Spring's HTTP, JVM and connection pool metrics, the app counts what matt
 | `roomkeeper.holds.expired` | Holds that ran out unpaid, their rooms put back on sale |
 | `roomkeeper.webhooks.duplicates.ignored` | Stripe webhook deliveries ignored because their event was already applied |
 | `roomkeeper.repricing.dropped` | Cheapest-price recomputes dropped because the repricing queue was full; should stay at 0 |
-| `roomkeeper.rate.limit.rejections` (tag `route`) | Requests a rate limit answered with 429: `login`, `signup` or `refresh` |
+| `roomkeeper.rate.limit.rejections` (tag `route`) | Requests a rate limit answered with 429: `login`, `signup`, `refresh` or `search` |
 | `cache.gets` (tags `cache`, `result`) | Hotel info (`hotel`) and search (`search`) cache lookups, `hit` or `miss`; the hit ratio is hits over all gets |
 
 A count made inside a transaction is only added once it commits, so a change that rolls back isn't counted. Prometheus reads them at `/actuator/prometheus` on the management port, 8081 (`MANAGEMENT_PORT`), which isn't published outside the deployment.

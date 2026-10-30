@@ -28,6 +28,8 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?run scripts/init-env.sh to create .env}
       # Swagger UI is the client locally; a real deployment leaves this unset, so docs are off
       API_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
+      # Searches a minute per client IP; raise it for a load test that searches harder
+      ROOMKEEPER_RATELIMITS_SEARCH_CAPACITY: ${SEARCH_RATE_LIMIT:-300}
       # Stripe test-mode keys from your shell or .env; unset, payments answer 503 and the rest works
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
@@ -143,6 +145,9 @@ services:
 
   redis:
     image: redis:8-alpine
+    # Full, Redis evicts the keys closest to expiring (cached searches, rate-limit buckets)
+    # and keeps refresh tokens and idempotency keys; without a policy it would refuse writes
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "volatile-ttl"]
     ports:
       - "127.0.0.1:${REDIS_PORT:-16379}:6379"
     healthcheck:

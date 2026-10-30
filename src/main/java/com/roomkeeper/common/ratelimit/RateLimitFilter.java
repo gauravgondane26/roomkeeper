@@ -18,11 +18,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Limits the open auth routes per client IP, each with its own bucket
- * ({@code rl:{route}:{ip}}): login so passwords can't be guessed quickly, signup so it
- * can't be used to create accounts or send emails in bulk, and refresh so it can't be
- * hammered. Every attempt counts, successful or not, and every rejection is counted in the
- * metrics by route.
+ * Limits the open routes per client IP, each with its own bucket ({@code rl:{route}:{ip}}):
+ * login so passwords can't be guessed quickly, signup so it can't be used to create accounts
+ * or send emails in bulk, refresh so it can't be hammered, and public search so nobody can
+ * sweep it, or dodge the cache with a new query each time and load Postgres. Every attempt
+ * counts, successful or not, and every rejection is counted in the metrics by route.
  * <p>
  * If Redis is down the request is allowed and a warning logged: availability matters more
  * than strict limits here, and nothing is lost but the protection.
@@ -34,9 +34,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * Registered in {@link RateLimitConfig} rather than by component scanning, so web slice
  * tests (which pick up every Filter component) don't need Redis.
  */
-public class AuthRateLimitFilter extends OncePerRequestFilter {
+public class RateLimitFilter extends OncePerRequestFilter {
 
-	private static final Logger log = LoggerFactory.getLogger(AuthRateLimitFilter.class);
+	private static final Logger log = LoggerFactory.getLogger(RateLimitFilter.class);
 
 	private record LimitedRoute(String name, RateLimitProperties.Rule rule, String tooMany, Counter rejections) {
 	}
@@ -45,31 +45,33 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
 
 	private final ProblemDetailsWriter problemWriter;
 
-	/** By path; every limited route is a POST. */
+	/** By method and path, such as {@code POST /api/v1/auth/login}. */
 	private final Map<String, LimitedRoute> routes;
 
-	public AuthRateLimitFilter(RateLimiter rateLimiter, RateLimitProperties properties,
+	public RateLimitFilter(RateLimiter rateLimiter, RateLimitProperties properties,
 			ProblemDetailsWriter problemWriter, BusinessMetrics metrics) {
 		this.rateLimiter = rateLimiter;
 		this.problemWriter = problemWriter;
 		this.routes = Map.of(
-				"/api/v1/auth/login", new LimitedRoute("login", properties.login(), "Too many login attempts",
+				"POST /api/v1/auth/login", new LimitedRoute("login", properties.login(), "Too many login attempts",
 						metrics.rateLimitRejections("login")),
-				"/api/v1/auth/signup", new LimitedRoute("signup", properties.signup(), "Too many signups",
+				"POST /api/v1/auth/signup", new LimitedRoute("signup", properties.signup(), "Too many signups",
 						metrics.rateLimitRejections("signup")),
-				"/api/v1/auth/refresh", new LimitedRoute("refresh", properties.refresh(), "Too many token refreshes",
-						metrics.rateLimitRejections("refresh")));
+				"POST /api/v1/auth/refresh", new LimitedRoute("refresh", properties.refresh(),
+						"Too many token refreshes", metrics.rateLimitRejections("refresh")),
+				"GET /api/v1/hotels/search", new LimitedRoute("search", properties.search(), "Too many searches",
+						metrics.rateLimitRejections("search")));
 	}
 
 	@Override
 	protected boolean shouldNotFilter(HttpServletRequest request) {
-		return !("POST".equals(request.getMethod()) && routes.containsKey(request.getRequestURI()));
+		return !routes.containsKey(key(request));
 	}
 
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
 			throws ServletException, IOException {
-		LimitedRoute route = routes.get(request.getRequestURI());
+		LimitedRoute route = routes.get(key(request));
 		RateLimiter.Decision decision;
 		try {
 			decision = rateLimiter.tryAcquire("rl:" + route.name() + ":" + request.getRemoteAddr(), route.rule());
@@ -88,6 +90,10 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
 		response.setHeader(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds));
 		problemWriter.write(request, response, ProblemType.RATE_LIMITED
 			.problem(route.tooMany() + "; try again in " + retryAfterSeconds + " seconds"));
+	}
+
+	private static String key(HttpServletRequest request) {
+		return request.getMethod() + " " + request.getRequestURI();
 	}
 
 }

@@ -16,7 +16,7 @@ Setup creates a hotel in a new city with two room types, has the admin approve i
 | Scenario | Load | Must hold |
 | --- | --- | --- |
 | `spread` | `SPREAD_RATE` holds a second (default 20), on random dates across the next 330 days, 1 to 3 nights, on a room type with 2,000 rooms | Every hold gets its rooms (201); p95 under 500 ms |
-| `browse` | `BROWSE_RATE` searches a second (default 10) in the hotel's city, over five date ranges | Every search finds the hotel |
+| `browse` | `BROWSE_RATE` searches a second (default 4; search allows 5 a second per client IP, so above that start the app with `SEARCH_RATE_LIMIT=1000000 docker compose up -d app`) in the hotel's city, over five date ranges | Every search finds the hotel |
 | `lastRooms` | 50 guests at once, 30 seconds in, for the 5 rooms of a suite on one night | Exactly 5 holds succeed, the other 45 get 409 `sold-out`, nothing else; afterwards the night shows 5 rooms held and 0 available |
 
 Each of these is a k6 threshold, so a run that breaks one exits non-zero.
