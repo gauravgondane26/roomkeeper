@@ -26,6 +26,8 @@ services:
       # The first admin, created at startup; approves hotels
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@roomkeeper.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?run scripts/init-env.sh to create .env}
+      # Swagger UI is the client locally; a real deployment leaves this unset, so docs are off
+      API_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
       # Stripe test-mode keys from your shell or .env; unset, payments answer 503 and the rest works
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}

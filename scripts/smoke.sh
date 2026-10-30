@@ -75,6 +75,8 @@ check "actuator health isn't public" GET /actuator/health 404
 # Week 2: API docs and auth
 check "API docs are public" GET /v3/api-docs 200 '"title":"RoomKeeper API"'
 check "Swagger UI is public" GET /swagger-ui/index.html 200 "Swagger UI"
+# Week 8: Compose turns the docs on (API_DOCS_ENABLED), so / sends browsers to them
+check "the root sends browsers to Swagger UI" GET / 302
 check "anonymous request is a 401 problem" GET /api/v1/does-not-exist 401 "urn:roomkeeper:problem:unauthorized"
 email="smoke-$(date +%s)-$RANDOM@example.com"
 signup_body="{\"email\":\"$email\",\"password\":\"smoke-test-password\",\"name\":\"Smoke Test\"}"

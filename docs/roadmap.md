@@ -178,7 +178,7 @@ Goal: the system is observable, load tested, and explained.
 - [x] README: one section per hard problem (what goes wrong, what was chosen, what was rejected, which test proves it), plus query plans and a Grafana screenshot. Four sections (selling the last room twice, charging or refunding twice, holds that never release, side effects lost or sent twice), a table of smaller decisions with their tests, and a How it performs section with the query plan numbers, the load test, and the dashboard during it (docs/images/grafana-load-test.jpg)
 - [ ] Optional: deploy to a free tier for a live Swagger link
 - [x] `prod` refuses the development JWT secret; Compose reads secrets from a gitignored `.env`; Postgres and Redis ports bound to localhost. `ProductionJwtSecretCheck` stops a prod start with either secret committed to the repository. Compose has no secret defaults any more: `JWT_SECRET`, `POSTGRES_PASSWORD`, `ADMIN_PASSWORD` and `GRAFANA_ADMIN_PASSWORD` must be in `.env`, which `scripts/init-env.sh` creates or completes with random values (CI runs it before its Compose smoke test). The local profile imports `.env` for the Postgres password
-- [ ] Swagger UI and API docs off in `prod` unless explicitly enabled
+- [x] Swagger UI and API docs off in `prod` unless explicitly enabled. `API_DOCS_ENABLED=true` turns them on (Compose sets it: Swagger UI is the local client); off, `/v3/api-docs` and `/swagger-ui.html` are 404. While on, `/` redirects to Swagger UI
 - [ ] Rate-limit public search; Redis `maxmemory` with `volatile-ttl` eviction so caches go before tokens
 - [ ] Trusted-proxy setup so rate limits see the real client IP; test with forwarded headers from trusted and untrusted sources
 - [ ] Refresh token reuse detection (token families)

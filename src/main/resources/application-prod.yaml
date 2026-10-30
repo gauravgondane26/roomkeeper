@@ -24,3 +24,11 @@ management:
   endpoint:
     health:
       show-details: never
+
+springdoc:
+  # The API's shape isn't published unless asked for: API_DOCS_ENABLED=true turns on the docs
+  # and Swagger UI (Compose does, since Swagger UI is the local client)
+  api-docs:
+    enabled: ${API_DOCS_ENABLED:false}
+  swagger-ui:
+    enabled: ${API_DOCS_ENABLED:false}

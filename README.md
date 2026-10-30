@@ -112,7 +112,7 @@ The app listens on port 8080, with health probes at `/livez` and `/readyz` (read
 
 ## Using the API
 
-Swagger UI is the client: open http://localhost:8080/swagger-ui.html.
+Swagger UI is the client: open http://localhost:8080 (it redirects there) or http://localhost:8080/swagger-ui.html. In the `prod` profile the API docs and Swagger UI are off unless `API_DOCS_ENABLED=true`, and then `/`, `/v3/api-docs` and `/swagger-ui.html` are 404; Compose turns them on, since Swagger UI is the local client.
 
 1. `POST /api/v1/auth/signup` with an email, a password (at least 8 characters, at most 72 bytes: BCrypt's limit), and a name. Add `"role": "HOTEL_MANAGER"` to manage hotels. The answer is always 202 with the same message, even for an email that's already registered, so signup can't be used to find out who has an account. A new account can log in at once and gets a welcome email; if the email was already registered, nothing changes and its owner is emailed that someone tried to sign up with it.
 2. `POST /api/v1/auth/login` returns an `accessToken` (valid 15 minutes) and a `refreshToken` (valid 7 days, single use).
@@ -226,7 +226,7 @@ CI runs on every push to `main` and every pull request. It first checks that no 
 | --- | --- | --- |
 | `local` (default) | Running on a developer machine | The Compose services |
 | `test` | The test suite | Testcontainers |
-| `prod` | The Docker image | Environment variables only: `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `JWT_SECRET` (base64, 32+ bytes; the app won't start with a secret committed to this repository); optionally `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` (test mode), without which payments answer 503 |
+| `prod` | The Docker image | Environment variables only: `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `JWT_SECRET` (base64, 32+ bytes; the app won't start with a secret committed to this repository); optionally `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` (test mode), without which payments answer 503; `API_DOCS_ENABLED=true` to publish the API docs and Swagger UI |
 
 Compose takes its secrets only from `.env`: `JWT_SECRET`, `POSTGRES_PASSWORD`, `ADMIN_PASSWORD`, `GRAFANA_ADMIN_PASSWORD`, and the optional Stripe keys. A missing one stops Compose with "run scripts/init-env.sh" rather than falling back to a default. The local profile imports `.env` too, for the Postgres password. A Postgres volume keeps the password it was created with: after changing `POSTGRES_PASSWORD`, recreate the volume (`docker compose down -v`, which deletes local data) or change the password inside the database (`scripts/init-env.sh` shows how).
 

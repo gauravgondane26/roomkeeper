@@ -42,8 +42,10 @@ public class SecurityConfig {
 				// Actuator only answers on the management port, which isn't published; on the
 				// public port these paths are 404
 				.requestMatchers("/actuator", "/actuator/**").permitAll()
-				// API docs: Swagger UI is the client
+				// API docs: Swagger UI is the client, and / sends browsers to it. In prod they're off
+				// unless API_DOCS_ENABLED is set, and then these paths are 404
 				.requestMatchers("/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
+				.requestMatchers(HttpMethod.GET, "/").permitAll()
 				// Errors thrown on permitted routes are forwarded here and must stay visible
 				.requestMatchers("/error").permitAll()
 				.requestMatchers("/api/v1/admin/**").hasRole("HOTEL_MANAGER")
