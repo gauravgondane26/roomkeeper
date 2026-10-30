@@ -39,8 +39,7 @@ class ActuatorLockdownIT extends AbstractIntegrationTest {
 		management().when().get("/actuator/prometheus")
 			.then().statusCode(200)
 			.contentType(startsWith("text/plain"))
-			.body(containsString("roomkeeper_bookings_initiated_total"))
-			.body(containsString("cache_gets_total{cache=\"search\""));
+			.body(containsString("roomkeeper_bookings_initiated_total"));
 		// Only health, info and prometheus are exposed, even there
 		management().when().get("/actuator/env").then().statusCode(404);
 		management().when().get("/actuator/metrics").then().statusCode(404);

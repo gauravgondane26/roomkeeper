@@ -6,6 +6,7 @@ import java.util.Map;
 import com.roomkeeper.common.error.ProblemDetailsWriter;
 import com.roomkeeper.common.error.ProblemType;
 import com.roomkeeper.common.metrics.BusinessMetrics;
+import io.micrometer.core.instrument.Counter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -37,14 +38,12 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
 
 	private static final Logger log = LoggerFactory.getLogger(AuthRateLimitFilter.class);
 
-	private record LimitedRoute(String name, RateLimitProperties.Rule rule, String tooMany) {
+	private record LimitedRoute(String name, RateLimitProperties.Rule rule, String tooMany, Counter rejections) {
 	}
 
 	private final RateLimiter rateLimiter;
 
 	private final ProblemDetailsWriter problemWriter;
-
-	private final BusinessMetrics metrics;
 
 	/** By path; every limited route is a POST. */
 	private final Map<String, LimitedRoute> routes;
@@ -53,11 +52,13 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
 			ProblemDetailsWriter problemWriter, BusinessMetrics metrics) {
 		this.rateLimiter = rateLimiter;
 		this.problemWriter = problemWriter;
-		this.metrics = metrics;
 		this.routes = Map.of(
-				"/api/v1/auth/login", new LimitedRoute("login", properties.login(), "Too many login attempts"),
-				"/api/v1/auth/signup", new LimitedRoute("signup", properties.signup(), "Too many signups"),
-				"/api/v1/auth/refresh", new LimitedRoute("refresh", properties.refresh(), "Too many token refreshes"));
+				"/api/v1/auth/login", new LimitedRoute("login", properties.login(), "Too many login attempts",
+						metrics.rateLimitRejections("login")),
+				"/api/v1/auth/signup", new LimitedRoute("signup", properties.signup(), "Too many signups",
+						metrics.rateLimitRejections("signup")),
+				"/api/v1/auth/refresh", new LimitedRoute("refresh", properties.refresh(), "Too many token refreshes",
+						metrics.rateLimitRejections("refresh")));
 	}
 
 	@Override
@@ -82,7 +83,7 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
 			chain.doFilter(request, response);
 			return;
 		}
-		metrics.rateLimited(route.name());
+		route.rejections().increment();
 		long retryAfterSeconds = Math.max(1, (decision.retryAfter().toMillis() + 999) / 1000);
 		response.setHeader(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds));
 		problemWriter.write(request, response, ProblemType.RATE_LIMITED

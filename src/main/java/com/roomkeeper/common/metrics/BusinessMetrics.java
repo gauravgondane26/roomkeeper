@@ -52,13 +52,16 @@ public class BusinessMetrics {
 		afterCommit(duplicateWebhooksIgnored);
 	}
 
-	/** A rate limit turned a request away; {@code route} names the limit, such as login. */
-	public void rateLimited(String route) {
-		Counter.builder("roomkeeper.rate.limit.rejections")
+	/**
+	 * The count of requests a rate limit turns away, for the route it guards (such as login).
+	 * Taken when the limit is set up, so it starts at 0 instead of appearing with its first
+	 * rejection, which Prometheus's rate() and increase() would miss.
+	 */
+	public Counter rateLimitRejections(String route) {
+		return Counter.builder("roomkeeper.rate.limit.rejections")
 			.description("Requests a rate limit turned away, by route")
 			.tag("route", route)
-			.register(registry)
-			.increment();
+			.register(registry);
 	}
 
 	private static void afterCommit(Counter counter) {

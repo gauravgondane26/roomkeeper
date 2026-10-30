@@ -31,7 +31,7 @@ class BusinessMetricsTest {
 	@Test
 	void countsAtOnceOutsideATransaction() {
 		metrics.bookingCreated();
-		metrics.rateLimited("login");
+		metrics.rateLimitRejections("login").increment();
 
 		assertThat(count("roomkeeper.bookings.initiated")).isOne();
 		assertThat(registry.get("roomkeeper.rate.limit.rejections").tag("route", "login").counter().count()).isOne();

@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - name: RoomKeeper
+    folder: ""
+    type: file
+    # Changes go in the JSON file, so the dashboard in git is the dashboard you see
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards

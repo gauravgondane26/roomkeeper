@@ -99,6 +99,16 @@ Besides Spring's HTTP, JVM and connection pool metrics, the app counts what matt
 
 A count made inside a transaction is only added once it commits, so a change that rolls back isn't counted. Prometheus reads them at `/actuator/prometheus` on the management port, 8081 (`MANAGEMENT_PORT`), which isn't published outside the deployment.
 
+To see them, start the stack with Prometheus and Grafana, then open the RoomKeeper dashboard at http://localhost:3000 (no login needed to view; the admin password is `GRAFANA_ADMIN_PASSWORD`, `admin` by default):
+
+```bash
+docker compose --profile metrics up -d --build --wait
+scripts/smoke.sh            # some traffic to look at
+scripts/check-metrics.sh    # Prometheus scrapes the app, and every dashboard query returns data
+```
+
+The dashboard leads with the business numbers over the chosen time range, then charts bookings per second, the booking request's p50/p95/p99 latency, responses by outcome, rate-limit rejections by route, cache hit ratio, and database connections in use and waiting. Prometheus (http://localhost:9090) and Grafana listen on localhost only. The dashboard is provisioned from `monitoring/grafana/dashboards/roomkeeper.json`; edit that file, not the dashboard in Grafana.
+
 ## Tests
 
 ```bash

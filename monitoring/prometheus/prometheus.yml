@@ -1,0 +1,11 @@
+# Scrapes the app's management port over the Compose network; the port isn't published.
+global:
+  # Short, so a load test shows up on the dashboard within seconds
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: roomkeeper
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["app:8081"]
