@@ -64,7 +64,7 @@ class BusinessMetricsIT extends AbstractIntegrationTest {
 
 	@Test
 	void aBookingIsCountedOnceHowEverOftenItsRequestIsRetried() {
-		double before = count("roomkeeper.bookings.created");
+		double before = count("roomkeeper.bookings.initiated");
 		String key = UUID.randomUUID().toString();
 
 		hold(key).statusCode(201);
@@ -72,7 +72,7 @@ class BusinessMetricsIT extends AbstractIntegrationTest {
 		// The only room is taken
 		hold(UUID.randomUUID().toString()).statusCode(409);
 
-		assertThat(count("roomkeeper.bookings.created") - before).isEqualTo(1);
+		assertThat(count("roomkeeper.bookings.initiated") - before).isEqualTo(1);
 	}
 
 	@Test

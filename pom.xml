@@ -35,6 +35,11 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
+		<!-- Serves the metrics at /actuator/prometheus, on the management port -->
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-prometheus</artifactId>
+		</dependency>
 		<!-- Cache metrics: binds the Redis caches' hit and miss counts to Micrometer -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

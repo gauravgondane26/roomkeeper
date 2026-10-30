@@ -57,7 +57,7 @@ check() {
 
 echo "Waiting up to ${WAIT_SECONDS}s for $BASE_URL ..."
 deadline=$((SECONDS + WAIT_SECONDS))
-until curl -sf --max-time 5 "$BASE_URL/actuator/health" >/dev/null; do
+until curl -sf --max-time 5 "$BASE_URL/readyz" >/dev/null; do
   if (( SECONDS >= deadline )); then
     echo "FAIL app did not become reachable within ${WAIT_SECONDS}s"
     exit 1
@@ -66,7 +66,11 @@ until curl -sf --max-time 5 "$BASE_URL/actuator/health" >/dev/null; do
 done
 
 # Week 1: the app is up and healthy
-check "health reports UP" GET /actuator/health 200 '"status":"UP"'
+check "liveness reports UP" GET /livez 200 '"status":"UP"'
+check "readiness reports UP" GET /readyz 200 '"status":"UP"'
+# Week 8: Actuator answers only on the private management port
+check "metrics aren't public" GET /actuator/prometheus 404
+check "actuator health isn't public" GET /actuator/health 404
 
 # Week 2: API docs and auth
 check "API docs are public" GET /v3/api-docs 200 '"title":"RoomKeeper API"'

@@ -25,6 +25,8 @@ services:
       # Stripe test-mode keys from your shell or .env; unset, payments answer 503 and the rest works
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+    # Only the API port is published. Actuator (8081) stays on the Compose network, where
+    # Prometheus scrapes it (docker compose --profile metrics up)
     ports:
       - "${APP_PORT:-8080}:8080"
     depends_on:

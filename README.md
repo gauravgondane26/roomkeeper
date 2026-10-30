@@ -24,7 +24,7 @@ docker compose up -d postgres redis
 ./mvnw spring-boot:run
 ```
 
-The app listens on port 8080. Postgres and Redis are published on 15432 and 16379 so they don't collide with native installs. Override with `APP_PORT`, `POSTGRES_PORT`, and `REDIS_PORT`.
+The app listens on port 8080, with health probes at `/livez` and `/readyz` (ready while Postgres answers). Actuator (health details, info, and Prometheus metrics) answers only on port 8081, which Compose doesn't publish: on 8080, `/actuator/*` is 404. Postgres and Redis are published on 15432 and 16379 so they don't collide with native installs. Override with `APP_PORT`, `POSTGRES_PORT`, and `REDIS_PORT`.
 
 ## Using the API
 
@@ -87,17 +87,17 @@ No real money moves: test-mode keys only work with Stripe's test cards.
 
 ## Metrics
 
-Besides Spring's HTTP, JVM and connection pool metrics, the app counts what matters to the business. They're Micrometer meters, so in Prometheus `roomkeeper.bookings.created` becomes `roomkeeper_bookings_created_total`, and so on.
+Besides Spring's HTTP, JVM and connection pool metrics, the app counts what matters to the business. They're Micrometer meters, so in Prometheus `roomkeeper.bookings.initiated` becomes `roomkeeper_bookings_initiated_total`, and so on.
 
 | Metric | Counts |
 | --- | --- |
-| `roomkeeper.bookings.created` | New holds; a retried request answered with an earlier booking isn't one |
+| `roomkeeper.bookings.initiated` | New holds; a retried request answered with an earlier booking isn't one |
 | `roomkeeper.holds.expired` | Holds that ran out unpaid, their rooms put back on sale |
 | `roomkeeper.webhooks.duplicates.ignored` | Stripe webhook deliveries ignored because their event was already applied |
 | `roomkeeper.rate.limit.rejections` (tag `route`) | Requests a rate limit answered with 429: `login`, `signup` or `refresh` |
 | `cache.gets` (tags `cache`, `result`) | Hotel info (`hotel`) and search (`search`) cache lookups, `hit` or `miss`; the hit ratio is hits over all gets |
 
-A count made inside a transaction is only added once it commits, so a change that rolls back isn't counted. No HTTP endpoint serves the metrics yet; Prometheus scraping comes with the Grafana dashboard.
+A count made inside a transaction is only added once it commits, so a change that rolls back isn't counted. Prometheus reads them at `/actuator/prometheus` on the management port, 8081 (`MANAGEMENT_PORT`), which isn't published outside the deployment.
 
 ## Tests
 

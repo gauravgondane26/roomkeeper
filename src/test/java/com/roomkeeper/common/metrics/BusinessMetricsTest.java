@@ -23,7 +23,7 @@ class BusinessMetricsTest {
 
 	@Test
 	void everyCounterIsThereFromTheStart() {
-		assertThat(count("roomkeeper.bookings.created")).isZero();
+		assertThat(count("roomkeeper.bookings.initiated")).isZero();
 		assertThat(count("roomkeeper.holds.expired")).isZero();
 		assertThat(count("roomkeeper.webhooks.duplicates.ignored")).isZero();
 	}
@@ -33,7 +33,7 @@ class BusinessMetricsTest {
 		metrics.bookingCreated();
 		metrics.rateLimited("login");
 
-		assertThat(count("roomkeeper.bookings.created")).isOne();
+		assertThat(count("roomkeeper.bookings.initiated")).isOne();
 		assertThat(registry.get("roomkeeper.rate.limit.rejections").tag("route", "login").counter().count()).isOne();
 	}
 
@@ -58,7 +58,7 @@ class BusinessMetricsTest {
 		TransactionSynchronizationManager.getSynchronizations()
 			.forEach(sync -> sync.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
 
-		assertThat(count("roomkeeper.bookings.created")).isZero();
+		assertThat(count("roomkeeper.bookings.initiated")).isZero();
 	}
 
 	private double count(String name) {

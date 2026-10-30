@@ -25,7 +25,8 @@ public class BusinessMetrics {
 
 	public BusinessMetrics(MeterRegistry registry) {
 		this.registry = registry;
-		this.bookingsCreated = Counter.builder("roomkeeper.bookings.created")
+		// Not "created": Prometheus reserves the _created suffix and would drop it from the name
+		this.bookingsCreated = Counter.builder("roomkeeper.bookings.initiated")
 			.description("Bookings created: rooms held for a guest")
 			.register(registry);
 		this.holdsExpired = Counter.builder("roomkeeper.holds.expired")

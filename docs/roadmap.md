@@ -169,9 +169,9 @@ Goal: the full lifecycle works, including the unhappy paths.
 
 Goal: the system is observable, load tested, and explained.
 
-- [x] Business metrics: bookings created, holds expired, duplicate webhooks ignored, rate-limit rejections, cache hit ratio. `BusinessMetrics` counts the first four (`roomkeeper.bookings.created`, `roomkeeper.holds.expired`, `roomkeeper.webhooks.duplicates.ignored`, `roomkeeper.rate.limit.rejections` by route), and a count made in a transaction waits for its commit, so a rollback isn't counted. The hit ratio comes from Spring's `cache.gets` by result: the Redis caches record statistics, and `spring-boot-starter-cache` binds them to Micrometer
+- [x] Business metrics: bookings created, holds expired, duplicate webhooks ignored, rate-limit rejections, cache hit ratio. `BusinessMetrics` counts the first four (`roomkeeper.bookings.initiated`, `roomkeeper.holds.expired`, `roomkeeper.webhooks.duplicates.ignored`, `roomkeeper.rate.limit.rejections` by route), and a count made in a transaction waits for its commit, so a rollback isn't counted. The hit ratio comes from Spring's `cache.gets` by result: the Redis caches record statistics, and `spring-boot-starter-cache` binds them to Micrometer
 - [ ] Prometheus and Grafana in Compose, with a provisioned dashboard
-- [ ] Actuator endpoints locked down in the `prod` profile
+- [x] Actuator endpoints locked down in the `prod` profile. Decided: Actuator gets its own port, 8081 (`MANAGEMENT_PORT`), which Compose doesn't publish; Prometheus scrapes it over the Compose network. It's the same in every profile, so the tests check what production runs. Exposed there: health, info, prometheus. The public port keeps `/livez` and `/readyz` (readiness includes the database, not Redis, which the app works without), and `/actuator/*` on it is 404. The Docker healthcheck and `smoke.sh` use `/readyz`; the bookings counter became `roomkeeper.bookings.initiated`, because Prometheus drops a `_created` suffix
 - [ ] Load test with k6 or Gatling against the booking endpoint
 - [ ] JaCoCo: review coverage on the domain package
 - [ ] README: one section per hard problem (what goes wrong, what was chosen, what was rejected, which test proves it), plus query plans and a Grafana screenshot

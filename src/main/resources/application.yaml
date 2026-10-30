@@ -77,7 +77,22 @@ roomkeeper:
     lease: 2m
 
 management:
+  # Actuator has a port of its own, which deployments keep private: Compose doesn't publish
+  # it, and Prometheus scrapes it from inside the network. The public port keeps only the
+  # /livez and /readyz probes.
+  server:
+    port: ${MANAGEMENT_PORT:8081}
   endpoints:
     web:
       exposure:
-        include: health, info
+        include: health, info, prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+        add-additional-paths: true
+      group:
+        # Ready to serve while Postgres answers; Redis isn't needed, since everything that
+        # uses it carries on without it
+        readiness:
+          include: readinessState, db

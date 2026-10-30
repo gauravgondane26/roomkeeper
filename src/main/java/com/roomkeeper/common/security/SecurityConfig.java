@@ -37,7 +37,11 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.GET, "/payments/*.html").permitAll()
 				// Stripe's webhook proves itself with a signature, checked by the endpoint
 				.requestMatchers(HttpMethod.POST, "/webhook/payment").permitAll()
-				.requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+				// Health probes for load balancers and container health checks
+				.requestMatchers(HttpMethod.GET, "/livez", "/readyz").permitAll()
+				// Actuator only answers on the management port, which isn't published; on the
+				// public port these paths are 404
+				.requestMatchers("/actuator", "/actuator/**").permitAll()
 				// API docs: Swagger UI is the client
 				.requestMatchers("/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
 				// Errors thrown on permitted routes are forwarded here and must stay visible
