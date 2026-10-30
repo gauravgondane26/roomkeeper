@@ -1,37 +1,23 @@
 package com.roomkeeper.search;
 
-import com.roomkeeper.common.error.ApiException;
-import com.roomkeeper.common.error.ProblemType;
-import com.roomkeeper.hotel.Hotel;
-import com.roomkeeper.hotel.HotelRepository;
-import com.roomkeeper.hotel.RoomRepository;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /** The public view of a hotel. Hotels that aren't on sale don't exist as far as guests can tell. */
 @Service
 public class HotelInfoService {
 
-	private final HotelRepository hotels;
+	private final HotelInfoReads reads;
 
-	private final RoomRepository rooms;
+	private final HotelInfoVersions versions;
 
-	private final HotelInfoMapper mapper;
-
-	public HotelInfoService(HotelRepository hotels, RoomRepository rooms, HotelInfoMapper mapper) {
-		this.hotels = hotels;
-		this.rooms = rooms;
-		this.mapper = mapper;
+	public HotelInfoService(HotelInfoReads reads, HotelInfoVersions versions) {
+		this.reads = reads;
+		this.versions = versions;
 	}
 
-	@Cacheable(cacheNames = CacheConfig.HOTEL_INFO, key = "#hotelId")
-	@Transactional(readOnly = true)
+	/** The version is taken before the load, so a change committed meanwhile retires what this read caches. */
 	public HotelInfoResponse get(long hotelId) {
-		Hotel hotel = hotels.findById(hotelId)
-			.filter(Hotel::isActive)
-			.orElseThrow(() -> new ApiException(ProblemType.NOT_FOUND, "Hotel " + hotelId + " not found"));
-		return mapper.toInfo(hotel, rooms.findByHotelIdOrderById(hotelId));
+		return reads.load(hotelId, versions.current(hotelId));
 	}
 
 }

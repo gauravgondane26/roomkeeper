@@ -2,9 +2,6 @@ package com.roomkeeper.search;
 
 import com.roomkeeper.hotel.HotelChangedEvent;
 import com.roomkeeper.inventory.InventoryChangedEvent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -12,21 +9,20 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * Drops cached responses when the data behind them changes. Runs after the change commits,
  * so a request racing the change can't put the old data back into the cache afterwards.
  * <p>
- * Cached searches are evicted per city: a change to one hotel retires every cached search
- * for its city by bumping the city's cache version, which covers every search that could
- * include it, while other cities keep their entries.
+ * Both caches are evicted by bumping a version that's part of their keys, never by
+ * deleting entries: a hotel's info by its own version ({@link HotelInfoVersions}), and
+ * searches per city, a change to one hotel retiring every cached search for its city,
+ * which covers every search that could include it, while other cities keep their entries.
  */
 @Component
 class HotelCacheEvictor {
 
-	private static final Logger log = LoggerFactory.getLogger(HotelCacheEvictor.class);
-
-	private final CacheManager caches;
+	private final HotelInfoVersions hotelVersions;
 
 	private final SearchCacheVersions searchVersions;
 
-	HotelCacheEvictor(CacheManager caches, SearchCacheVersions searchVersions) {
-		this.caches = caches;
+	HotelCacheEvictor(HotelInfoVersions hotelVersions, SearchCacheVersions searchVersions) {
+		this.hotelVersions = hotelVersions;
 		this.searchVersions = searchVersions;
 	}
 
@@ -39,13 +35,7 @@ class HotelCacheEvictor {
 	/** Search results show the hotel's name and city, so they go too. */
 	@TransactionalEventListener
 	void onHotelChanged(HotelChangedEvent event) {
-		try {
-			caches.getCache(CacheConfig.HOTEL_INFO).evict(event.hotelId());
-		}
-		catch (RuntimeException ex) {
-			// The change is committed; the entry still expires on its own
-			log.warn("Could not evict cached info for hotel {}", event.hotelId(), ex);
-		}
+		hotelVersions.bump(event.hotelId());
 		event.cities().forEach(searchVersions::bump);
 	}
 

@@ -18,7 +18,7 @@ import org.springframework.data.redis.serializer.RedisSerializationContext.Seria
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Response caches in Redis: {@code hotel:{shape}:{id}} for hotel info and
+ * Response caches in Redis: {@code hotel:{shape}:{id}:v{version}} for hotel info and
  * {@code search:{shape}:{city hash}:v{version}:{query}} for search results. Each cache
  * stores one response type as JSON; {@code shape} ({@link CacheShapes}) changes with what
  * that type holds, so a deploy that changes it starts with an empty cache rather than

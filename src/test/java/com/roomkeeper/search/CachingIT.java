@@ -1,6 +1,7 @@
 package com.roomkeeper.search;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
@@ -63,15 +64,17 @@ class CachingIT extends AbstractIntegrationTest {
 	void hotelInfoIsCachedForAboutTenMinutes() {
 		info().statusCode(200);
 
-		String key = "hotel:" + CacheShapes.of(HotelInfoResponse.class) + ":" + hotelId;
-		assertThat(awaitCached("hotel:*:" + hotelId)).containsExactly(key);
+		// The hotel's version is whatever setting it up left it at
+		String version = Objects.requireNonNullElse(redis.opsForValue().get("hotel-version:" + hotelId), "0");
+		String key = "hotel:" + CacheShapes.of(HotelInfoResponse.class) + ":" + hotelId + ":v" + version;
+		assertThat(awaitCached("hotel:*:" + hotelId + ":v*")).containsExactly(key);
 		assertThat(redis.getExpire(key)).isBetween(590L, 600L);
 	}
 
 	@Test
 	void cachedHotelInfoIsServedWithoutTheDatabase() {
 		info().body("name", equalTo("Seaside Inn"));
-		awaitCached("hotel:*:" + hotelId);
+		awaitCached("hotel:*:" + hotelId + ":v*");
 		jdbc.update(CHANGE_BEHIND_THE_CACHE, hotelId);
 
 		info().body("name", equalTo("Seaside Inn"));
@@ -80,7 +83,7 @@ class CachingIT extends AbstractIntegrationTest {
 	@Test
 	void editingTheHotelEvictsItsInfo() {
 		info().body("name", equalTo("Seaside Inn"));
-		awaitCached("hotel:*:" + hotelId);
+		awaitCached("hotel:*:" + hotelId + ":v*");
 
 		api(manager).contentType(ContentType.JSON).body(aHotel().named("Seaside Resort").inCity(city).build())
 			.when().put("/api/v1/admin/hotels/{id}", hotelId)
@@ -92,7 +95,7 @@ class CachingIT extends AbstractIntegrationTest {
 	@Test
 	void addingARoomTypeEvictsTheHotelsInfo() {
 		info().body("rooms.type", contains("Deluxe"));
-		awaitCached("hotel:*:" + hotelId);
+		awaitCached("hotel:*:" + hotelId + ":v*");
 
 		createRoom(manager, hotelId, aRoom().ofType("Suite").build());
 
@@ -122,7 +125,7 @@ class CachingIT extends AbstractIntegrationTest {
 	void editingARoomTypesCapacityRefreshesTheInfoButKeepsCachedSearches() {
 		info().body("rooms.capacity", contains(2));
 		search();
-		awaitCached("hotel:*:" + hotelId);
+		awaitCached("hotel:*:" + hotelId + ":v*");
 		awaitCached("search:*");
 
 		api(manager).contentType(ContentType.JSON).body(aRoom().ofType("Deluxe").sleeping(3).build())
