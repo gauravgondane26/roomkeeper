@@ -81,9 +81,7 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 			.body(Map.of("roomId", roomId, "checkIn", "2026-03-10", "checkOut", "2026-03-12", "rooms", 2))
 			.when().post("/api/v1/bookings/init")
 			.then().statusCode(201).extract().jsonPath().getLong("id");
-		putAGuestOn(guest, bookingId);
-		idempotentApi(guest).when().post("/api/v1/bookings/{id}/payments", bookingId).then().statusCode(201);
-		sessionId = stripe.checkoutsFor(bookingId).getFirst().session().id();
+		sessionId = startPaying(guest, bookingId);
 	}
 
 	@Test
@@ -102,7 +100,7 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 				"evt_paid_" + bookingId))
 			.isEqualTo(1);
 		// The guest's confirmation goes out once, however often Stripe reports the payment
-		assertThat(confirmationsInTheOutbox()).isEqualTo(1);
+		assertThat(outboxEvents("BOOKING_CONFIRMED", bookingId)).isEqualTo(1);
 	}
 
 	@Test
@@ -203,7 +201,7 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 			}
 		}
 		assertThat(nightsBooked()).containsOnly(2);
-		assertThat(confirmationsInTheOutbox()).isEqualTo(1);
+		assertThat(outboxEvents("BOOKING_CONFIRMED", bookingId)).isEqualTo(1);
 	}
 
 	@Test
@@ -325,12 +323,6 @@ class PaymentWebhookIT extends AbstractIntegrationTest {
 
 	private String paymentStatus(String session) {
 		return jdbc.queryForObject("select status from payments where provider_session_id = ?", String.class, session);
-	}
-
-	private long confirmationsInTheOutbox() {
-		return jdbc.queryForObject(
-				"select count(*) from outbox_events where type = 'BOOKING_CONFIRMED' and aggregate_id = ?", Long.class,
-				bookingId);
 	}
 
 	private long queriesWaitingOnLocks() {

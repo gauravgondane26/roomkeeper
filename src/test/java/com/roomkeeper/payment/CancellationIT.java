@@ -26,7 +26,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import static com.roomkeeper.testsupport.HotelBuilder.aHotel;
 import static com.roomkeeper.testsupport.RoomBuilder.aRoom;
-import static com.roomkeeper.testsupport.StripeWebhooks.checkoutCompleted;
 import static com.roomkeeper.testsupport.UserBuilder.aUser;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -94,11 +93,8 @@ class CancellationIT extends AbstractIntegrationTest {
 					"rooms", 2))
 			.when().post("/api/v1/bookings/init")
 			.then().statusCode(201).extract().jsonPath().getLong("id");
-		putAGuestOn(guest, bookingId);
-		idempotentApi(guest).when().post("/api/v1/bookings/{id}/payments", bookingId).then().statusCode(201);
-		String sessionId = stripe.checkoutsFor(bookingId).getFirst().session().id();
 		paymentIntentId = "pi_cancel_" + bookingId;
-		deliverWebhook(checkoutCompleted("evt_paid_" + bookingId, sessionId, paymentIntentId)).statusCode(200);
+		pay(guest, bookingId, paymentIntentId);
 		assertThat(nightsBooked()).as("paid for").containsOnly(2);
 	}
 

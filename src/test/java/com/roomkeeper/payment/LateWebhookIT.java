@@ -80,9 +80,7 @@ class LateWebhookIT extends AbstractIntegrationTest {
 		roomId = firstRoomOf(manager, hotelId);
 		guest = signUpAndLogIn(aUser().build());
 		bookingId = hold(guest);
-		putAGuestOn(guest, bookingId);
-		idempotentApi(guest).when().post("/api/v1/bookings/{id}/payments", bookingId).then().statusCode(201);
-		sessionId = stripe.checkoutsFor(bookingId).getFirst().session().id();
+		sessionId = startPaying(guest, bookingId);
 		paymentIntentId = "pi_late_" + bookingId;
 
 		clock.advance(Duration.ofMinutes(10));
@@ -101,7 +99,7 @@ class LateWebhookIT extends AbstractIntegrationTest {
 			.containsEntry("reserved_count", 0));
 		assertThat(paymentStatus()).isEqualTo("SUCCEEDED");
 		assertThat(stripe.refundsOf(paymentIntentId)).isZero();
-		assertThat(confirmationsInTheOutbox()).isEqualTo(1);
+		assertThat(outboxEvents("BOOKING_CONFIRMED", bookingId)).isEqualTo(1);
 	}
 
 	@Test
@@ -114,7 +112,8 @@ class LateWebhookIT extends AbstractIntegrationTest {
 			.then().body("status", equalTo("EXPIRED"));
 		assertThat(paymentStatus()).isEqualTo("REFUNDED");
 		assertThat(stripe.refundsOf(paymentIntentId)).isOne();
-		assertThat(confirmationsInTheOutbox()).as("no confirmation for a booking that didn't happen").isZero();
+		assertThat(outboxEvents("BOOKING_CONFIRMED", bookingId)).as("no confirmation for a booking that didn't happen")
+			.isZero();
 		// The other guest's hold is untouched
 		assertThat(nights()).hasSize(2).allSatisfy(night -> assertThat(night)
 			.containsEntry("booked_count", 0)
@@ -222,12 +221,6 @@ class LateWebhookIT extends AbstractIntegrationTest {
 			.body(Map.of("roomId", roomId, "checkIn", "2026-03-10", "checkOut", "2026-03-12", "rooms", 1))
 			.when().post("/api/v1/bookings/init")
 			.then().statusCode(201).extract().jsonPath().getLong("id");
-	}
-
-	private long confirmationsInTheOutbox() {
-		return jdbc.queryForObject(
-				"select count(*) from outbox_events where type = 'BOOKING_CONFIRMED' and aggregate_id = ?", Long.class,
-				bookingId);
 	}
 
 	private String bookingStatus() {

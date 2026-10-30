@@ -6,7 +6,6 @@ import java.time.Instant;
 import java.util.Map;
 
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
-import com.roomkeeper.testsupport.FakePaymentGateway;
 import com.roomkeeper.testsupport.MutableClock;
 import com.roomkeeper.testsupport.MutableClockConfig;
 import com.roomkeeper.testsupport.TestUser;
@@ -20,7 +19,6 @@ import org.springframework.context.annotation.Import;
 
 import static com.roomkeeper.testsupport.HotelBuilder.aHotel;
 import static com.roomkeeper.testsupport.RoomBuilder.aRoom;
-import static com.roomkeeper.testsupport.StripeWebhooks.checkoutCompleted;
 import static com.roomkeeper.testsupport.UserBuilder.aUser;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -36,9 +34,6 @@ class HotelReportIT extends AbstractIntegrationTest {
 
 	@Autowired
 	MutableClock clock;
-
-	@Autowired
-	FakePaymentGateway stripe;
 
 	private TestUser managerUser;
 
@@ -134,11 +129,7 @@ class HotelReportIT extends AbstractIntegrationTest {
 			.when().post("/api/v1/bookings/init")
 			.then().statusCode(201).extract().jsonPath();
 		long bookingId = booking.getLong("id");
-		putAGuestOn(guest, bookingId);
-		idempotentApi(guest).when().post("/api/v1/bookings/{id}/payments", bookingId).then().statusCode(201);
-		String sessionId = stripe.checkoutsFor(bookingId).getFirst().session().id();
-		deliverWebhook(checkoutCompleted("evt_report_" + bookingId, sessionId, "pi_report_" + bookingId))
-			.statusCode(200);
+		pay(guest, bookingId, "pi_report_" + bookingId);
 		return new Paid(bookingId, booking.getObject("amount", BigDecimal.class));
 	}
 

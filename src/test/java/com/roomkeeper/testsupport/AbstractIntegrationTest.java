@@ -59,6 +59,9 @@ public abstract class AbstractIntegrationTest {
 	@Autowired
 	private Clock applicationClock;
 
+	@Autowired
+	private FakePaymentGateway paymentGateway;
+
 	@Value("${roomkeeper.admin.email}")
 	private String adminEmail;
 
@@ -220,6 +223,26 @@ public abstract class AbstractIntegrationTest {
 			.body(payload)
 			.when().post("/webhook/payment")
 			.then();
+	}
+
+	/** Puts a guest on the user's booking and starts paying for it; returns the checkout session's id. */
+	protected String startPaying(String token, long bookingId) {
+		putAGuestOn(token, bookingId);
+		idempotentApi(token).when().post("/api/v1/bookings/{id}/payments", bookingId).then().statusCode(201);
+		return paymentGateway.checkoutsFor(bookingId).getFirst().session().id();
+	}
+
+	/** Starts paying for the user's booking and has Stripe report it paid, which confirms it. */
+	protected void pay(String token, long bookingId, String paymentIntentId) {
+		String sessionId = startPaying(token, bookingId);
+		deliverWebhook(StripeWebhooks.checkoutCompleted("evt_paid_" + bookingId, sessionId, paymentIntentId))
+			.statusCode(200);
+	}
+
+	/** How many outbox events of the type there are about the booking or user. */
+	protected long outboxEvents(String type, long aggregateId) {
+		return database.queryForObject("select count(*) from outbox_events where type = ? and aggregate_id = ?",
+				Long.class, type, aggregateId);
 	}
 
 	/**
