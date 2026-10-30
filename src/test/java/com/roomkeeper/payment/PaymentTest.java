@@ -86,6 +86,8 @@ class PaymentTest {
 		paid.succeed("pi_1");
 		assertThatThrownBy(() -> paid.refundDue(new BigDecimal("8000.01"))).as("more than was paid")
 			.isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> paid.refundDue(BigDecimal.ZERO)).as("nothing")
+			.isInstanceOf(IllegalArgumentException.class);
 		assertThat(paid.getStatus()).isEqualTo(PaymentStatus.SUCCEEDED);
 	}
 

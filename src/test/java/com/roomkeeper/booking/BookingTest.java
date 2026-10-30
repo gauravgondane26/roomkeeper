@@ -124,6 +124,34 @@ class BookingTest {
 	}
 
 	@Test
+	void anExpiredBookingCantBePaidEvenBeforeItsHoldTime() {
+		Booking booking = twoRooms();
+		booking.putGuests(List.of(guest("Asha")), HELD_AT.plusSeconds(60));
+		// Its status settles it, whatever the clock says about the hold time
+		booking.expire();
+
+		assertThatThrownBy(() -> booking.startPayment(HELD_AT.plusSeconds(120)))
+			.isInstanceOfSatisfying(ApiException.class,
+					ex -> assertThat(ex.type()).isEqualTo(ProblemType.HOLD_EXPIRED));
+		assertThat(booking.getStatus()).isEqualTo(BookingStatus.EXPIRED);
+	}
+
+	@Test
+	void aConfirmedBookingCantBePaidAgain() {
+		Booking booking = twoRooms();
+		booking.putGuests(List.of(guest("Asha")), HELD_AT.plusSeconds(60));
+		booking.startPayment(HELD_AT.plusSeconds(120));
+		booking.confirm();
+
+		assertThatThrownBy(() -> booking.startPayment(HELD_AT.plusSeconds(180)))
+			.isInstanceOfSatisfying(ApiException.class, ex -> {
+				assertThat(ex.type()).isEqualTo(ProblemType.BOOKING_STATE);
+				assertThat(ex.getMessage()).contains("can't be paid");
+			});
+		assertThat(booking.getStatus()).isEqualTo(BookingStatus.CONFIRMED);
+	}
+
+	@Test
 	void aPaidBookingIsConfirmed() {
 		Booking booking = twoRooms();
 		booking.putGuests(List.of(guest("Asha")), HELD_AT.plusSeconds(60));

@@ -214,6 +214,38 @@
 										</limit>
 									</limits>
 								</rule>
+								<!-- The domain: entities, their states, and the pricing and cancellation rules.
+								     Small and free of I/O, so every line and branch is tested, guards included -->
+								<rule>
+									<element>CLASS</element>
+									<includes>
+										<include>com.roomkeeper.booking.Booking</include>
+										<include>com.roomkeeper.booking.BookingStatus</include>
+										<include>com.roomkeeper.booking.CancellationPolicy</include>
+										<include>com.roomkeeper.booking.Guest</include>
+										<include>com.roomkeeper.hotel.Hotel</include>
+										<include>com.roomkeeper.hotel.HotelReport</include>
+										<include>com.roomkeeper.hotel.Room</include>
+										<include>com.roomkeeper.inventory.Inventory</include>
+										<include>com.roomkeeper.outbox.OutboxEvent</include>
+										<include>com.roomkeeper.payment.Payment</include>
+										<include>com.roomkeeper.payment.PaymentStatus</include>
+										<include>com.roomkeeper.pricing.*</include>
+										<include>com.roomkeeper.user.User</include>
+									</includes>
+									<limits>
+										<limit>
+											<counter>LINE</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>1.00</minimum>
+										</limit>
+										<limit>
+											<counter>BRANCH</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>1.00</minimum>
+										</limit>
+									</limits>
+								</rule>
 							</rules>
 						</configuration>
 					</execution>

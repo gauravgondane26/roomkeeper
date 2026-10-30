@@ -119,7 +119,7 @@ A k6 load test drives the booking endpoint while the dashboard watches: `docker 
 ./mvnw verify    # unit + integration tests (*IT) against real Postgres and Redis via Testcontainers
 ```
 
-`verify` writes a coverage report to `target/site/jacoco/index.html` and fails if coverage drops below 94% of lines or 83% of branches. A run of only some tests can't reach that, so skip coverage for it:
+`verify` writes a coverage report to `target/site/jacoco/index.html` and fails if coverage drops below 94% of lines or 83% of branches overall, or below 100% for the domain classes: the entities, booking states, and the pricing and cancellation rules (the list is in `pom.xml`). They hold the rules every booking depends on and do no I/O, so every line and branch is tested, guards included. A run of only some tests can't reach that, so skip coverage for it:
 
 ```bash
 ./mvnw verify -DskipUnitTests -Djacoco.skip=true -Dit.test=CachingIT   # one integration test class

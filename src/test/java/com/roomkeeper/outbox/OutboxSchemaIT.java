@@ -50,6 +50,18 @@ class OutboxSchemaIT extends AbstractDataTest {
 	}
 
 	@Test
+	void aFailureKeepsTheFirstThousandCharactersOfALongError() {
+		OutboxEvent event = events.save(new OutboxEvent(42L, OutboxEventType.BOOKING_CONFIRMED, "{}", NOW));
+		event.recordFailure("IllegalStateException: " + "x".repeat(5_000), NOW);
+		entityManager.flush();
+
+		String stored = jdbc.queryForObject("select last_error from outbox_events where id = ?", String.class,
+				event.getId());
+		assertThat(stored).hasSize(1_000)
+			.startsWith("IllegalStateException: xxx");
+	}
+
+	@Test
 	void anEventIsNeverBothPublishedAndParked() {
 		assertThatThrownBy(() -> insertEvent(Map.of("published_at", "now()", "failed_at", "now()")))
 			.isInstanceOf(DataIntegrityViolationException.class)

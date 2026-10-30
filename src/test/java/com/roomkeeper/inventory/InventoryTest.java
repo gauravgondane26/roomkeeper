@@ -92,4 +92,28 @@ class InventoryTest {
 		assertThat(night.getBookedCount()).isZero();
 	}
 
+	@Test
+	void holdsOnlyRoomsThatAreFreeOnAnOpenNight() {
+		Inventory night = new Inventory(7L, LocalDate.parse("2026-03-10"), 2);
+		night.hold(1);
+
+		assertThatThrownBy(() -> night.hold(2)).isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("1 free");
+		night.markClosed(true);
+		assertThatThrownBy(() -> night.hold(1)).isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("closed");
+		assertThat(night.getReservedCount()).isOne();
+	}
+
+	@Test
+	void releasesOnlyRoomsThatAreHeld() {
+		Inventory night = new Inventory(7L, LocalDate.parse("2026-03-10"), 5);
+		night.hold(2);
+		night.release(1);
+
+		assertThatThrownBy(() -> night.release(2)).isInstanceOf(IllegalStateException.class);
+		assertThat(night.getReservedCount()).isOne();
+		assertThat(night.getAvailable()).isEqualTo(4);
+	}
+
 }
