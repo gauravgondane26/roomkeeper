@@ -104,6 +104,7 @@ scripts/init-env.sh
 # Whole stack from source: app (prod profile), Postgres 18, Redis 8
 docker compose up -d --build --wait
 scripts/smoke.sh                      # smoke checks over HTTP
+scripts/scan-image.sh                 # Grype vulnerability scan of the image, as in CI
 
 # Or run only the services and start the app yourself (local profile)
 docker compose up -d postgres redis
@@ -220,7 +221,7 @@ The dashboard leads with the business numbers over the chosen time range, then c
 ./mvnw test -Dtest=BookingStatusTest                                    # one unit test class (no coverage check)
 ```
 
-CI runs on every push to `main` and every pull request. It first checks that no migration already on `main` was changed (`scripts/check-migrations.sh`), then runs the same steps as above, then builds the Docker image and smoke tests it. Dependabot opens weekly update pull requests for Maven, GitHub Actions, and the Docker images.
+CI runs on every push to `main` and every pull request. It first checks that no migration already on `main` was changed (`scripts/check-migrations.sh`), then runs the same steps as above, then builds the Docker image, smoke tests it, and scans it with Grype (`scripts/scan-image.sh`: a high or critical vulnerability with a fix available fails the build; `.grype.yaml` lists accepted ones with their reason). Each green commit on `main` is then published to GHCR as `ghcr.io/gauravgondane26/roomkeeper:<commit SHA>`, with an SBOM and SLSA build provenance attached as attestations (`docker buildx imagetools inspect <image> --format '{{ json .SBOM }}'` shows the SBOM). Dependabot opens weekly update pull requests for Maven, GitHub Actions, and the Docker images.
 
 ## Configuration profiles
 

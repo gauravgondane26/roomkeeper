@@ -1,0 +1,11 @@
+# Grype settings for scripts/scan-image.sh, which CI runs on every build.
+# A high or critical vulnerability fails the scan, but only once a fixed version exists:
+# until then there's nothing to upgrade to, and the base image update that brings the fix
+# arrives through Dependabot.
+fail-on-severity: high
+only-fixed: true
+
+# Accepted vulnerabilities, each with why it doesn't apply, for example:
+#   - vulnerability: CVE-2026-12345
+#     reason: only reachable through XML parsing, which the app never does
+ignore: []

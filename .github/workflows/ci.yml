@@ -75,6 +75,46 @@ jobs:
           docker compose up -d --build --wait
           scripts/smoke.sh
 
+      # The image the smoke test just ran; fails on a high or critical vulnerability
+      # with a fix (settings and accepted ones in .grype.yaml)
+      - name: Scan the Docker image
+        run: scripts/scan-image.sh
+
       - name: App logs on failure
         if: ${{ failure() }}
         run: docker compose logs app
+
+  # Every commit on main that passed the build, tests, smoke test and scan is published
+  # to GHCR, tagged with its SHA, with an SBOM and build provenance attached to the image
+  # as attestations. It's built again here from the same commit with Buildx, which the
+  # attestations need; pull requests never publish.
+  publish:
+    needs: build
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push the image with SBOM and provenance
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          sbom: true
+          provenance: mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

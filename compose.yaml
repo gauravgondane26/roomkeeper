@@ -128,6 +128,20 @@ services:
     depends_on:
       - app
 
+  # Vulnerability scan of the app image; run it through scripts/scan-image.sh, which saves
+  # the image to target/ first. Its database is kept in a volume between runs.
+  grype:
+    image: anchore/grype:v0.121.0
+    profiles: [scan]
+    command: ["docker-archive:/scan/roomkeeper-image.tar", "--config", "/scan/.grype.yaml"]
+    volumes:
+      - ./target/roomkeeper-image.tar:/scan/roomkeeper-image.tar:ro
+      - ./.grype.yaml:/scan/.grype.yaml:ro
+      - grype-db:/grype-db
+    environment:
+      GRYPE_DB_CACHE_DIR: /grype-db
+      GRYPE_CHECK_FOR_APP_UPDATE: "false"
+
   postgres:
     image: postgres:18-alpine
     environment:
@@ -161,3 +175,4 @@ services:
 volumes:
   postgres-data:
   prometheus-data:
+  grype-db:
