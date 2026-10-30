@@ -191,7 +191,7 @@ Goal: the system is observable, load tested, and explained.
 - [ ] Inventory admin can reset a night's total to follow the room type again
 - [ ] Cache key prefix carries a version, so a deploy that changes a cached response starts fresh
 - [ ] Hotel info can't be re-cached stale after an eviction: Spring Data Redis stores entries without waiting, so a guest's read can land just after a manager's change evicts the entry and serve old details for up to 10 minutes. Version the key like search, or make cache writes wait for Redis; test it by holding writes back with `CLIENT PAUSE`
-- [ ] Reset the shared test clock before every test automatically
+- [x] Reset the shared test clock before every test automatically. `MutableClockReset`, a Spring `TestExecutionListener` registered in `src/test/resources/META-INF/spring.factories`, puts the `MutableClock` back to `MutableClockConfig.START` before each test method (before `@BeforeEach`, which can still set its own time); contexts without the clock are left alone. `MutableClockResetIT` moves the clock in one test and finds it back at the start in the next
 - [ ] Test: authorization matrix over every admin endpoint (anonymous, guest, other manager, owner)
 - [ ] Test: JWT edge cases (expired, wrong issuer, wrong key, `alg: none`, tampered role claim)
 - [ ] Test: the whole app with Redis down, and with Postgres connections lost or the pool exhausted
