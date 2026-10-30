@@ -10,6 +10,7 @@ import com.roomkeeper.outbox.Email;
 import com.roomkeeper.outbox.FakeEmailSender;
 import com.roomkeeper.outbox.OutboxPublisher;
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
+import com.roomkeeper.testsupport.RaceTest;
 import com.roomkeeper.testsupport.TestUser;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
@@ -110,7 +111,7 @@ class SignupIT extends AbstractIntegrationTest {
 			.containsExactly("Welcome to RoomKeeper", "Someone tried to sign up with your email");
 	}
 
-	@Test
+	@RaceTest
 	void racingSignupsWithOneEmailCreateOneAccountAndAnswerAlike() throws Exception {
 		TestUser owner = aUser().build();
 		List<Callable<Response>> signups = new ArrayList<>();

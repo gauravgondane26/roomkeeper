@@ -14,6 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
+import com.roomkeeper.testsupport.RaceTest;
 import com.roomkeeper.testsupport.TestUser;
 import io.restassured.http.ContentType;
 import io.restassured.path.json.JsonPath;
@@ -113,7 +114,7 @@ class RefreshTokenIT extends AbstractIntegrationTest {
 		refresh(newest).statusCode(401);
 	}
 
-	@Test
+	@RaceTest
 	void concurrentRefreshesWithTheSameTokenSucceedOnlyOnce() throws Exception {
 		TestUser user = aUser().build();
 		signUp(user);

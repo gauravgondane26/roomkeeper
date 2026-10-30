@@ -14,6 +14,7 @@ import com.roomkeeper.testsupport.AbstractIntegrationTest;
 import com.roomkeeper.testsupport.FakePaymentGateway;
 import com.roomkeeper.testsupport.MutableClock;
 import com.roomkeeper.testsupport.MutableClockConfig;
+import com.roomkeeper.testsupport.RaceTest;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -156,7 +157,7 @@ class LateWebhookIT extends AbstractIntegrationTest {
 		assertThat(paymentStatus()).isEqualTo("REFUNDED");
 	}
 
-	@Test
+	@RaceTest
 	void racingDeliveriesOfALatePaymentRefundItOnce() throws Exception {
 		hold(signUpAndLogIn(aUser().build()));
 		String paid = checkoutCompleted("evt_late_racing_" + bookingId, sessionId, paymentIntentId);

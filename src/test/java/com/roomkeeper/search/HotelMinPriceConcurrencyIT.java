@@ -17,9 +17,9 @@ import com.roomkeeper.pricing.PricingChain;
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
 import com.roomkeeper.testsupport.MutableClock;
 import com.roomkeeper.testsupport.MutableClockConfig;
+import com.roomkeeper.testsupport.RaceTest;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -65,7 +65,7 @@ class HotelMinPriceConcurrencyIT extends AbstractIntegrationTest {
 		activateHotel(manager, hotelId);
 	}
 
-	@Test
+	@RaceTest
 	void concurrentChangesToOneHotelAllSucceedAndLeaveTheCheapestPricesRight() throws Exception {
 		CountDownLatch start = new CountDownLatch(1);
 		List<Future<Integer>> statuses = new ArrayList<>();

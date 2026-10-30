@@ -9,10 +9,10 @@ import java.util.concurrent.Callable;
 
 import com.roomkeeper.auth.AccessTokenService;
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
+import com.roomkeeper.testsupport.RaceTest;
 import com.roomkeeper.user.Role;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
-import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -46,7 +46,7 @@ class BookingRacesIT extends AbstractIntegrationTest {
 	@Autowired
 	Clock clock;
 
-	@Test
+	@RaceTest
 	void bookingsAndManagersChangingTheSameNightsAllGetAnswersAndTheCountsAddUp() throws Exception {
 		String manager = signUpAndLogIn(aUser().asHotelManager().build());
 		long hotelId = activeHotel(manager, aHotel().build(), aRoom().ofType("Deluxe").withTotalCount(10).build());

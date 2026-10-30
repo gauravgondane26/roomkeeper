@@ -10,6 +10,7 @@ import java.util.concurrent.Callable;
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
 import com.roomkeeper.testsupport.MutableClock;
 import com.roomkeeper.testsupport.MutableClockConfig;
+import com.roomkeeper.testsupport.RaceTest;
 import io.restassured.http.ContentType;
 import io.restassured.response.ExtractableResponse;
 import io.restassured.response.Response;
@@ -129,7 +130,7 @@ class InitIdempotencyIT extends AbstractIntegrationTest {
 		assertThat(reservedOnTheFirstNight()).isEqualTo(4);
 	}
 
-	@Test
+	@RaceTest
 	void retriesRacingTheFirstRequestMakeOneBooking() throws Exception {
 		List<Callable<Response>> attempts = new ArrayList<>();
 		for (int i = 0; i < 8; i++) {

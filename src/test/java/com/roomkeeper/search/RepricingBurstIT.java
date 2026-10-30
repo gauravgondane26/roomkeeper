@@ -13,9 +13,9 @@ import javax.sql.DataSource;
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
 import com.roomkeeper.testsupport.MutableClock;
 import com.roomkeeper.testsupport.MutableClockConfig;
+import com.roomkeeper.testsupport.RaceTest;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Import;
@@ -66,7 +66,7 @@ class RepricingBurstIT extends AbstractIntegrationTest {
 		roomId = firstRoomOf(manager, hotelId);
 	}
 
-	@Test
+	@RaceTest
 	void aBurstOfBookingsQueuesAFewRecomputesAndEndsAtTheRightPrice() throws Exception {
 		String guest = signUpAndLogIn(aUser().build());
 		ThreadPoolExecutor pool = repricing.getThreadPoolExecutor();

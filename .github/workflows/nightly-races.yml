@@ -1,0 +1,44 @@
+name: Nightly races
+
+# Repeats the tests that race threads (@RaceTest, tag "race") to catch rare interleavings
+# and flaky tests a single CI run can miss. Each night on main, or by hand with a chosen
+# number of rounds.
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+    inputs:
+      rounds:
+        description: How many times to run the race tests
+        type: number
+        default: 15
+
+permissions:
+  contents: read
+
+jobs:
+  races:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: maven
+
+      - name: Race tests, repeated
+        env:
+          ROUNDS: ${{ inputs.rounds || 15 }}
+        run: scripts/repeat-race-tests.sh "$ROUNDS"
+
+      - name: Upload reports of failed rounds
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: race-rounds
+          path: target/race-rounds/
+          if-no-files-found: ignore

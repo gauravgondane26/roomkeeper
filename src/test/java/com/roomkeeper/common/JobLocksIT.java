@@ -7,6 +7,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
+import com.roomkeeper.testsupport.RaceTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -27,7 +28,7 @@ class JobLocksIT extends AbstractIntegrationTest {
 	@Autowired
 	StringRedisTemplate redis;
 
-	@Test
+	@RaceTest
 	void onlyOneOfTwoInstancesRunsTheJobAtATime() throws Exception {
 		CountDownLatch running = new CountDownLatch(1);
 		CountDownLatch finish = new CountDownLatch(1);

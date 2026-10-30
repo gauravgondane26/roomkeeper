@@ -10,6 +10,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
 
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
+import com.roomkeeper.testsupport.RaceTest;
 import com.roomkeeper.testsupport.TestUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -111,7 +112,7 @@ class OutboxPublisherIT extends AbstractIntegrationTest {
 			.containsEntry("published", false);
 	}
 
-	@Test
+	@RaceTest
 	void runsThatOverlapStillSendEachEventOnce() throws Exception {
 		// A run that outlives its lock's lease can overlap the next; each locks the events it sends
 		List<Long> events = new ArrayList<>();

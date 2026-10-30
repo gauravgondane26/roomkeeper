@@ -12,6 +12,7 @@ import com.roomkeeper.testsupport.AbstractIntegrationTest;
 import com.roomkeeper.testsupport.FakePaymentGateway;
 import com.roomkeeper.testsupport.MutableClock;
 import com.roomkeeper.testsupport.MutableClockConfig;
+import com.roomkeeper.testsupport.RaceTest;
 import io.restassured.http.ContentType;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
@@ -105,7 +106,7 @@ class PaymentStartIT extends AbstractIntegrationTest {
 		assertThat(paymentsForTheBooking()).isEqualTo(1);
 	}
 
-	@Test
+	@RaceTest
 	void racingPaymentRequestsOpenOneSession() throws Exception {
 		List<Callable<Response>> requests = new ArrayList<>();
 		for (int i = 0; i < 6; i++) {
