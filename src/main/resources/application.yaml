@@ -15,6 +15,24 @@ spring:
   profiles:
     # Profiles: local (developer machine), test (test suite), prod (deployed)
     default: local
+  # How long to wait on a store that stops answering (a network partition, a paused or
+  # overloaded server) before giving up. The drivers' defaults, a minute for Redis and 30 s
+  # for a database connection, would hold every request that long and use up the threads.
+  data:
+    redis:
+      # Everything that uses Redis carries on without it, so give up quickly
+      timeout: 1s
+      connect-timeout: 1s
+  datasource:
+    hikari:
+      # In milliseconds. Wait at most 3 s for a free connection, then answer 503 to retry
+      connection-timeout: 3000
+      # Checking that an idle connection still works gives up after 1 s
+      validation-timeout: 1000
+      data-source-properties:
+        # In seconds: a query on a database that stopped answering fails instead of waiting
+        # forever (the driver's default). Every query here takes milliseconds
+        socketTimeout: 5
   jpa:
     # Flyway owns the schema; Hibernate only checks that entities match it
     hibernate:
