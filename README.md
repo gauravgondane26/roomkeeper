@@ -9,6 +9,7 @@ A hotel booking backend in Java 25 and Spring Boot, built test-first. It focuses
 - [Project design](docs/Hotel%20Booking%20Backend%20Project%20Design.md): goals, schema, API, booking lifecycle, and the hard problems
 - [Roadmap](docs/roadmap.md): the build plan broken into tasks
 - [Query plans](docs/query-plans.md): `EXPLAIN ANALYZE` of hotel search over a million inventory rows (about 1 ms) and the indexes it uses
+- [Load test](docs/load-test.md): k6 against the booking endpoint, up to about 1,800 requests a second, and what the dashboard showed
 
 ## Running locally
 
@@ -108,6 +109,8 @@ scripts/check-metrics.sh    # Prometheus scrapes the app, and every dashboard qu
 ```
 
 The dashboard leads with the business numbers over the chosen time range, then charts bookings per second, the booking request's p50/p95/p99 latency, responses by outcome, rate-limit rejections by route, cache hit ratio, and database connections in use and waiting. Prometheus (http://localhost:9090) and Grafana listen on localhost only. The dashboard is provisioned from `monitoring/grafana/dashboards/roomkeeper.json`; edit that file, not the dashboard in Grafana.
+
+A k6 load test drives the booking endpoint while the dashboard watches: `docker compose --profile loadtest run --rm k6`. It holds rooms on dates across the year, searches the same city, and races 50 guests for the last 5 rooms of a night, which exactly 5 must win. Results and what they showed are in [docs/load-test.md](docs/load-test.md): no failures and a p95 under 10 ms up to about 1,800 requests a second on one laptop, with the database pool as the first limit in sight. It also found two things to improve: repricing drops recomputes under load, and hold expiry clears a backlog slowly.
 
 ## Tests
 

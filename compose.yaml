@@ -103,6 +103,22 @@ services:
       timeout: 3s
       retries: 20
 
+  # Load test against the running stack (see loadtest/booking.js):
+  #   docker compose --profile loadtest run --rm k6
+  k6:
+    image: grafana/k6:2.2.0
+    profiles: [loadtest]
+    command: ["run", "/loadtest/booking.js"]
+    volumes:
+      - ./loadtest:/loadtest:ro
+    environment:
+      BASE_URL: http://app:8080
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@roomkeeper.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-local-admin-password}
+      K6_NO_USAGE_REPORT: "true"
+    depends_on:
+      - app
+
   postgres:
     image: postgres:18-alpine
     environment:
