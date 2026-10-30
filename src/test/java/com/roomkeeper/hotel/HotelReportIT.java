@@ -3,7 +3,6 @@ package com.roomkeeper.hotel;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.Map;
 
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
