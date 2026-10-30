@@ -26,6 +26,7 @@ class BusinessMetricsTest {
 		assertThat(count("roomkeeper.bookings.initiated")).isZero();
 		assertThat(count("roomkeeper.holds.expired")).isZero();
 		assertThat(count("roomkeeper.webhooks.duplicates.ignored")).isZero();
+		assertThat(count("roomkeeper.repricing.dropped")).isZero();
 	}
 
 	@Test

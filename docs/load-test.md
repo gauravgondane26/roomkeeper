@@ -50,7 +50,9 @@ Two things this shows:
 1. **Almost all the queued work was redundant.** A recompute already waiting for a hotel covers any that arrive behind it. Coalescing them (at most one pending recompute per hotel, which reads the latest state when it runs) would keep the queue tiny and leave nothing to drop at any booking rate.
 2. **A log line per dropped task floods the log.** That's 51,501 WARN lines in a minute. A counter (`roomkeeper.repricing.dropped`) plus a rate-limited warning would say the same thing.
 
-Neither is fixed yet. A coalesced recompute would cover the union of the pending nights and evict searches if any of the sales it replaces would have.
+**Fixed the same day.** At most one recompute now waits per hotel (`PendingRecomputes`). A later sale merges into it, widening its nights and making it evict cached searches if the sale would have, and the recompute reads inventory when it starts, so it covers every sale merged into it. The queue now holds hotels, not bookings. A recompute the queue still refuses is counted (`roomkeeper.repricing.dropped`) and logged, once per hotel, and the hotel's next sale schedules another. `RepricingBurstIT` holds the hotel's lock while 8 bookings land: at most 3 recomputes are queued (8 before the fix), and the price is right once they run.
+
+Rerun at 1,500 holds a second: 0 recomputes dropped. The old code, built and run the same way straight before, dropped 63,409. Latency in those reruns was poor for both versions (a p95 of seconds, with up to 190 requests waiting for a database connection): by then the laptop was short of memory and the database held 240,000 more bookings than in the first runs. So the reruns say nothing about latency either way; the figures in the table above are for the conditions they were taken in.
 
 ## After the runs: releasing 152,425 abandoned holds
 

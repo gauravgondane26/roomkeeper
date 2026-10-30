@@ -24,7 +24,8 @@ class PrometheusScrapeIT extends AbstractIntegrationTest {
 			.then().statusCode(200).extract().asString();
 
 		assertThat(scrape).contains("roomkeeper_bookings_initiated_total ", "roomkeeper_holds_expired_total ",
-				"roomkeeper_webhooks_duplicates_ignored_total ", "roomkeeper_rate_limit_rejections_total{route=\"login\"}",
+				"roomkeeper_webhooks_duplicates_ignored_total ", "roomkeeper_repricing_dropped_total ",
+				"roomkeeper_rate_limit_rejections_total{route=\"login\"}",
 				"roomkeeper_rate_limit_rejections_total{route=\"signup\"}",
 				"roomkeeper_rate_limit_rejections_total{route=\"refresh\"}", "hikaricp_connections_active{",
 				"hikaricp_connections_pending{");

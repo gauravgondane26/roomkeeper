@@ -23,6 +23,8 @@ public class BusinessMetrics {
 
 	private final Counter duplicateWebhooksIgnored;
 
+	private final Counter repricingDropped;
+
 	public BusinessMetrics(MeterRegistry registry) {
 		this.registry = registry;
 		// Not "created": Prometheus reserves the _created suffix and would drop it from the name
@@ -34,6 +36,9 @@ public class BusinessMetrics {
 			.register(registry);
 		this.duplicateWebhooksIgnored = Counter.builder("roomkeeper.webhooks.duplicates.ignored")
 			.description("Payment webhook deliveries ignored because their event was already applied")
+			.register(registry);
+		this.repricingDropped = Counter.builder("roomkeeper.repricing.dropped")
+			.description("Cheapest-price recomputes dropped because the repricing queue was full")
 			.register(registry);
 	}
 
@@ -50,6 +55,15 @@ public class BusinessMetrics {
 	/** A webhook delivery found its event already applied, and changed nothing. */
 	public void duplicateWebhookIgnored() {
 		afterCommit(duplicateWebhooksIgnored);
+	}
+
+	/**
+	 * A hotel's cheapest prices weren't recomputed after a sale because the repricing queue was
+	 * full; they're stale until its nights change again. Counted straight away: it happens
+	 * after the sale committed.
+	 */
+	public void repricingDropped() {
+		repricingDropped.increment();
 	}
 
 	/**

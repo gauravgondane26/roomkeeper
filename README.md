@@ -81,6 +81,7 @@ After the load test, one run of the job released all 150,000-odd abandoned holds
 | --- | --- | --- |
 | Cached searches live 60 seconds under a per-city version; any inventory change that changes what search shows bumps it | Stale availability is the bug guests would notice; a bump is one `INCR`, not a scan for old keys | [`SearchCacheEvictionIT`](src/test/java/com/roomkeeper/search/SearchCacheEvictionIT.java) |
 | With Redis down, caches and rate limits fail open, idempotency keys fail closed (503), and refresh asks the user to log in again | Postgres decides what's true: losing Redis costs speed and some protection, never a booking or a second charge | [`CacheFailOpenTest`](src/test/java/com/roomkeeper/search/CacheFailOpenTest.java), [`AuthRateLimitFilterTest`](src/test/java/com/roomkeeper/common/ratelimit/AuthRateLimitFilterTest.java), [`IdempotencyFilterTest`](src/test/java/com/roomkeeper/common/idempotency/IdempotencyFilterTest.java), [`AuthServiceRedisDownTest`](src/test/java/com/roomkeeper/auth/AuthServiceRedisDownTest.java) |
+| After a booking, its hotel's cheapest prices are recomputed in the background, with at most one recompute waiting per hotel | A burst of bookings at one hotel queues one recompute, not one per booking; the load test found the per-booking queue dropping 51,501 | [`RepricingBurstIT`](src/test/java/com/roomkeeper/search/RepricingBurstIT.java), [`PendingRecomputesTest`](src/test/java/com/roomkeeper/search/PendingRecomputesTest.java) |
 | Jobs (hold expiry, outbox, inventory roll) run on whichever instance holds a Redis lease | Every instance can schedule them; one runs each time, and a crashed holder's lease runs out | [`JobLocksIT`](src/test/java/com/roomkeeper/common/JobLocksIT.java) |
 | Login, signup and refresh are rate limited per client IP | Password guessing and bulk signups get slow | [`LoginRateLimitIT`](src/test/java/com/roomkeeper/common/ratelimit/LoginRateLimitIT.java), [`AuthRateLimitIT`](src/test/java/com/roomkeeper/common/ratelimit/AuthRateLimitIT.java) |
 | Signup answers the same for a registered email, and emails its owner instead | Signup can't reveal who has an account | [`SignupIT`](src/test/java/com/roomkeeper/auth/SignupIT.java) |
@@ -174,6 +175,7 @@ Besides Spring's HTTP, JVM and connection pool metrics, the app counts what matt
 | `roomkeeper.bookings.initiated` | New holds; a retried request answered with an earlier booking isn't one |
 | `roomkeeper.holds.expired` | Holds that ran out unpaid, their rooms put back on sale |
 | `roomkeeper.webhooks.duplicates.ignored` | Stripe webhook deliveries ignored because their event was already applied |
+| `roomkeeper.repricing.dropped` | Cheapest-price recomputes dropped because the repricing queue was full; should stay at 0 |
 | `roomkeeper.rate.limit.rejections` (tag `route`) | Requests a rate limit answered with 429: `login`, `signup` or `refresh` |
 | `cache.gets` (tags `cache`, `result`) | Hotel info (`hotel`) and search (`search`) cache lookups, `hit` or `miss`; the hit ratio is hits over all gets |
 
@@ -193,7 +195,7 @@ The dashboard leads with the business numbers over the chosen time range, then c
 
 **Search** over 1,000 hotels and 1.1 million inventory rows takes about 1 ms: the city index finds the city's hotels, and the `(room_id, date)` unique index reaches just their nights. The hotel report over 366 nights takes about 13 ms. The plans are in [docs/query-plans.md](docs/query-plans.md), with a script to reproduce them.
 
-**Under load**, a k6 test (`docker compose --profile loadtest run --rm k6`) holds rooms on dates across the year, searches the same city, and races 50 guests for the last 5 rooms of a night, which exactly 5 must win. On one laptop running everything, it took up to about 1,800 requests a second with no failures and a booking p95 of 7 ms; the database pool (10 connections) was the first limit in sight. It also found something to improve: under load, repricing drops recomputes, logging a warning for each. Details: [docs/load-test.md](docs/load-test.md).
+**Under load**, a k6 test (`docker compose --profile loadtest run --rm k6`) holds rooms on dates across the year, searches the same city, and races 50 guests for the last 5 rooms of a night, which exactly 5 must win. On one laptop running everything, it took up to about 1,800 requests a second with no failures and a booking p95 of 7 ms; the database pool (10 connections) was the first limit in sight. It also found repricing dropping recomputes under load (51,501 in a minute), since fixed: at most one recompute now waits per hotel, and a rerun dropped none. Details: [docs/load-test.md](docs/load-test.md).
 
 ![The RoomKeeper dashboard during the load test: bookings rising to 1,500 a second, booking latency mostly under 20 ms at p95 after a warm-up spike, a 99.9% search cache hit ratio, and database connections briefly queuing during the 50-guest race](docs/images/grafana-load-test.jpg)
 
