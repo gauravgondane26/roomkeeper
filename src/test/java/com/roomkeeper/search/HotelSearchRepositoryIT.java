@@ -132,8 +132,10 @@ class HotelSearchRepositoryIT extends AbstractDataTest {
 		long hotel = activeHotel("UTC");
 		openNights(insertRoom(hotel), 5);
 
-		var upperCase = repository.search(new SearchCriteria(city.toUpperCase(), CHECK_IN, CHECK_OUT, 1), NOW, 20, 0);
-		var otherCity = repository.search(new SearchCriteria(city + "-elsewhere", CHECK_IN, CHECK_OUT, 1), NOW, 20, 0);
+		var upperCase = repository.search(new SearchCriteria(city.toUpperCase(), CHECK_IN, CHECK_OUT, 1), NOW, 20, 0)
+			.hotels();
+		var otherCity = repository.search(new SearchCriteria(city + "-elsewhere", CHECK_IN, CHECK_OUT, 1), NOW, 20, 0)
+			.hotels();
 
 		assertThat(upperCase).extracting(HotelMatch::id).containsExactly(hotel);
 		assertThat(otherCity).isEmpty();
@@ -149,7 +151,7 @@ class HotelSearchRepositoryIT extends AbstractDataTest {
 		openNightsFrom(insertRoom(utc), "2026-03-11", 5);
 		var stayFromThe11th = new SearchCriteria(city, LocalDate.parse("2026-03-11"), CHECK_OUT, 1);
 
-		assertThat(repository.search(stayFromThe11th, lateOnThe11th, 20, 0)).extracting(HotelMatch::id)
+		assertThat(repository.search(stayFromThe11th, lateOnThe11th, 20, 0).hotels()).extracting(HotelMatch::id)
 			.containsExactly(utc);
 	}
 
@@ -162,7 +164,7 @@ class HotelSearchRepositoryIT extends AbstractDataTest {
 		minPrice(hotel, "2026-03-13", "3500.00");
 		minPrice(hotel, "2026-03-14", "4600.00");
 
-		HotelMatch match = repository.search(criteria(1), NOW, 20, 0).getFirst();
+		HotelMatch match = repository.search(criteria(1), NOW, 20, 0).hotels().getFirst();
 
 		assertThat(match.name()).isEqualTo("Hotel " + hotel);
 		assertThat(match.city()).isEqualTo(city);
@@ -182,9 +184,15 @@ class HotelSearchRepositoryIT extends AbstractDataTest {
 		minPrice(cheap, "2026-03-12", "2000.00");
 		minPrice(middle, "2026-03-12", "5000.00");
 
-		assertThat(repository.search(criteria(1), NOW, 2, 0)).extracting(HotelMatch::id).containsExactly(cheap, middle);
-		assertThat(repository.search(criteria(1), NOW, 2, 2)).extracting(HotelMatch::id).containsExactly(pricey);
-		assertThat(repository.count(criteria(1), NOW)).isEqualTo(3);
+		var first = repository.search(criteria(1), NOW, 2, 0);
+		var second = repository.search(criteria(1), NOW, 2, 2);
+		var pastTheLast = repository.search(criteria(1), NOW, 2, 4);
+
+		assertThat(first.hotels()).extracting(HotelMatch::id).containsExactly(cheap, middle);
+		assertThat(second.hotels()).extracting(HotelMatch::id).containsExactly(pricey);
+		assertThat(pastTheLast.hotels()).isEmpty();
+		assertThat(List.of(first, second, pastTheLast)).extracting(HotelSearchRepository.Page::total)
+			.containsOnly(3L);
 	}
 
 	private SearchCriteria criteria(int rooms) {
@@ -192,7 +200,7 @@ class HotelSearchRepositoryIT extends AbstractDataTest {
 	}
 
 	private List<Long> searchIds(int rooms) {
-		return repository.search(criteria(rooms), NOW, 20, 0).stream().map(HotelMatch::id).toList();
+		return repository.search(criteria(rooms), NOW, 20, 0).hotels().stream().map(HotelMatch::id).toList();
 	}
 
 	private long activeHotel(String timeZone) {

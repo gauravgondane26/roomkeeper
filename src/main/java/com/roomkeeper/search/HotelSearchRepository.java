@@ -48,10 +48,23 @@ public class HotelSearchRepository {
 		this.jdbc = jdbc;
 	}
 
-	/** One page of matches, cheapest first (hotels without a price last), then by id. */
-	public List<HotelMatch> search(SearchCriteria criteria, Instant now, int limit, long offset) {
-		return jdbc.sql(AVAILABLE_HOTELS + """
-				select h.id, h.name, h.city, h.amenities, min(p.min_price) as from_price
+	/** One page of matches and how many hotels match in all. */
+	public record Page(List<HotelMatch> hotels, long total) {
+	}
+
+	private record Row(HotelMatch match, long total) {
+	}
+
+	/**
+	 * One page of matches, cheapest first (hotels without a price last), then by id. The
+	 * total comes with each row ({@code count(*) over ()} counts every match before the
+	 * limit), so a page takes one query. A page past the last has no row to carry it, so
+	 * only then is it counted separately.
+	 */
+	public Page search(SearchCriteria criteria, Instant now, int limit, long offset) {
+		List<Row> rows = jdbc.sql(AVAILABLE_HOTELS + """
+				select h.id, h.name, h.city, h.amenities, min(p.min_price) as from_price,
+				       count(*) over () as total
 				from hotels h
 				join available_hotels a on a.hotel_id = h.id
 				left join hotel_min_price p
@@ -62,11 +75,15 @@ public class HotelSearchRepository {
 			.params(params(criteria, now))
 			.param("limit", limit)
 			.param("offset", offset)
-			.query(HotelSearchRepository::toMatch)
+			.query((rs, row) -> new Row(toMatch(rs), rs.getLong("total")))
 			.list();
+		if (rows.isEmpty()) {
+			return new Page(List.of(), offset > 0 ? count(criteria, now) : 0);
+		}
+		return new Page(rows.stream().map(Row::match).toList(), rows.getFirst().total());
 	}
 
-	public long count(SearchCriteria criteria, Instant now) {
+	private long count(SearchCriteria criteria, Instant now) {
 		return jdbc.sql(AVAILABLE_HOTELS + "select count(*) from available_hotels")
 			.params(params(criteria, now))
 			.query(Long.class)
@@ -80,7 +97,7 @@ public class HotelSearchRepository {
 				"now", OffsetDateTime.ofInstant(now, ZoneOffset.UTC));
 	}
 
-	private static HotelMatch toMatch(ResultSet rs, int row) throws SQLException {
+	private static HotelMatch toMatch(ResultSet rs) throws SQLException {
 		Array amenities = rs.getArray("amenities");
 		return new HotelMatch(rs.getLong("id"), rs.getString("name"), rs.getString("city"),
 				List.of((String[]) amenities.getArray()), rs.getBigDecimal("from_price"));

@@ -78,6 +78,18 @@ class HotelBrowseIT extends AbstractIntegrationTest {
 	}
 
 	@Test
+	void aPagePastTheLastIsEmptyButStillCountsTheHotels() {
+		activeHotel("Budget", "3000");
+		activeHotel("Grand", "7000");
+
+		search(Map.of("size", 1, "page", 5))
+			.statusCode(200)
+			.body("hotels", empty())
+			.body("totalHotels", equalTo(2))
+			.body("totalPages", equalTo(2));
+	}
+
+	@Test
 	void aHotelClosedForOneNightOfTheStayDropsOut() {
 		long hotel = activeHotel("Seaside", "4000");
 		long roomId = firstRoomOf(manager, hotel);

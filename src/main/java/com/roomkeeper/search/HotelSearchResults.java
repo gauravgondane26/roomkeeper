@@ -1,8 +1,6 @@
 package com.roomkeeper.search;
 
 import java.time.Clock;
-import java.time.Instant;
-import java.util.List;
 
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
@@ -26,13 +24,10 @@ class HotelSearchResults {
 			condition = "#query.cacheVersion() != null")
 	@Transactional(readOnly = true)
 	public HotelSearchResponse find(SearchQuery query) {
-		Instant now = clock.instant();
 		long offset = (long) query.page() * query.size();
-		long total = repository.count(query.criteria(), now);
-		List<HotelMatch> hotels = total > offset
-				? repository.search(query.criteria(), now, query.size(), offset)
-				: List.of();
-		return new HotelSearchResponse(hotels, query.page(), query.size(), total,
+		HotelSearchRepository.Page found = repository.search(query.criteria(), clock.instant(), query.size(), offset);
+		long total = found.total();
+		return new HotelSearchResponse(found.hotels(), query.page(), query.size(), total,
 				(int) ((total + query.size() - 1) / query.size()));
 	}
 
