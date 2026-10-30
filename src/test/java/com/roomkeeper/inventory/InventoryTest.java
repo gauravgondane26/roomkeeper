@@ -23,6 +23,17 @@ class InventoryTest {
 	}
 
 	@Test
+	void aHandSetNightResetToTheRoomTypeFollowsItAgain() {
+		Inventory night = new Inventory(7L, LocalDate.parse("2026-03-10"), 5);
+		night.overrideTotalCount(2);
+
+		night.resetToRoomTotal(5);
+
+		assertThat(night.getTotalCount()).isEqualTo(5);
+		assertThat(night.isTotalOverridden()).isFalse();
+	}
+
+	@Test
 	void confirmsOnlyRoomsThatAreHeld() {
 		Inventory night = new Inventory(7L, LocalDate.parse("2026-03-10"), 5);
 		night.hold(1);

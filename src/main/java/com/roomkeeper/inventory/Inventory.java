@@ -186,6 +186,12 @@ public class Inventory {
 		this.totalOverridden = true;
 	}
 
+	/** A manager undid a hand-set total: the night takes the room type's total and follows it again. */
+	public void resetToRoomTotal(int roomTotal) {
+		this.totalCount = roomTotal;
+		this.totalOverridden = false;
+	}
+
 	/** The room type's total changed and this night follows it. */
 	public void followRoomTotal(int totalCount) {
 		this.totalCount = totalCount;

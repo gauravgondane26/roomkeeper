@@ -55,7 +55,11 @@ public class InventoryAdminService {
 	public List<InventoryResponse> update(long ownerId, long roomId, InventoryUpdateRequest request) {
 		Room room = rooms.findOwnedRoom(ownerId, roomId);
 		if (request.changesNothing()) {
-			throw new ApiException(ProblemType.VALIDATION, "Set at least one of closed, surgeFactor, or totalCount");
+			throw new ApiException(ProblemType.VALIDATION,
+					"Set at least one of closed, surgeFactor, totalCount, or followRoomType");
+		}
+		if (request.totalCount() != null && request.followsRoomType()) {
+			throw new InvalidFieldException("followRoomType", "can't be set together with totalCount");
 		}
 		NightRange range = NightRange.of(request.from(), request.to());
 		if (range.from().isBefore(room.getHotel().today(clock))) {
@@ -72,6 +76,9 @@ public class InventoryAdminService {
 		if (request.totalCount() != null) {
 			InventoryService.requireNotBelowSold(nights, request.totalCount());
 		}
+		if (request.followsRoomType()) {
+			InventoryService.requireNotBelowSold(nights, room.getTotalCount());
+		}
 		for (Inventory night : nights) {
 			if (request.closed() != null) {
 				night.markClosed(request.closed());
@@ -81,6 +88,9 @@ public class InventoryAdminService {
 			}
 			if (request.totalCount() != null) {
 				night.overrideTotalCount(request.totalCount());
+			}
+			if (request.followsRoomType()) {
+				night.resetToRoomTotal(room.getTotalCount());
 			}
 		}
 		Hotel hotel = room.getHotel();

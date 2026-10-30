@@ -23,7 +23,8 @@ import static org.hamcrest.Matchers.equalTo;
 
 /**
  * Changing a room type's total in room admin flows into its inventory: every future night
- * follows the new total, except nights whose total the manager set by hand.
+ * follows the new total, except nights whose total the manager set by hand, until the
+ * manager resets them to follow it again.
  */
 @Import(MutableClockConfig.class)
 class RoomTotalChangeIT extends AbstractIntegrationTest {
@@ -70,6 +71,38 @@ class RoomTotalChangeIT extends AbstractIntegrationTest {
 	}
 
 	@Test
+	void aHandSetNightCanBeResetToFollowTheRoomTypeAgain() {
+		patchNights(Map.of("from", "2026-03-15", "to", "2026-03-15", "totalCount", 2)).statusCode(200);
+
+		patchNights(Map.of("from", "2026-03-14", "to", "2026-03-16", "followRoomType", true))
+			.statusCode(200)
+			.body("totalCount", contains(5, 5, 5))
+			.body("totalOverridden", contains(false, false, false));
+
+		changeRoomTotal(8).statusCode(200);
+		nightsOf(manager, roomId, "2026-03-14", "2026-03-16").body("totalCount", contains(8, 8, 8));
+	}
+
+	@Test
+	void resettingANightBelowWhatItHasSoldIsRejected() {
+		patchNights(Map.of("from", "2026-03-15", "to", "2026-03-15", "totalCount", 9)).statusCode(200);
+		sellRooms(roomId, "2026-03-15", 6, 1);
+
+		patchNights(Map.of("from", "2026-03-15", "to", "2026-03-15", "followRoomType", true))
+			.statusCode(409)
+			.body("type", equalTo("urn:roomkeeper:problem:total-below-sold"))
+			.body("nights", contains("2026-03-15"));
+		nightsOf(manager, roomId, "2026-03-15", "2026-03-15").body("totalCount", contains(9));
+	}
+
+	@Test
+	void settingATotalAndFollowingTheRoomTypeAtOnceIsRejected() {
+		patchNights(Map.of("from", "2026-03-15", "to", "2026-03-15", "totalCount", 2, "followRoomType", true))
+			.statusCode(400)
+			.body("type", equalTo("urn:roomkeeper:problem:validation"));
+	}
+
+	@Test
 	void pastNightsKeepTheirTotal() {
 		clock.advance(Duration.ofDays(2));
 		manager = logIn(managerUser);
@@ -106,6 +139,12 @@ class RoomTotalChangeIT extends AbstractIntegrationTest {
 			.then().statusCode(200);
 
 		nightsOf(manager, roomId, "2026-03-14", "2026-03-16").body("totalCount", contains(5, 2, 5));
+	}
+
+	private ValidatableResponse patchNights(Map<String, Object> change) {
+		return api(manager).contentType(ContentType.JSON).body(change)
+			.when().patch("/api/v1/admin/inventory/rooms/{roomId}", roomId)
+			.then();
 	}
 
 	private ValidatableResponse changeRoomTotal(int totalCount) {
