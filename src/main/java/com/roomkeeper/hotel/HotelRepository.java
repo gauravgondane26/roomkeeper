@@ -2,6 +2,8 @@ package com.roomkeeper.hotel;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface HotelRepository extends JpaRepository<Hotel, Long> {
@@ -11,7 +13,7 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
 	/** Hotels on sale. */
 	List<Hotel> findByActiveTrueOrderById();
 
-	/** The review queue for a status, oldest first. */
-	List<Hotel> findByApprovalStatusOrderByCreatedAtAscIdAsc(ApprovalStatus status);
+	/** One page of the hotels in a review status, in the page's order. */
+	Page<Hotel> findByApprovalStatus(ApprovalStatus status, Pageable pageable);
 
 }

@@ -137,6 +137,15 @@ public class Hotel {
 		return rejectionReason;
 	}
 
+	/** The admin who last approved or rejected the hotel; null if none has. */
+	public Long getReviewedBy() {
+		return reviewedBy;
+	}
+
+	public Instant getReviewedAt() {
+		return reviewedAt;
+	}
+
 	public void approve(long adminId, Instant at) {
 		review(ApprovalStatus.APPROVED, null, adminId, at);
 	}

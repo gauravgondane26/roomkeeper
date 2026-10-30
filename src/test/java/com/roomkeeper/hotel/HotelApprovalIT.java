@@ -13,8 +13,8 @@ import static com.roomkeeper.testsupport.RoomBuilder.aRoom;
 import static com.roomkeeper.testsupport.UserBuilder.aUser;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
 /**
@@ -54,7 +54,10 @@ class HotelApprovalIT extends AbstractIntegrationTest {
 	void onceAnAdminApprovesItTheManagerCanActivateIt() {
 		moderate("approve", Map.of())
 			.statusCode(200)
-			.body("approvalStatus", equalTo("APPROVED"));
+			.body("approvalStatus", equalTo("APPROVED"))
+			.body("reviewedBy.id", equalTo((int) signedInUserId(adminToken())))
+			.body("reviewedBy.email", equalTo(signedInEmail(adminToken())))
+			.body("reviewedAt", notNullValue());
 
 		activate()
 			.statusCode(200)
@@ -65,7 +68,9 @@ class HotelApprovalIT extends AbstractIntegrationTest {
 	void anAdminRejectsAHotelWithAReason() {
 		moderate("reject", Map.of("reason", "Photos don't match the address"))
 			.statusCode(200)
-			.body("approvalStatus", equalTo("REJECTED"));
+			.body("approvalStatus", equalTo("REJECTED"))
+			.body("reviewedBy.email", equalTo(signedInEmail(adminToken())))
+			.body("reviewedAt", notNullValue());
 
 		api(manager).when().get("/api/v1/admin/hotels/{id}", hotelId)
 			.then()
@@ -98,21 +103,46 @@ class HotelApprovalIT extends AbstractIntegrationTest {
 	}
 
 	@Test
-	void adminsSeeTheReviewQueue() {
-		long approved = createHotel(manager, aHotel().named("Hillside").build());
+	void adminsSeeTheReviewQueueAPageAtATimeOldestFirst() {
+		long second = createHotel(manager, aHotel().named("Hillside").build());
+		long third = createHotel(manager, aHotel().named("Lakeside").build());
+		long approved = createHotel(manager, aHotel().named("Approved").build());
 		approveHotel(approved);
+		// Other tests' hotels wait too; these three are the newest, so the last in the queue
+		long waiting = queue("PENDING", 0, 1).extract().jsonPath().getLong("totalHotels");
 
+		// One hotel a page, so page n is the queue's hotel n
+		queue("PENDING", (int) waiting - 3, 1)
+			.body("hotels.id", contains((int) hotelId))
+			.body("hotels[0].ownerId", equalTo((int) signedInUserId(manager)))
+			.body("hotels[0].name", equalTo("Seaside Inn"))
+			.body("hotels[0].reviewedBy", nullValue())
+			.body("page", equalTo((int) waiting - 3))
+			.body("size", equalTo(1))
+			.body("totalHotels", equalTo((int) waiting))
+			.body("totalPages", equalTo((int) waiting));
+		queue("PENDING", (int) waiting - 2, 1).body("hotels.id", contains((int) second));
+		queue("PENDING", (int) waiting - 1, 1).body("hotels.id", contains((int) third));
+		queue("PENDING", (int) waiting, 1).body("hotels", empty());
+		// The default page is the head of the queue, 20 hotels
 		api(adminToken()).when().get("/api/v1/moderation/hotels")
-			.then()
-				.statusCode(200)
-				.body("id", hasItem((int) hotelId))
-				.body("id", not(hasItem((int) approved)))
-				.body("find { it.id == %d }.ownerId".formatted(hotelId), equalTo((int) signedInUserId(manager)))
-				.body("find { it.id == %d }.name".formatted(hotelId), equalTo("Seaside Inn"));
+			.then().statusCode(200).body("page", equalTo(0)).body("size", equalTo(20));
+	}
 
-		api(adminToken()).queryParam("status", "APPROVED").when().get("/api/v1/moderation/hotels")
-			.then()
-				.body("id", hasItem((int) approved));
+	@Test
+	void reviewedHotelsShowWhoReviewedThem() {
+		moderate("approve", Map.of()).statusCode(200);
+		long last = queue("APPROVED", 0, 1).extract().jsonPath().getLong("totalHotels") - 1;
+
+		queue("APPROVED", (int) last, 1)
+			.body("hotels[0].id", equalTo((int) hotelId))
+			.body("hotels[0].reviewedBy.email", equalTo(signedInEmail(adminToken())))
+			.body("hotels[0].reviewedAt", notNullValue());
+	}
+
+	@Test
+	void theQueueHasAPageSizeLimit() {
+		queueRequest("PENDING", 0, 51).statusCode(400).body("errors.field", contains("size"));
 	}
 
 	@Test
@@ -178,6 +208,20 @@ class HotelApprovalIT extends AbstractIntegrationTest {
 			request.contentType(ContentType.JSON).body(body);
 		}
 		return request.when().patch("/api/v1/moderation/hotels/{id}/" + action, hotelId).then();
+	}
+
+	private ValidatableResponse queue(String status, int page, int size) {
+		return queueRequest(status, page, size).statusCode(200);
+	}
+
+	private ValidatableResponse queueRequest(String status, int page, int size) {
+		return api(adminToken()).queryParam("status", status).queryParam("page", page).queryParam("size", size)
+			.when().get("/api/v1/moderation/hotels")
+			.then();
+	}
+
+	private String signedInEmail(String token) {
+		return api(token).when().get("/api/v1/users/profile").then().extract().jsonPath().getString("email");
 	}
 
 	private long signedInUserId(String token) {

@@ -1,16 +1,14 @@
 package com.roomkeeper.hotel;
 
-import java.util.List;
-
 import com.roomkeeper.common.security.CurrentUserId;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -24,10 +22,10 @@ public class HotelModerationController {
 		this.moderationService = moderationService;
 	}
 
-	/** Hotels in a review status, oldest first; the pending queue by default. */
+	/** Hotels in a review status, oldest first, a page at a time; the pending queue by default. */
 	@GetMapping
-	public List<HotelReviewResponse> list(@RequestParam(defaultValue = "PENDING") ApprovalStatus status) {
-		return moderationService.list(status);
+	public HotelReviewPageResponse list(@Valid @ParameterObject HotelReviewPageRequest request) {
+		return moderationService.list(request);
 	}
 
 	@PatchMapping("/{hotelId}/approve")
