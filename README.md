@@ -223,6 +223,8 @@ The dashboard leads with the business numbers over the chosen time range, then c
 scripts/repeat-race-tests.sh 5                                          # every @RaceTest, five rounds
 ```
 
+`OpenApiSnapshotIT` compares the OpenAPI spec with `src/test/resources/openapi.json`, so any change to the API's shape fails the build until it's accepted on purpose: rerun with `-Dopenapi.snapshot.update=true` (for example `./mvnw verify -DskipUnitTests -Djacoco.skip=true -Dit.test=OpenApiSnapshotIT -Dopenapi.snapshot.update=true`) and commit the snapshot's diff with the change, where a reviewer can see what clients will notice.
+
 Tests that race threads against each other are marked `@RaceTest` (JUnit tag `race`). One lucky run can hide a race, so the Nightly races workflow repeats them 15 rounds a night (or as many as you choose when starting it by hand), runs every round even after a failure so the count shows how rare it is, and keeps the reports of each failed round.
 
 CI runs on every push to `main` and every pull request. It first checks that no migration already on `main` was changed (`scripts/check-migrations.sh`), then runs the same steps as above, then builds the Docker image, smoke tests it, and scans it with Grype (`scripts/scan-image.sh`: a high or critical vulnerability with a fix available fails the build; `.grype.yaml` lists accepted ones with their reason). Each green commit on `main` is then published to GHCR as `ghcr.io/gauravgondane26/roomkeeper:<commit SHA>`, with an SBOM and SLSA build provenance attached as attestations (`docker buildx imagetools inspect <image> --format '{{ json .SBOM }}'` shows the SBOM). Dependabot opens weekly update pull requests for Maven, GitHub Actions, and the Docker images.

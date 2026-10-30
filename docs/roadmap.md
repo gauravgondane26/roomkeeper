@@ -197,7 +197,7 @@ Goal: the system is observable, load tested, and explained.
 - [ ] Test: the whole app with Redis down, and with Postgres connections lost or the pool exhausted
 - [ ] Test: DST change days, UTC+14 and UTC-11 hotels, a leap day in the inventory window, holidays across the year boundary
 - [ ] Test: Flyway upgrading a populated older database
-- [ ] OpenAPI snapshot test, so a breaking API change fails CI
+- [x] OpenAPI snapshot test, so a breaking API change fails CI. `OpenApiSnapshotIT` compares `/v3/api-docs` (keys sorted, the random-port server URL left out) with `src/test/resources/openapi.json`. Any change fails, not only breaking ones: telling them apart needs a diff tool, and a reviewed snapshot diff shows both. `-Dopenapi.snapshot.update=true` rewrites it
 - [ ] Paginate the moderation queue, and record who approved or rejected each hotel in an admin view
 
 **Done when:** the README explains every design decision with links to its tests.

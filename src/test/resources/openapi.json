@@ -1,0 +1,2058 @@
+{
+  "components" : {
+    "schemas" : {
+      "BookingGuestsRequest" : {
+        "properties" : {
+          "guestIds" : {
+            "items" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "maxItems" : 40,
+            "minItems" : 0,
+            "type" : "array"
+          }
+        },
+        "required" : [ "guestIds" ],
+        "type" : "object"
+      },
+      "BookingInitRequest" : {
+        "properties" : {
+          "checkIn" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "checkOut" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "roomId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "rooms" : {
+            "format" : "int32",
+            "maximum" : 10,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "checkIn", "checkOut", "roomId", "rooms" ],
+        "type" : "object"
+      },
+      "BookingPageResponse" : {
+        "properties" : {
+          "bookings" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BookingResponse"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalBookings" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "BookingResponse" : {
+        "properties" : {
+          "amount" : {
+            "type" : "number"
+          },
+          "checkIn" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "checkOut" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "guests" : {
+            "items" : {
+              "$ref" : "#/components/schemas/GuestResponse"
+            },
+            "type" : "array"
+          },
+          "holdExpiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "hotelId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "hotelName" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "roomId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "roomType" : {
+            "type" : "string"
+          },
+          "rooms" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "status" : {
+            "enum" : [ "RESERVED", "GUESTS_ADDED", "PAYMENT_PENDING", "CONFIRMED", "EXPIRED", "CANCELLED" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "BookingStatusResponse" : {
+        "properties" : {
+          "holdExpiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "status" : {
+            "enum" : [ "RESERVED", "GUESTS_ADDED", "PAYMENT_PENDING", "CONFIRMED", "EXPIRED", "CANCELLED" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CancellationResponse" : {
+        "properties" : {
+          "bookingId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "refund" : {
+            "type" : "number"
+          },
+          "refundStatus" : {
+            "enum" : [ "PENDING", "REFUNDED" ],
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "RESERVED", "GUESTS_ADDED", "PAYMENT_PENDING", "CONFIRMED", "EXPIRED", "CANCELLED" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "GuestRequest" : {
+        "properties" : {
+          "age" : {
+            "format" : "int32",
+            "maximum" : 150,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "gender" : {
+            "enum" : [ "FEMALE", "MALE", "OTHER" ],
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "age", "gender", "name" ],
+        "type" : "object"
+      },
+      "GuestResponse" : {
+        "properties" : {
+          "age" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "gender" : {
+            "enum" : [ "FEMALE", "MALE", "OTHER" ],
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "HotelInfoResponse" : {
+        "properties" : {
+          "amenities" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "city" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "rooms" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RoomInfo"
+            },
+            "type" : "array"
+          },
+          "timeZone" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "HotelMatch" : {
+        "properties" : {
+          "amenities" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "city" : {
+            "type" : "string"
+          },
+          "fromPricePerNight" : {
+            "type" : "number"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "HotelReport" : {
+        "properties" : {
+          "averageDailyRate" : {
+            "type" : "number"
+          },
+          "from" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "nights" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Night"
+            },
+            "type" : "array"
+          },
+          "occupancy" : {
+            "type" : "number"
+          },
+          "revenue" : {
+            "type" : "number"
+          },
+          "roomNightsAvailable" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "roomNightsSold" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "to" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "HotelRequest" : {
+        "properties" : {
+          "amenities" : {
+            "items" : {
+              "maxLength" : 50,
+              "minLength" : 0,
+              "type" : "string"
+            },
+            "maxItems" : 30,
+            "minItems" : 0,
+            "type" : "array"
+          },
+          "city" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "timeZone" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "city", "name", "timeZone" ],
+        "type" : "object"
+      },
+      "HotelResponse" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "amenities" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "approvalStatus" : {
+            "enum" : [ "PENDING", "APPROVED", "REJECTED" ],
+            "type" : "string"
+          },
+          "city" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "rejectionReason" : {
+            "type" : "string"
+          },
+          "timeZone" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "HotelReviewResponse" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "amenities" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "approvalStatus" : {
+            "enum" : [ "PENDING", "APPROVED", "REJECTED" ],
+            "type" : "string"
+          },
+          "city" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "ownerId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "rejectionReason" : {
+            "type" : "string"
+          },
+          "timeZone" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "HotelSearchResponse" : {
+        "properties" : {
+          "hotels" : {
+            "items" : {
+              "$ref" : "#/components/schemas/HotelMatch"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalHotels" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPages" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "InventoryResponse" : {
+        "properties" : {
+          "available" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "bookedCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "closed" : {
+            "type" : "boolean"
+          },
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "reservedCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "surgeFactor" : {
+            "type" : "number"
+          },
+          "totalCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalOverridden" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "InventoryUpdateRequest" : {
+        "properties" : {
+          "closed" : {
+            "type" : "boolean"
+          },
+          "followRoomType" : {
+            "type" : "boolean"
+          },
+          "from" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "surgeFactor" : {
+            "maximum" : 10.0,
+            "minimum" : 0.01,
+            "type" : "number"
+          },
+          "to" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "totalCount" : {
+            "format" : "int32",
+            "maximum" : 10000,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "from", "to" ],
+        "type" : "object"
+      },
+      "LoginRequest" : {
+        "properties" : {
+          "email" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "password" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "email", "password" ],
+        "type" : "object"
+      },
+      "Night" : {
+        "properties" : {
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "revenue" : {
+            "type" : "number"
+          },
+          "roomsAvailable" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "roomsBooked" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PaymentResponse" : {
+        "properties" : {
+          "amount" : {
+            "type" : "number"
+          },
+          "bookingId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "checkoutUrl" : {
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "status" : {
+            "enum" : [ "PENDING", "SUCCEEDED", "EXPIRED", "FAILED", "REFUND_PENDING", "REFUNDED" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "RefreshRequest" : {
+        "properties" : {
+          "refreshToken" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "refreshToken" ],
+        "type" : "object"
+      },
+      "RejectHotelRequest" : {
+        "properties" : {
+          "reason" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "reason" ],
+        "type" : "object"
+      },
+      "RoomInfo" : {
+        "properties" : {
+          "basePrice" : {
+            "type" : "number"
+          },
+          "capacity" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "type" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "RoomRequest" : {
+        "properties" : {
+          "basePrice" : {
+            "minimum" : 0.01,
+            "type" : "number"
+          },
+          "capacity" : {
+            "format" : "int32",
+            "maximum" : 20,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "totalCount" : {
+            "format" : "int32",
+            "maximum" : 10000,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "type" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "basePrice", "capacity", "totalCount", "type" ],
+        "type" : "object"
+      },
+      "RoomResponse" : {
+        "properties" : {
+          "basePrice" : {
+            "type" : "number"
+          },
+          "capacity" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "hotelId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "type" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SignupRequest" : {
+        "properties" : {
+          "email" : {
+            "format" : "email",
+            "maxLength" : 320,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "password" : {
+            "maxLength" : 2147483647,
+            "minLength" : 8,
+            "type" : "string"
+          },
+          "role" : {
+            "enum" : [ "GUEST", "HOTEL_MANAGER" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "email", "name", "password" ],
+        "type" : "object"
+      },
+      "SignupResponse" : {
+        "properties" : {
+          "message" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "TokenResponse" : {
+        "properties" : {
+          "accessToken" : {
+            "type" : "string"
+          },
+          "expiresIn" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "refreshExpiresIn" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "refreshToken" : {
+            "type" : "string"
+          },
+          "tokenType" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "UpdateProfileRequest" : {
+        "properties" : {
+          "name" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "pattern" : "(?s).*\\S.*",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "UserResponse" : {
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "role" : {
+            "enum" : [ "GUEST", "HOTEL_MANAGER", "ADMIN" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      }
+    },
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "bearerFormat" : "JWT",
+        "description" : "Access token from POST /api/v1/auth/login",
+        "scheme" : "bearer",
+        "type" : "http"
+      }
+    }
+  },
+  "info" : {
+    "description" : "Hotel booking backend. Errors are RFC 9457 problem details; match on `type`.",
+    "title" : "RoomKeeper API",
+    "version" : "v1"
+  },
+  "openapi" : "3.1.0",
+  "paths" : {
+    "/api/v1/admin/hotels" : {
+      "get" : {
+        "operationId" : "list_1",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/HotelResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Hotel admin" ]
+      },
+      "post" : {
+        "operationId" : "create_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/HotelRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HotelResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Hotel admin" ]
+      }
+    },
+    "/api/v1/admin/hotels/{hotelId}" : {
+      "delete" : {
+        "operationId" : "delete",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "hotelId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "Hotel admin" ]
+      },
+      "get" : {
+        "operationId" : "get_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "hotelId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HotelResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Hotel admin" ]
+      },
+      "put" : {
+        "operationId" : "update_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "hotelId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/HotelRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HotelResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Hotel admin" ]
+      }
+    },
+    "/api/v1/admin/hotels/{hotelId}/activate" : {
+      "patch" : {
+        "operationId" : "activate",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "hotelId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HotelResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Hotel admin" ]
+      }
+    },
+    "/api/v1/admin/hotels/{hotelId}/bookings" : {
+      "get" : {
+        "description" : "Every booking at the hotel, newest first, a page at a time. Only its manager sees them.",
+        "operationId" : "list_6",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "hotelId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "format" : "int32",
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "format" : "int32",
+            "maximum" : 50,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BookingPageResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "List a hotel's bookings",
+        "tags" : [ "Hotel admin" ]
+      }
+    },
+    "/api/v1/admin/hotels/{hotelId}/deactivate" : {
+      "patch" : {
+        "operationId" : "deactivate",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "hotelId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HotelResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Hotel admin" ]
+      }
+    },
+    "/api/v1/admin/hotels/{hotelId}/reports" : {
+      "get" : {
+        "description" : "Each night from `from` to `to` (both included, at most 366): rooms booked by paid stays, rooms on sale, and revenue, with totals, occupancy, and the average daily rate. Revenue is counted by night stayed: each paid booking's amount, less any refund, spread over its nights.",
+        "operationId" : "report",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "hotelId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "from",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HotelReport"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Revenue and occupancy over a range of nights",
+        "tags" : [ "Hotel admin" ]
+      }
+    },
+    "/api/v1/admin/hotels/{hotelId}/rooms" : {
+      "get" : {
+        "operationId" : "list_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "hotelId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/RoomResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Room admin" ]
+      },
+      "post" : {
+        "operationId" : "create_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "hotelId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RoomRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RoomResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Room admin" ]
+      }
+    },
+    "/api/v1/admin/hotels/{hotelId}/rooms/{roomId}" : {
+      "delete" : {
+        "operationId" : "delete_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "hotelId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "roomId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "Room admin" ]
+      },
+      "get" : {
+        "operationId" : "get_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "hotelId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "roomId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RoomResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Room admin" ]
+      },
+      "put" : {
+        "operationId" : "update_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "hotelId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "path",
+          "name" : "roomId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RoomRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RoomResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Room admin" ]
+      }
+    },
+    "/api/v1/admin/inventory/rooms/{roomId}" : {
+      "get" : {
+        "operationId" : "list_3",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "roomId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "from",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : false,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/InventoryResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Inventory admin" ]
+      },
+      "patch" : {
+        "operationId" : "update_4",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "roomId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InventoryUpdateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/InventoryResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Inventory admin" ]
+      }
+    },
+    "/api/v1/auth/login" : {
+      "post" : {
+        "operationId" : "login",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "security" : [ ],
+        "tags" : [ "Auth" ]
+      }
+    },
+    "/api/v1/auth/logout" : {
+      "post" : {
+        "operationId" : "logout",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "security" : [ ],
+        "tags" : [ "Auth" ]
+      }
+    },
+    "/api/v1/auth/refresh" : {
+      "post" : {
+        "operationId" : "refresh",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "security" : [ ],
+        "tags" : [ "Auth" ]
+      }
+    },
+    "/api/v1/auth/signup" : {
+      "post" : {
+        "description" : "Always 202 with the same message, whether or not the email is already registered, so signup can't reveal who has an account. A new account can log in at once and gets a welcome email; a registered address's owner is emailed that someone tried to sign up with it.",
+        "operationId" : "signup",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SignupRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "202" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SignupResponse"
+                }
+              }
+            },
+            "description" : "Accepted"
+          }
+        },
+        "security" : [ ],
+        "summary" : "Sign up",
+        "tags" : [ "Auth" ]
+      }
+    },
+    "/api/v1/bookings/init" : {
+      "post" : {
+        "operationId" : "init",
+        "parameters" : [ {
+          "description" : "New for each request, and the same when retrying it: a retry gets the first response back instead of running again. Kept for 24 hours.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : true,
+          "schema" : {
+            "example" : "6f1c2a9e-3b7d-4e2a-9c51-0d8e7b4a2f10",
+            "maxLength" : 255,
+            "minLength" : 1,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BookingInitRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BookingResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Bookings" ]
+      }
+    },
+    "/api/v1/bookings/{bookingId}" : {
+      "get" : {
+        "operationId" : "get_4",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "bookingId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BookingResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Bookings" ]
+      }
+    },
+    "/api/v1/bookings/{bookingId}/cancel" : {
+      "post" : {
+        "description" : "Puts the rooms back on sale and refunds what the cancellation policy allows: everything with 48 hours' notice before check-in (2 PM hotel time), half with less. The refund follows within seconds (refundStatus PENDING, then REFUNDED). Once the stay has begun it's 409 cancellation-closed. Cancelling again returns the same cancellation.",
+        "operationId" : "cancel",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "bookingId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CancellationResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Cancel a paid booking",
+        "tags" : [ "Bookings" ]
+      }
+    },
+    "/api/v1/bookings/{bookingId}/guests" : {
+      "post" : {
+        "operationId" : "putGuests",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "bookingId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BookingGuestsRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BookingResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Bookings" ]
+      }
+    },
+    "/api/v1/bookings/{bookingId}/payments" : {
+      "post" : {
+        "description" : "Opens a checkout session for the booking's frozen amount (201), or returns the one already open (200). Pay at checkoutUrl; the booking is confirmed when Stripe reports the payment.",
+        "operationId" : "start",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "bookingId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "description" : "New for each request, and the same when retrying it: a retry gets the first response back instead of running again. Kept for 24 hours.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : true,
+          "schema" : {
+            "example" : "6f1c2a9e-3b7d-4e2a-9c51-0d8e7b4a2f10",
+            "maxLength" : 255,
+            "minLength" : 1,
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PaymentResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Start paying for a booking",
+        "tags" : [ "Payments" ]
+      }
+    },
+    "/api/v1/bookings/{bookingId}/status" : {
+      "get" : {
+        "operationId" : "status",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "bookingId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BookingStatusResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Bookings" ]
+      }
+    },
+    "/api/v1/hotels/search" : {
+      "get" : {
+        "operationId" : "search",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "city",
+          "required" : true,
+          "schema" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "checkIn",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "checkOut",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "rooms",
+          "required" : false,
+          "schema" : {
+            "format" : "int32",
+            "maximum" : 10,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "format" : "int32",
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "format" : "int32",
+            "maximum" : 50,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HotelSearchResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "security" : [ ],
+        "tags" : [ "Browse" ]
+      }
+    },
+    "/api/v1/hotels/{hotelId}/info" : {
+      "get" : {
+        "operationId" : "info",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "hotelId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HotelInfoResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "security" : [ ],
+        "tags" : [ "Browse" ]
+      }
+    },
+    "/api/v1/moderation/hotels" : {
+      "get" : {
+        "operationId" : "list_5",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "default" : "PENDING",
+            "enum" : [ "PENDING", "APPROVED", "REJECTED" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/HotelReviewResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Moderation" ]
+      }
+    },
+    "/api/v1/moderation/hotels/{hotelId}/approve" : {
+      "patch" : {
+        "operationId" : "approve",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "hotelId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HotelReviewResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Moderation" ]
+      }
+    },
+    "/api/v1/moderation/hotels/{hotelId}/reject" : {
+      "patch" : {
+        "operationId" : "reject",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "hotelId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RejectHotelRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HotelReviewResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Moderation" ]
+      }
+    },
+    "/api/v1/users/bookings" : {
+      "get" : {
+        "operationId" : "list_4",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "format" : "int32",
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "format" : "int32",
+            "maximum" : 50,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BookingPageResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Bookings" ]
+      }
+    },
+    "/api/v1/users/guests" : {
+      "get" : {
+        "operationId" : "list",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/GuestResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Saved guests" ]
+      },
+      "post" : {
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GuestRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/GuestResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Saved guests" ]
+      }
+    },
+    "/api/v1/users/guests/{guestId}" : {
+      "delete" : {
+        "operationId" : "remove",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "guestId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "Saved guests" ]
+      },
+      "get" : {
+        "operationId" : "get",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "guestId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/GuestResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Saved guests" ]
+      },
+      "put" : {
+        "operationId" : "update",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "guestId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GuestRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/GuestResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Saved guests" ]
+      }
+    },
+    "/api/v1/users/profile" : {
+      "get" : {
+        "operationId" : "get_3",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Profile" ]
+      },
+      "patch" : {
+        "operationId" : "update_3",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateProfileRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Profile" ]
+      }
+    },
+    "/webhook/payment" : {
+      "post" : {
+        "description" : "Called by Stripe, not clients. 200 once applied (or already applied before); 400 if the Stripe-Signature doesn't verify.",
+        "operationId" : "receive",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "Stripe-Signature",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "format" : "byte",
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "security" : [ ],
+        "summary" : "Receive a Stripe event",
+        "tags" : [ "Webhooks" ]
+      }
+    }
+  },
+  "security" : [ {
+    "bearerAuth" : [ ]
+  } ],
+  "tags" : [ {
+    "description" : "Travellers the signed-in user keeps on file to put on bookings",
+    "name" : "Saved guests"
+  }, {
+    "description" : "Hotel managers set up the hotels they own",
+    "name" : "Hotel admin"
+  }, {
+    "description" : "Per-night availability, closures, and surge pricing for a room type",
+    "name" : "Inventory admin"
+  }, {
+    "description" : "Search hotels and see their details; no login needed",
+    "name" : "Browse"
+  }, {
+    "description" : "Stripe reports payments here",
+    "name" : "Webhooks"
+  }, {
+    "description" : "Guests hold rooms for a stay, then add guests and pay before the hold runs out",
+    "name" : "Bookings"
+  }, {
+    "description" : "The signed-in user's own profile",
+    "name" : "Profile"
+  }, {
+    "description" : "Admins review hotels before they go on sale",
+    "name" : "Moderation"
+  }, {
+    "description" : "Guests pay for a held booking on Stripe's checkout page",
+    "name" : "Payments"
+  }, {
+    "description" : "Room types in a hotel the manager owns",
+    "name" : "Room admin"
+  }, {
+    "description" : "Sign up, log in, refresh, and log out",
+    "name" : "Auth"
+  } ]
+}
