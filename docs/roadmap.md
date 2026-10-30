@@ -186,7 +186,7 @@ Goal: the system is observable, load tested, and explained.
 - [ ] Branch protection on `main`: the CI check must pass before a merge
 - [ ] Scan the Docker image (Trivy or Grype); on green `main`, publish it to GHCR tagged with the commit SHA, with an SBOM and provenance
 - [ ] Nightly workflow that repeats the concurrency tests 10 to 20 times to catch rare races and flaky tests
-- [ ] Reprice `hotel_min_price` when the pricing settings change
+- [x] Reprice `hotel_min_price` when the pricing settings change. The settings are configuration, so they change with a deploy: `pricing_settings` (V14) records a canonical fingerprint of them plus `PricingProperties.RULES_VERSION` (bump it when a rule's code changes prices), and at startup `PricingSettingsRepricer` re-prices every hotel on sale in the background if it differs, through the same event as a manager's change (recompute, then search eviction). The new fingerprint is recorded only when every hotel is done, so a cut-short run repeats at the next start; two instances doing it at once is wasted work, not wrong prices
 - [ ] Search in one query (`count(*) over ()`) instead of a count and a page query
 - [ ] Inventory admin can reset a night's total to follow the room type again
 - [ ] Cache key prefix carries a version, so a deploy that changes a cached response starts fresh

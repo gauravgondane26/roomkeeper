@@ -128,7 +128,7 @@ Per client IP, login allows 10 attempts a minute, signup 20 an hour, and refresh
 - `GET /api/v1/hotels/search?city=Goa&checkIn=2026-12-24&checkOut=2026-12-27` lists hotels with a room type free for every night of the stay, cheapest first. Optional: `rooms` (default 1), `page` (from 0), and `size` (default 20, at most 50). Stays are up to 30 nights. Each hotel shows `fromPricePerNight`, the cheapest nightly price of any bookable room during the stay.
 - `GET /api/v1/hotels/{id}/info` shows an active hotel's details and room types.
 
-Prices come from a rule chain applied per night: base price, then the night's surge factor, 20% more once a room type is 80% booked or held, 15% more on Friday and Saturday nights, and 25% more on configured holidays (`roomkeeper.pricing` in `application.yaml`).
+Prices come from a rule chain applied per night: base price, then the night's surge factor, 20% more once a room type is 80% booked or held, 15% more on Friday and Saturday nights, and 25% more on configured holidays (`roomkeeper.pricing` in `application.yaml`). Search shows each hotel's cheapest price per night from `hotel_min_price`; when a deploy changes these settings (or `PricingProperties.RULES_VERSION`, bumped when a rule's code changes), an instance starting with the new settings re-prices every hotel on sale in the background ([`PricingSettingsRepricingIT`](src/test/java/com/roomkeeper/search/PricingSettingsRepricingIT.java)).
 
 ### Setting up a hotel (as a `HOTEL_MANAGER`)
 
