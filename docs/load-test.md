@@ -52,14 +52,10 @@ Two things this shows:
 
 Neither is fixed yet. A coalesced recompute would cover the union of the pending nights and evict searches if any of the sales it replaces would have.
 
-## Finding: hold expiry clears a backlog slowly
+## After the runs: releasing 152,425 abandoned holds
 
-The four runs left about 150,000 holds, none paid for, which ran out ten minutes later. The expiry job released them at about 31 a second, so clearing them all takes more than an hour. Their bookings read `EXPIRED` straight away, but their rooms stay counted as reserved in inventory until the job gets to them, so after a burst of abandoned holds those rooms are off sale for that long.
+The four runs left 152,425 holds, none paid for, which ran out ten minutes after they were made. Their bookings read `EXPIRED` straight away, but until the expiry job reaches a hold, its rooms stay counted as reserved in inventory. Two short runs released the first 2,130; the next run released the other 150,295 and logged it 45 minutes later, at 13:43.
 
-Each hold is released in its own transaction, one after another, so that one failure can't keep the others' rooms off sale. Each of those transactions waits for its commit to reach disk: sampled while the job ran, its session was waiting on `WalSync` at `COMMIT`, and Docker Desktop's disk makes that wait long. Bookings at 1,500 a second didn't hit this, because many requests commit at once and share a flush.
+Most of those 45 minutes were the machine, not the job. Twice the Docker VM stalled: Prometheus recorded no scrapes at all from 13:02 to 13:18 and from 13:23 to 13:37 (the laptop had under 1 GB of memory free, and the full test suite ran during the second stall). Outside the stalls, holds were released at 200 to 480 a second.
 
-Ways to raise it, none done yet:
-
-- **Commit releases without waiting for the disk** (`SET LOCAL synchronous_commit = off` in the release transaction). A release lost in a crash leaves an expired hold that the next run releases again, so losing one costs nothing.
-- **Release a small batch per transaction** (for example 50 holds, locked with `FOR UPDATE SKIP LOCKED`), so one flush covers many. A failure would put the whole batch back, so it would need a retry one hold at a time.
-- **Run several release workers**, each taking different holds with `SKIP LOCKED`.
+Each hold is released in its own transaction, one after another, so that one failure can't keep the others' rooms off sale, and each commit waits for its flush to disk (a sample taken as the VM recovered showed the release waiting on `WalSync` at `COMMIT`). Bookings don't pay that wait one by one, because concurrent commits share a flush. A few hundred releases a second is plenty at this scale; if it ever isn't, the options are to commit releases with `synchronous_commit = off` (a release lost in a crash is redone by the next run), to release a small batch per transaction, or to run several release workers with `SKIP LOCKED`.

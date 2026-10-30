@@ -1,6 +1,6 @@
 # RoomKeeper
 
-A hotel booking backend in Java 25 and Spring Boot, built test-first. It focuses on the problems real booking systems get wrong: selling the last room twice, charging for a payment that arrives twice, and holds that never release.
+A hotel booking backend in Java 25 and Spring Boot, built test-first. It focuses on the problems real booking systems get wrong: selling the last room twice, charging or refunding a payment twice, holds that never release, and side effects lost or sent twice.
 
 > Work in progress. See the [roadmap](docs/roadmap.md) for where things stand.
 
@@ -10,6 +10,85 @@ A hotel booking backend in Java 25 and Spring Boot, built test-first. It focuses
 - [Roadmap](docs/roadmap.md): the build plan broken into tasks
 - [Query plans](docs/query-plans.md): `EXPLAIN ANALYZE` of hotel search over a million inventory rows (about 1 ms) and the indexes it uses
 - [Load test](docs/load-test.md): k6 against the booking endpoint, up to about 1,800 requests a second, and what the dashboard showed
+
+## The hard problems
+
+These four are why the project exists. For each: what goes wrong, what RoomKeeper does, what it doesn't do and why, and the tests that prove it.
+
+### Selling the last room twice
+
+**What goes wrong.** Two guests ask for the last room at the same moment. Both read one room free, both take it, and the hotel has sold one room twice.
+
+**What RoomKeeper does.** Holding rooms locks the stay's inventory rows (`SELECT ... FOR UPDATE`, one row per night), always in date order, then checks and updates them in the same transaction. The second guest waits for the first, reads the true count, and gets 409 `sold-out`. Every writer of those rows (holds, hold expiry, payments, cancellation, inventory admin, room totals) locks nights in the same date order, so overlapping writes queue instead of deadlocking. Behind all of it, a check constraint (`inventory_not_oversold`: booked plus held never exceeds the total) refuses an oversell even from plain SQL.
+
+**Not done, and why.** Optimistic locking (a version column, retry on conflict) suits rare conflicts, but here they cluster on exactly the last few rooms, where it would retry the most. A Redis lock per room would put the rule in a store that isn't the source of truth: a lock lost in a failover lets two guests through, while a row lock lives and dies with the transaction that needs it.
+
+**Proved by**
+- [`LastRoomConcurrencyIT`](src/test/java/com/roomkeeper/booking/LastRoomConcurrencyIT.java): 50 guests ask for the last room at once; exactly one gets it, the other 49 get `sold-out`.
+- [`BookingRacesIT`](src/test/java/com/roomkeeper/booking/BookingRacesIT.java): guests book while the manager changes the same nights' totals and surge; nothing deadlocks or oversells.
+- [`InventoryConstraintsIT`](src/test/java/com/roomkeeper/inventory/InventoryConstraintsIT.java): the database refuses an oversell written straight in SQL.
+- The [load test](docs/load-test.md) races 50 guests for the last 5 rooms alongside up to 1,500 other holds a second: exactly 5 win, every run.
+
+### Charging or refunding twice
+
+**What goes wrong.** Networks retry and guests double-click, so "hold these rooms" or "start paying" can arrive twice. Stripe delivers each webhook at least once, sometimes two copies at the same moment. Handled naively, that's two holds, two checkout sessions, a booking confirmed twice, or a payment refunded twice.
+
+**What RoomKeeper does.**
+- Requests that create something carry an `Idempotency-Key`. The first claims the key in Redis (`SET NX`) and stores its response; a retry gets that response back, marked `Idempotent-Replayed: true`. If Redis is down these requests answer 503: refusing is better than risking a second payment.
+- A webhook records its event id in `processed_webhook_events` in the same Postgres transaction as the change it makes. A redelivery finds the id and changes nothing; two copies arriving together queue on the primary key, and the second changes nothing.
+- Every call to Stripe that moves money carries an idempotency key of its own (one per payment for refunding a late payment, one per booking for a cancellation's refund), so a retry is a no-op on Stripe's side too.
+
+**Not done, and why.** Webhook dedupe in Redis: the "already applied" mark would commit separately from the change it marks, so a crash between the two either loses the event or applies it twice. Disabling the button in the client: it helps, but the retry that matters often comes from the network, not the guest.
+
+**Proved by**
+- [`InitIdempotencyIT`](src/test/java/com/roomkeeper/booking/InitIdempotencyIT.java): a retried hold with the same key returns the original booking, not a second hold.
+- [`PaymentStartIT`](src/test/java/com/roomkeeper/payment/PaymentStartIT.java): asking to pay again returns the open session, never a second.
+- [`PaymentWebhookIT`](src/test/java/com/roomkeeper/payment/PaymentWebhookIT.java): the same webhook twice confirms once and writes one outbox row; deliveries in flight together confirm once.
+- [`CancellationIT`](src/test/java/com/roomkeeper/payment/CancellationIT.java): cancelling twice, or the refund event arriving twice, refunds once.
+
+### Holds that never release
+
+**What goes wrong.** A guest holds the last room, then closes the tab. If nothing gives the room back, it's off sale for good. And Stripe's checkout page stays open longer than the hold, so a guest can pay for rooms that already went back on sale, maybe to someone else.
+
+**What RoomKeeper does.** A hold has an expiry time (10 minutes), and reads show it as `EXPIRED` the moment that passes. A job runs every minute and gives the rooms back, each hold in its own transaction, re-checked under the booking's lock so a payment that just landed wins. Every instance schedules it, but only the one holding the Redis lease `lock:hold-expiry` runs it. If the guest was paying, the job also closes their Stripe session. A payment that still arrives late re-checks the stay as a new booking would: if the rooms are still free, it books them at the price paid; if not, it refunds in full, calling Stripe outside the transaction so no locks are held while it waits. Either way the booking ends confirmed or refunded, never stuck. Time comes from an injected `Clock`, so tests move it instead of sleeping.
+
+**Not done, and why.** Redis key expiry with keyspace notifications: they're fire-and-forget, so one missed while the app restarts would leave the rooms held for good, and the inventory lives in Postgres anyway. Releasing only when someone reads the booking: nobody reads an abandoned hold again, so its rooms would stay off sale.
+
+**Proved by**
+- [`HoldExpiryIT`](src/test/java/com/roomkeeper/booking/HoldExpiryIT.java): a hold gives its rooms back at 10 minutes, not a second sooner, with the clock moved instead of waited on.
+- [`HoldReleaseIT`](src/test/java/com/roomkeeper/booking/HoldReleaseIT.java): what the job releases and what it leaves alone; cheapest prices and cached searches follow.
+- [`HoldExpiryLockIT`](src/test/java/com/roomkeeper/booking/HoldExpiryLockIT.java): every instance schedules the job; only the lock holder runs it.
+- [`LateWebhookIT`](src/test/java/com/roomkeeper/payment/LateWebhookIT.java): a payment after the hold ran out is confirmed if the room is still free and refunded once if not, even with deliveries racing or Stripe failing the first refund.
+
+After the load test, one run of the job released all 150,000-odd abandoned holds, at 200 to 480 a second whenever the laptop's Docker VM wasn't stalled ([details](docs/load-test.md#after-the-runs-releasing-152425-abandoned-holds)).
+
+### Side effects lost or sent twice
+
+**What goes wrong.** Send the confirmation email inside the booking transaction, and a rollback after sending tells the guest about a booking that doesn't exist. Send it after the commit, and a crash in between loses it. The same goes for the refund a cancellation owes.
+
+**What RoomKeeper does.** A transactional outbox. A change writes its side effects as rows in `outbox_events` inside its own transaction (the writer refuses to run outside one), so they commit or roll back together. A publisher runs every 5 seconds under `lock:outbox` and takes each waiting event in its own transaction (`FOR UPDATE SKIP LOCKED`, so overlapping runs split the queue), hands it to its consumers, and marks it published. Delivery is at least once, so every consumer tolerates a repeat: an email's idempotency key is its event's id, and a cancellation's refund uses one Stripe key per booking with the amount fixed when the guest cancelled. An event that fails 10 times is parked with its last error rather than retried forever.
+
+**Not done, and why.** An after-commit event listener: simple, but the event lives only in memory, so a crash right after the commit loses it. A message broker (Kafka, Redis Streams): publishing to one reliably from a database transaction needs an outbox in front of it anyway, and at this scale polling one table is enough (publishing to Redis Streams is a stretch goal). Retrying forever: one poison event would be retried, and logged, for good.
+
+**Proved by**
+- [`OutboxWriterIT`](src/test/java/com/roomkeeper/outbox/OutboxWriterIT.java): an outbox event commits or rolls back with the change that wrote it.
+- [`OutboxPublisherIT`](src/test/java/com/roomkeeper/outbox/OutboxPublisherIT.java): each event goes out at least once, a duplicate sends one email, and an event that keeps failing is parked.
+- [`CancellationIT`](src/test/java/com/roomkeeper/payment/CancellationIT.java): the refund is made exactly once, even when Stripe fails the first attempt and the event is handed over again.
+
+### Smaller decisions
+
+| Decision | Why | Proved by |
+| --- | --- | --- |
+| Cached searches live 60 seconds under a per-city version; any inventory change that changes what search shows bumps it | Stale availability is the bug guests would notice; a bump is one `INCR`, not a scan for old keys | [`SearchCacheEvictionIT`](src/test/java/com/roomkeeper/search/SearchCacheEvictionIT.java) |
+| With Redis down, caches and rate limits fail open, idempotency keys fail closed (503), and refresh asks the user to log in again | Postgres decides what's true: losing Redis costs speed and some protection, never a booking or a second charge | [`CacheFailOpenTest`](src/test/java/com/roomkeeper/search/CacheFailOpenTest.java), [`AuthRateLimitFilterTest`](src/test/java/com/roomkeeper/common/ratelimit/AuthRateLimitFilterTest.java), [`IdempotencyFilterTest`](src/test/java/com/roomkeeper/common/idempotency/IdempotencyFilterTest.java), [`AuthServiceRedisDownTest`](src/test/java/com/roomkeeper/auth/AuthServiceRedisDownTest.java) |
+| Jobs (hold expiry, outbox, inventory roll) run on whichever instance holds a Redis lease | Every instance can schedule them; one runs each time, and a crashed holder's lease runs out | [`JobLocksIT`](src/test/java/com/roomkeeper/common/JobLocksIT.java) |
+| Login, signup and refresh are rate limited per client IP | Password guessing and bulk signups get slow | [`LoginRateLimitIT`](src/test/java/com/roomkeeper/common/ratelimit/LoginRateLimitIT.java), [`AuthRateLimitIT`](src/test/java/com/roomkeeper/common/ratelimit/AuthRateLimitIT.java) |
+| Signup answers the same for a registered email, and emails its owner instead | Signup can't reveal who has an account | [`SignupIT`](src/test/java/com/roomkeeper/auth/SignupIT.java) |
+| Refresh tokens are opaque, stored as a hash in Redis, and single use | Rotation and logout really revoke them, and a stolen copy works once at most | [`RefreshTokenIT`](src/test/java/com/roomkeeper/auth/RefreshTokenIT.java) |
+| The cancellation policy is plain domain code: all back with 48 hours' notice, half with less, nothing once the stay has begun (2 PM hotel time) | Easy to test across time zones and clock changes | [`CancellationPolicyTest`](src/test/java/com/roomkeeper/booking/CancellationPolicyTest.java) |
+| A hotel taken off sale honours its paid bookings | Off sale may be a pause; guests can still cancel under the policy | [`HotelDeactivationIT`](src/test/java/com/roomkeeper/hotel/HotelDeactivationIT.java), [`CancellationIT`](src/test/java/com/roomkeeper/payment/CancellationIT.java) |
+| Business metrics count after commit | A change that rolls back isn't counted | [`BusinessMetricsTest`](src/test/java/com/roomkeeper/common/metrics/BusinessMetricsTest.java) |
+| Actuator answers only on a private port | Metrics and health details aren't public | [`ActuatorLockdownIT`](src/test/java/com/roomkeeper/ActuatorLockdownIT.java) |
 
 ## Running locally
 
@@ -110,7 +189,15 @@ scripts/check-metrics.sh    # Prometheus scrapes the app, and every dashboard qu
 
 The dashboard leads with the business numbers over the chosen time range, then charts bookings per second, the booking request's p50/p95/p99 latency, responses by outcome, rate-limit rejections by route, cache hit ratio, and database connections in use and waiting. Prometheus (http://localhost:9090) and Grafana listen on localhost only. The dashboard is provisioned from `monitoring/grafana/dashboards/roomkeeper.json`; edit that file, not the dashboard in Grafana.
 
-A k6 load test drives the booking endpoint while the dashboard watches: `docker compose --profile loadtest run --rm k6`. It holds rooms on dates across the year, searches the same city, and races 50 guests for the last 5 rooms of a night, which exactly 5 must win. Results and what they showed are in [docs/load-test.md](docs/load-test.md): no failures and a p95 under 10 ms up to about 1,800 requests a second on one laptop, with the database pool as the first limit in sight. It also found two things to improve: repricing drops recomputes under load, and hold expiry clears a backlog slowly.
+## How it performs
+
+**Search** over 1,000 hotels and 1.1 million inventory rows takes about 1 ms: the city index finds the city's hotels, and the `(room_id, date)` unique index reaches just their nights. The hotel report over 366 nights takes about 13 ms. The plans are in [docs/query-plans.md](docs/query-plans.md), with a script to reproduce them.
+
+**Under load**, a k6 test (`docker compose --profile loadtest run --rm k6`) holds rooms on dates across the year, searches the same city, and races 50 guests for the last 5 rooms of a night, which exactly 5 must win. On one laptop running everything, it took up to about 1,800 requests a second with no failures and a booking p95 of 7 ms; the database pool (10 connections) was the first limit in sight. It also found something to improve: under load, repricing drops recomputes, logging a warning for each. Details: [docs/load-test.md](docs/load-test.md).
+
+![The RoomKeeper dashboard during the load test: bookings rising to 1,500 a second, booking latency mostly under 20 ms at p95 after a warm-up spike, a 99.9% search cache hit ratio, and database connections briefly queuing during the 50-guest race](docs/images/grafana-load-test.jpg)
+
+*The RoomKeeper dashboard over the four load-test runs (2026-10-30, 12:42 to 12:54).*
 
 ## Tests
 
