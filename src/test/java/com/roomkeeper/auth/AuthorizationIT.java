@@ -1,5 +1,7 @@
 package com.roomkeeper.auth;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Map;
 
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
@@ -35,6 +37,20 @@ class AuthorizationIT extends AbstractIntegrationTest {
 
 		api(tampered)
 			.when().get("/api/v1/probe/me")
+			.then()
+				.statusCode(401)
+				.body("type", equalTo("urn:roomkeeper:problem:unauthorized"));
+	}
+
+	@Test
+	void aGuestTokenEditedToClaimAdminIsUnauthorizedNotLetIn() {
+		String[] parts = signUpAndLogIn(aUser().build()).split("\\.");
+		String claims = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
+		String promoted = Base64.getUrlEncoder().withoutPadding()
+			.encodeToString(claims.replace("\"GUEST\"", "\"ADMIN\"").getBytes(StandardCharsets.UTF_8));
+
+		api(parts[0] + "." + promoted + "." + parts[2])
+			.when().get("/api/v1/moderation/hotels")
 			.then()
 				.statusCode(401)
 				.body("type", equalTo("urn:roomkeeper:problem:unauthorized"));
