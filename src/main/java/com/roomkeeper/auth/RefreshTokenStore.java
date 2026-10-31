@@ -9,9 +9,9 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 
+import com.roomkeeper.common.LuaScripts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
@@ -43,8 +43,7 @@ public class RefreshTokenStore {
 
 	private static final int FAMILY_BYTES = 16;
 
-	private static final RedisScript<Long> ROTATE = RedisScript.of(new ClassPathResource("auth/refresh_rotate.lua"),
-			Long.class);
+	private static final RedisScript<Long> ROTATE = LuaScripts.load("auth/refresh_rotate.lua", Long.class);
 
 	/** A refresh that worked: whose session it is, and the token that now continues it. */
 	public record Rotation(long userId, String refreshToken) {

@@ -250,13 +250,16 @@ public abstract class AbstractIntegrationTest {
 	/**
 	 * Delivers outbox events once, as the app's own threads would (they're off in tests): the
 	 * relay sends unsent events to their streams, entries a failed delivery left are taken
-	 * again (without waiting claim-idle), then each reader handles its new entries. An event
-	 * whose consumer fails is tried again on the next call.
+	 * again (without waiting claim-idle), then the readers handle new entries until there are
+	 * none: a read takes at most a batch, and other tests' leftover events can fill several.
+	 * An event whose consumer fails is tried again on the next call.
 	 */
 	protected void deliverOutbox() {
 		outboxRelay.relayWaiting();
 		outboxReaders.claimIdle(Duration.ZERO);
-		outboxReaders.readOnce();
+		while (outboxReaders.readOnce() > 0) {
+			// Next batch
+		}
 	}
 
 	/** How many outbox events of the type there are about the booking or user. */

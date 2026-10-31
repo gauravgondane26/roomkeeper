@@ -4,7 +4,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 
-import org.springframework.core.io.ClassPathResource;
+import com.roomkeeper.common.LuaScripts;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
@@ -21,8 +21,7 @@ public class RateLimiter {
 	}
 
 	@SuppressWarnings("rawtypes")
-	private static final RedisScript<List> TOKEN_BUCKET = RedisScript
-		.of(new ClassPathResource("ratelimit/token_bucket.lua"), List.class);
+	private static final RedisScript<List> TOKEN_BUCKET = LuaScripts.load("ratelimit/token_bucket.lua", List.class);
 
 	private final StringRedisTemplate redis;
 
