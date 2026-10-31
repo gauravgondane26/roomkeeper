@@ -16,18 +16,21 @@ public final class Concurrently {
 
 	/**
 	 * Starts every task at the same moment, each on its own thread, and returns their results
-	 * in order. Each thread waits on one latch, so none starts before all are ready to go.
+	 * in order. No task starts until every thread is running and waiting at the start line.
 	 */
 	public static <T> List<T> runTogether(List<Callable<T>> tasks) throws Exception {
+		CountDownLatch ready = new CountDownLatch(tasks.size());
 		CountDownLatch start = new CountDownLatch(1);
 		List<Future<T>> futures = new ArrayList<>();
 		try (ExecutorService pool = Executors.newFixedThreadPool(tasks.size())) {
 			for (Callable<T> task : tasks) {
 				futures.add(pool.submit(() -> {
+					ready.countDown();
 					start.await();
 					return task.call();
 				}));
 			}
+			ready.await();
 			start.countDown();
 			List<T> results = new ArrayList<>();
 			for (Future<T> future : futures) {

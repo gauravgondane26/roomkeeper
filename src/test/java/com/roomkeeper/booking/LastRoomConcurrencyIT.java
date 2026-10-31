@@ -5,10 +5,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.Callable;
 
 import com.roomkeeper.auth.AccessTokenService;
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
@@ -19,6 +16,7 @@ import io.restassured.response.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import static com.roomkeeper.testsupport.Concurrently.runTogether;
 import static com.roomkeeper.testsupport.HotelBuilder.aHotel;
 import static com.roomkeeper.testsupport.RoomBuilder.aRoom;
 import static com.roomkeeper.testsupport.UserBuilder.aUser;
@@ -58,21 +56,12 @@ class LastRoomConcurrencyIT extends AbstractIntegrationTest {
 			tokens.add(accessTokens.issue(insertGuestUser(), Role.GUEST).value());
 		}
 
-		CountDownLatch start = new CountDownLatch(1);
-		List<Response> responses = new ArrayList<>();
-		try (ExecutorService pool = Executors.newFixedThreadPool(GUESTS)) {
-			List<Future<Response>> futures = new ArrayList<>();
-			for (String token : tokens) {
-				futures.add(pool.submit(() -> {
-					start.await();
-					return idempotentApi(token).contentType(ContentType.JSON).body(stay).when().post("/api/v1/bookings/init");
-				}));
-			}
-			start.countDown();
-			for (Future<Response> future : futures) {
-				responses.add(future.get());
-			}
+		List<Callable<Response>> holds = new ArrayList<>();
+		for (String token : tokens) {
+			holds.add(() -> idempotentApi(token).contentType(ContentType.JSON).body(stay).when().post("/api/v1/bookings/init"));
 		}
+
+		List<Response> responses = runTogether(holds);
 
 		List<Integer> statuses = responses.stream().map(Response::statusCode).toList();
 		assertThat(statuses).as("one hold, 49 sold out").filteredOn(status -> status == 201).hasSize(1);

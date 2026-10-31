@@ -7,10 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.Callable;
 
 import com.roomkeeper.pricing.Night;
 import com.roomkeeper.pricing.PricingChain;
@@ -24,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import static com.roomkeeper.testsupport.Concurrently.runTogether;
 import static com.roomkeeper.testsupport.HotelBuilder.aHotel;
 import static com.roomkeeper.testsupport.RoomBuilder.aRoom;
 import static com.roomkeeper.testsupport.UserBuilder.aUser;
@@ -38,7 +36,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Import(MutableClockConfig.class)
 class HotelMinPriceConcurrencyIT extends AbstractIntegrationTest {
 
-	private static final int UPDATES = 24;
+	private static final int THREADS = 12;
+
+	private static final int UPDATES = 2 * THREADS;
 
 	@Autowired
 	MutableClock clock;
@@ -67,29 +67,25 @@ class HotelMinPriceConcurrencyIT extends AbstractIntegrationTest {
 
 	@RaceTest
 	void concurrentChangesToOneHotelAllSucceedAndLeaveTheCheapestPricesRight() throws Exception {
-		CountDownLatch start = new CountDownLatch(1);
-		List<Future<Integer>> statuses = new ArrayList<>();
-		try (ExecutorService pool = Executors.newFixedThreadPool(12)) {
-			for (int i = 0; i < UPDATES; i++) {
-				long roomId = roomIds.get(i % 2);
-				// Surges from 0.50 to 2.80 make either room type the cheaper one on any night
-				String surge = new BigDecimal("0.50").add(new BigDecimal("0.10").multiply(BigDecimal.valueOf(i)))
-					.toPlainString();
-				statuses.add(pool.submit(() -> {
-					start.await();
-					return api(manager).contentType(ContentType.JSON)
-						.body(Map.of("from", "2026-03-11", "to", "2026-06-30", "surgeFactor", surge))
-						.when().patch("/api/v1/admin/inventory/rooms/{roomId}", roomId)
-						.then().extract().statusCode();
-				}));
-			}
-			start.countDown();
-			for (Future<Integer> status : statuses) {
-				assertThat(status.get()).isEqualTo(200);
-			}
+		// Each thread makes two of the changes, one after the other
+		List<Callable<List<Integer>>> managers = new ArrayList<>();
+		for (int t = 0; t < THREADS; t++) {
+			int first = t;
+			managers.add(() -> List.of(changeSurge(first), changeSurge(first + THREADS)));
 		}
 
+		assertThat(runTogether(managers)).allSatisfy(statuses -> assertThat(statuses).containsOnly(200));
 		assertThat(storedMinPrices()).isEqualTo(expectedMinPrices());
+	}
+
+	/** Change {@code i} of {@value #UPDATES}: a surge on one room type, alternating between the two. */
+	private int changeSurge(int i) {
+		// Surges from 0.50 to 2.80 make either room type the cheaper one on any night
+		String surge = new BigDecimal("0.50").add(new BigDecimal("0.10").multiply(BigDecimal.valueOf(i))).toPlainString();
+		return api(manager).contentType(ContentType.JSON)
+			.body(Map.of("from", "2026-03-11", "to", "2026-06-30", "surgeFactor", surge))
+			.when().patch("/api/v1/admin/inventory/rooms/{roomId}", roomIds.get(i % 2))
+			.then().extract().statusCode();
 	}
 
 	private Map<LocalDate, BigDecimal> storedMinPrices() {

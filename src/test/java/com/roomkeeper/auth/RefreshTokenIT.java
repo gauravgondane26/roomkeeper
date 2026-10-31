@@ -9,9 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
 import com.roomkeeper.testsupport.RaceTest;
@@ -23,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
+import static com.roomkeeper.testsupport.Concurrently.runTogether;
 import static com.roomkeeper.testsupport.UserBuilder.aUser;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -121,30 +119,19 @@ class RefreshTokenIT extends AbstractIntegrationTest {
 		String refreshToken = login(user).extract().path("refreshToken");
 
 		int threads = 10;
-		var ready = new CountDownLatch(threads);
-		var go = new CountDownLatch(1);
-		List<Integer> statuses = new ArrayList<>();
 		var issued = new ConcurrentLinkedQueue<String>();
-		try (var pool = Executors.newFixedThreadPool(threads)) {
-			List<Future<Integer>> results = new ArrayList<>();
-			for (int i = 0; i < threads; i++) {
-				Callable<Integer> attempt = () -> {
-					ready.countDown();
-					go.await();
-					var response = refresh(refreshToken).extract();
-					if (response.statusCode() == 200) {
-						issued.add(response.path("refreshToken"));
-					}
-					return response.statusCode();
-				};
-				results.add(pool.submit(attempt));
-			}
-			ready.await();
-			go.countDown();
-			for (Future<Integer> result : results) {
-				statuses.add(result.get());
-			}
+		List<Callable<Integer>> attempts = new ArrayList<>();
+		for (int i = 0; i < threads; i++) {
+			attempts.add(() -> {
+				var response = refresh(refreshToken).extract();
+				if (response.statusCode() == 200) {
+					issued.add(response.path("refreshToken"));
+				}
+				return response.statusCode();
+			});
 		}
+
+		List<Integer> statuses = runTogether(attempts);
 
 		assertThat(statuses).filteredOn(status -> status == 200).hasSize(1);
 		assertThat(statuses).filteredOn(status -> status == 401).hasSize(threads - 1);
