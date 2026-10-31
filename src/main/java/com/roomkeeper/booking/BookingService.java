@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 
 import com.roomkeeper.common.error.ApiException;
@@ -26,8 +27,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /** A guest's bookings: holding rooms for a stay, and what happens to the hold after. */
 @Service
@@ -57,11 +61,14 @@ public class BookingService {
 
 	private final BusinessMetrics metrics;
 
+	private final TransactionTemplate transaction;
+
 	private final Clock clock;
 
 	public BookingService(BookingRepository bookings, RoomRepository rooms, HotelService hotels, GuestService guests,
 			InventoryRepository inventory, PricingChain pricing, BookingMapper mapper, BookingProperties properties,
-			ApplicationEventPublisher events, BusinessMetrics metrics, Clock clock) {
+			ApplicationEventPublisher events, BusinessMetrics metrics, PlatformTransactionManager transactions,
+			Clock clock) {
 		this.bookings = bookings;
 		this.rooms = rooms;
 		this.hotels = hotels;
@@ -72,15 +79,45 @@ public class BookingService {
 		this.properties = properties;
 		this.events = events;
 		this.metrics = metrics;
+		this.transaction = new TransactionTemplate(transactions);
 		this.clock = clock;
 	}
 
 	/**
 	 * Holds the rooms on every night of the stay, at the price the rules give now, until the
 	 * hold runs out. Sold out if any night is closed or short of rooms.
+	 * <p>
+	 * Pessimistic (the default), the stay's nights are locked while the hold is made, so
+	 * holds for the same nights wait for each other. Optimistic, they don't wait: each reads
+	 * the nights unlocked, and one that finds at commit that another hold changed them first
+	 * starts over, up to {@code optimisticAttempts} times, then answers 503 booking-busy.
+	 * Either way the database's check constraint refuses an oversold night.
 	 */
-	@Transactional
 	public BookingResponse init(long userId, BookingInitRequest request) {
+		if (properties.locking() == BookingProperties.Locking.PESSIMISTIC) {
+			return transaction.execute(status -> hold(userId, request, true));
+		}
+		for (int attempt = 1;; attempt++) {
+			try {
+				return transaction.execute(status -> hold(userId, request, false));
+			}
+			catch (ObjectOptimisticLockingFailureException ex) {
+				if (attempt >= properties.optimisticAttempts()) {
+					throw new ApiException(ProblemType.BOOKING_BUSY,
+							"Too many guests are booking these nights at once; try again");
+				}
+				metrics.optimisticRetry();
+				backOff(attempt);
+			}
+		}
+	}
+
+	/**
+	 * One attempt at holding the stay, in a transaction. Locked, the nights can't change
+	 * under it. Unlocked (optimistic), its writes fail at commit if another hold changed one
+	 * of the nights after it read them, and nothing it did is kept.
+	 */
+	private BookingResponse hold(long userId, BookingInitRequest request, boolean lock) {
 		// Hotels that aren't on sale don't exist as far as guests can tell
 		Room room = rooms.findById(request.roomId())
 			.filter(found -> found.getHotel().isActive())
@@ -91,7 +128,8 @@ public class BookingService {
 
 		// Locked until commit, in date order like every other writer, so two requests for the last
 		// room can't both see it free, and two overlapping stays can't deadlock each other
-		List<Inventory> nights = inventory.lockNights(room.getId(), request.checkIn(), lastNight);
+		List<Inventory> nights = lock ? inventory.lockNights(room.getId(), request.checkIn(), lastNight)
+				: inventory.findByRoomIdAndDateBetweenOrderByDate(room.getId(), request.checkIn(), lastNight);
 		if (!Inventory.canSellStay(nights, request.checkIn(), request.checkOut(), count)) {
 			throw new SoldOutException(room.getId(), count, request.checkIn(), request.checkOut());
 		}
@@ -107,6 +145,20 @@ public class BookingService {
 				Inventory.anySoldOut(nights)));
 		metrics.bookingCreated();
 		return mapper.toResponse(booking, now);
+	}
+
+	/**
+	 * A random pause of up to 2^attempt ms (at most 50), so holds that collided spread out
+	 * instead of colliding again in step.
+	 */
+	private static void backOff(int attempt) {
+		try {
+			Thread.sleep(ThreadLocalRandom.current().nextLong(1, Math.min(50, 1L << attempt) + 1));
+		}
+		catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
+			throw new ApiException(ProblemType.BOOKING_BUSY, "Interrupted while waiting to try the hold again");
+		}
 	}
 
 	@Transactional(readOnly = true)

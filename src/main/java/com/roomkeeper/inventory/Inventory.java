@@ -13,6 +13,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 /**
  * One room type on one night: how many exist, how many are booked, and how many are held
@@ -50,6 +51,10 @@ public class Inventory {
 
 	@Column(nullable = false)
 	private boolean closed;
+
+	/** Bumped on every update; only the optimistic way of holding rooms checks it (V15). */
+	@Version
+	private long version;
 
 	protected Inventory() {
 	}

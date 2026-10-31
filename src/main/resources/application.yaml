@@ -82,6 +82,11 @@ roomkeeper:
   booking:
     # How long unpaid rooms stay held before the expiry job releases them
     hold-duration: 10m
+    # pessimistic locks a stay's nights while holding them; optimistic reads them unlocked and
+    # starts over (up to optimistic-attempts times) if another hold changed them first. Kept to
+    # benchmark the two: docs/locking-benchmark.md
+    locking: ${BOOKING_LOCKING:pessimistic}
+    optimistic-attempts: 5
     # How often the expiry job looks for holds that have run out
     expiry-interval: 1m
   inventory:

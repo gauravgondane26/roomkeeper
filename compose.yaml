@@ -32,6 +32,9 @@ services:
       ROOMKEEPER_RATELIMITS_SEARCH_CAPACITY: ${SEARCH_RATE_LIMIT:-300}
       # Proxies whose X-Forwarded-For is believed (an IP regex); none by default
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      # How holds keep two guests off one room: pessimistic, or optimistic for the locking
+      # benchmark (loadtest/locking.js, docs/locking-benchmark.md)
+      BOOKING_LOCKING: ${BOOKING_LOCKING:-pessimistic}
       # Stripe test-mode keys from your shell or .env; unset, payments answer 503 and the rest works
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}

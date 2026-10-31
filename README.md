@@ -205,6 +205,8 @@ The dashboard leads with the business numbers over the chosen time range, then c
 
 **Under load**, a k6 test (`docker compose --profile loadtest run --rm k6`) holds rooms on dates across the year, searches the same city, and races 50 guests for the last 5 rooms of a night, which exactly 5 must win. On one laptop running everything, it took up to about 1,800 requests a second with no failures and a booking p95 of 7 ms; the database pool (10 connections) was the first limit in sight. It also found repricing dropping recomputes under load (51,501 in a minute), since fixed: at most one recompute now waits per hotel, and a rerun dropped none. Details: [docs/load-test.md](docs/load-test.md).
 
+**Pessimistic or optimistic locking**: both are in the code (`roomkeeper.booking.locking`), and a k6 benchmark ran them on the same machine. With 25 to 100 guests holding one night back to back, the default pessimistic locks made 2.2 to 2.4 times as many holds (376 to 639 a second, none failed); optimistic gave up more than half its holds after 5 attempts and retried 11,800 to 18,100 times in 10 seconds. Without contention the two were the same. Details: [docs/locking-benchmark.md](docs/locking-benchmark.md).
+
 ![The RoomKeeper dashboard during the load test: bookings rising to 1,500 a second, booking latency mostly under 20 ms at p95 after a warm-up spike, a 99.9% search cache hit ratio, and database connections briefly queuing during the 50-guest race](docs/images/grafana-load-test.jpg)
 
 *The RoomKeeper dashboard over the four load-test runs (2026-10-30, 12:42 to 12:54).*

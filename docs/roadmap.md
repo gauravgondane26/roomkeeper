@@ -204,7 +204,7 @@ Goal: the system is observable, load tested, and explained.
 
 ## Stretch goals
 
-- [ ] Benchmark pessimistic against optimistic locking under contention and publish the numbers
+- [x] Benchmark pessimistic against optimistic locking under contention and publish the numbers. An optimistic way of holding rooms (V15 `inventory.version`, unlocked reads, retried on conflict up to `optimistic-attempts`, then 503 `booking-busy`) sits beside the default pessimistic one, picked by `roomkeeper.booking.locking`; `OptimisticLockingIT` checks it's as correct. `loadtest/locking.js` ran both: equal without contention; with 25 to 100 guests on one night, pessimistic made 2.2 to 2.4 times as many holds and none failed, while optimistic gave up 54%. Holds stay pessimistic: [locking benchmark](locking-benchmark.md)
 - [ ] Mutation testing with PIT on the domain package
 - [ ] Publish outbox events to Redis Streams or Kafka instead of polling
 - [ ] Waitlist that offers a released hold to the next person in line

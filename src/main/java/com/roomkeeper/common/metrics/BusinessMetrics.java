@@ -25,8 +25,13 @@ public class BusinessMetrics {
 
 	private final Counter repricingDropped;
 
+	private final Counter optimisticRetries;
+
 	public BusinessMetrics(MeterRegistry registry) {
 		this.registry = registry;
+		this.optimisticRetries = Counter.builder("roomkeeper.bookings.optimistic.retries")
+			.description("Optimistic holds that lost a race for their nights and started over")
+			.register(registry);
 		// Not "created": Prometheus reserves the _created suffix and would drop it from the name
 		this.bookingsCreated = Counter.builder("roomkeeper.bookings.initiated")
 			.description("Bookings created: rooms held for a guest")
@@ -45,6 +50,14 @@ public class BusinessMetrics {
 	/** A guest held rooms: a new booking, not a retried request answered with an earlier one. */
 	public void bookingCreated() {
 		afterCommit(bookingsCreated);
+	}
+
+	/**
+	 * An optimistic hold found its nights changed by another and started over. Counted
+	 * straight away: the attempt that lost was rolled back.
+	 */
+	public void optimisticRetry() {
+		optimisticRetries.increment();
 	}
 
 	/** A hold ran out unpaid and its rooms went back on sale. */

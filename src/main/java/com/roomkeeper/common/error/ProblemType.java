@@ -45,6 +45,7 @@ public enum ProblemType {
 	IDEMPOTENCY_KEY_IN_USE("idempotency-key-in-use", HttpStatus.CONFLICT, "Idempotency key in use"),
 	IDEMPOTENCY_KEY_REUSED("idempotency-key-reused", HttpStatus.UNPROCESSABLE_CONTENT, "Idempotency key reused"),
 	PAYMENTS_UNAVAILABLE("payments-unavailable", HttpStatus.SERVICE_UNAVAILABLE, "Payments unavailable"),
+	BOOKING_BUSY("booking-busy", HttpStatus.SERVICE_UNAVAILABLE, "Booking busy"),
 	INVALID_WEBHOOK_SIGNATURE("invalid-webhook-signature", HttpStatus.BAD_REQUEST, "Invalid webhook signature");
 
 	private static final String URN_PREFIX = "urn:roomkeeper:problem:";
