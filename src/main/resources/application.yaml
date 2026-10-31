@@ -12,6 +12,11 @@ server:
 spring:
   application:
     name: roomkeeper
+  # VIRTUAL_THREADS=true serves requests (and Spring's own async and scheduling) on virtual
+  # threads instead of Tomcat's 200 platform threads (docs/virtual-threads-benchmark.md)
+  threads:
+    virtual:
+      enabled: ${VIRTUAL_THREADS:false}
   profiles:
     # Profiles: local (developer machine), test (test suite), prod (deployed)
     default: local

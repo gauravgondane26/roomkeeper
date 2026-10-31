@@ -35,6 +35,9 @@ services:
       # How holds keep two guests off one room: pessimistic, or optimistic for the locking
       # benchmark (loadtest/locking.js, docs/locking-benchmark.md)
       BOOKING_LOCKING: ${BOOKING_LOCKING:-pessimistic}
+      # Requests on virtual threads instead of Tomcat's platform threads, for the
+      # before-and-after load test (loadtest/threads.js, docs/virtual-threads-benchmark.md)
+      VIRTUAL_THREADS: ${VIRTUAL_THREADS:-false}
       # Stripe test-mode keys from your shell or .env; unset, payments answer 503 and the rest works
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}

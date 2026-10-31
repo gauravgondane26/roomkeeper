@@ -211,6 +211,8 @@ The dashboard leads with the business numbers over the chosen time range, then c
 
 **Pessimistic or optimistic locking**: both are in the code (`roomkeeper.booking.locking`), and a k6 benchmark ran them on the same machine. With 25 to 100 guests holding one night back to back, the default pessimistic locks made 2.2 to 2.4 times as many holds (376 to 639 a second, none failed); optimistic gave up more than half its holds after 5 attempts and retried 11,800 to 18,100 times in 10 seconds. Without contention the two were the same. Details: [docs/locking-benchmark.md](docs/locking-benchmark.md).
 
+**Platform or virtual threads**: `VIRTUAL_THREADS=true` serves requests on virtual threads, and a k6 benchmark ran both on the same machine with 50 and 400 guests sending requests back to back. Virtual threads answered 14 to 19% more cached hotel reads (up to 21,300 a second, on 51 JVM threads instead of about 248), but holds, which wait on the database's 10 connections, were 8 to 24% slower with a worse p99. Platform threads stay the default: holding and paying for rooms is the path that matters, and it's database-bound. Details: [virtual threads benchmark](docs/virtual-threads-benchmark.md).
+
 ![The RoomKeeper dashboard during the load test: bookings rising to 1,500 a second, booking latency mostly under 20 ms at p95 after a warm-up spike, a 99.9% search cache hit ratio, and database connections briefly queuing during the 50-guest race](docs/images/grafana-load-test.jpg)
 
 *The RoomKeeper dashboard over the four load-test runs (2026-10-30, 12:42 to 12:54).*
