@@ -216,15 +216,16 @@ Every feature starts as a failing test that states a business rule in plain word
 Package by feature, so each module owns its controller, service, domain, and repository, and the boundaries stay visible.
 
 ```
-src/main/java/.../booking
+src/main/java/com/roomkeeper
   auth/         signup, login, JWT, refresh tokens
+  user/         accounts, roles, profiles, the first admin
   hotel/        hotels, rooms, activation
   inventory/    per-night inventory, admin updates
   search/       availability query, min-price table
   pricing/      pricing rules and the rule chain
-  booking/      lifecycle, holds, expiry job
+  booking/      lifecycle, holds, expiry job, saved guests, waitlist
   payment/      Stripe client, webhook, refunds
-  outbox/       outbox writer and publisher
+  outbox/       outbox writer, relay, stream readers, sweeper
   common/       errors, idempotency, rate limiting, clock
 src/main/resources/db/migration   Flyway scripts (V1__init.sql, ...)
 ```
