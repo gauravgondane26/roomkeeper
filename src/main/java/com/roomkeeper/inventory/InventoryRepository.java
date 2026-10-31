@@ -21,6 +21,16 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 	@Query("select i from Inventory i where i.roomId = :roomId and i.date between :from and :to order by i.date")
 	List<Inventory> lockNights(Long roomId, LocalDate from, LocalDate to);
 
+	/**
+	 * Like {@link #lockNights}, but a night another transaction holds is left out rather than
+	 * waited for (nights this transaction holds already are included). For a transaction that
+	 * already holds other nights: one that never waits can't deadlock. Fewer nights back than
+	 * the range has means some were busy.
+	 */
+	@Query(value = "select * from inventory where room_id = :roomId and date between :from and :to"
+			+ " order by date for update skip locked", nativeQuery = true)
+	List<Inventory> lockFreeNights(Long roomId, LocalDate from, LocalDate to);
+
 	/** Like {@link #lockNights}: every night from {@code from} on whose total wasn't set by hand. */
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("""

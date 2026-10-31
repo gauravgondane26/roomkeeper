@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 class OutboxRoutesTest {
 
 	private static final Set<OutboxEventType> BOOKING = EnumSet.of(OutboxEventType.BOOKING_CONFIRMED,
-			OutboxEventType.BOOKING_CANCELLED);
+			OutboxEventType.BOOKING_CANCELLED, OutboxEventType.WAITLIST_OFFERED);
 
 	private static final Set<OutboxEventType> ACCOUNT = EnumSet.of(OutboxEventType.ACCOUNT_CREATED,
 			OutboxEventType.SIGNUP_FOR_EXISTING_ACCOUNT);

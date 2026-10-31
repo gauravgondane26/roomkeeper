@@ -768,6 +768,71 @@
           }
         },
         "type" : "object"
+      },
+      "WaitlistEntryResponse" : {
+        "properties" : {
+          "bookingId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "checkIn" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "checkOut" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "offeredAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "roomId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "rooms" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "status" : {
+            "enum" : [ "WAITING", "OFFERED", "LEFT", "EXPIRED" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "WaitlistJoinRequest" : {
+        "properties" : {
+          "checkIn" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "checkOut" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "roomId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "rooms" : {
+            "format" : "int32",
+            "maximum" : 10,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "checkIn", "checkOut", "roomId", "rooms" ],
+        "type" : "object"
       }
     },
     "securitySchemes" : {
@@ -2045,6 +2110,110 @@
         "tags" : [ "Profile" ]
       }
     },
+    "/api/v1/waitlist" : {
+      "get" : {
+        "operationId" : "listWaitlist",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/WaitlistEntryResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Waitlist" ]
+      },
+      "post" : {
+        "operationId" : "joinWaitlist",
+        "parameters" : [ {
+          "description" : "New for each request, and the same when retrying it: a retry gets the first response back instead of running again. Kept for 24 hours.",
+          "in" : "header",
+          "name" : "Idempotency-Key",
+          "required" : true,
+          "schema" : {
+            "example" : "6f1c2a9e-3b7d-4e2a-9c51-0d8e7b4a2f10",
+            "maxLength" : 255,
+            "minLength" : 1,
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/WaitlistJoinRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WaitlistEntryResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Waitlist" ]
+      }
+    },
+    "/api/v1/waitlist/{entryId}" : {
+      "delete" : {
+        "operationId" : "leaveWaitlist",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "entryId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Waitlist" ]
+      },
+      "get" : {
+        "operationId" : "getWaitlistEntry",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "entryId",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WaitlistEntryResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "Waitlist" ]
+      }
+    },
     "/webhook/payment" : {
       "post" : {
         "description" : "Called by Stripe, not clients. 200 once applied (or already applied before); 400 if the Stripe-Signature doesn't verify.",
@@ -2088,6 +2257,9 @@
   }, {
     "description" : "Hotel managers set up the hotels they own",
     "name" : "Hotel admin"
+  }, {
+    "description" : "Guests wait for a sold-out stay; rooms a hold or a cancellation gives back are held for the oldest waiter whose stay then fits, and they're emailed",
+    "name" : "Waitlist"
   }, {
     "description" : "Per-night availability, closures, and surge pricing for a room type",
     "name" : "Inventory admin"

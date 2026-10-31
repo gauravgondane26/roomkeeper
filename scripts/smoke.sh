@@ -192,6 +192,12 @@ check "guest lists saved travellers" GET /api/v1/users/guests 200 "\"id\":$trave
 check "guest puts the traveller on the booking" POST "/api/v1/bookings/$booking_id/guests" 200 \
   '"status":"GUESTS_ADDED"' "{\"guestIds\":[$traveller_id]}"
 check "guest reads the booking's status" GET "/api/v1/bookings/$booking_id/status" 200 '"status":"GUESTS_ADDED"'
+# Stretch: the waitlist takes only sold-out stays; this one still has rooms free
+IDEMPOTENCY_KEY=$(new_key)
+check "a stay with rooms free isn't waited for" POST /api/v1/waitlist 409 "urn:roomkeeper:problem:stay-available" \
+  "{\"roomId\":$room_id,\"checkIn\":\"$stay_in\",\"checkOut\":\"$stay_out\",\"rooms\":1}"
+IDEMPOTENCY_KEY=""
+check "guest reads their waitlist" GET /api/v1/waitlist 200 '['
 
 # Week 6: payments
 check "paying needs an Idempotency-Key" POST "/api/v1/bookings/$booking_id/payments" 400 \

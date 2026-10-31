@@ -225,6 +225,8 @@
 										<include>com.roomkeeper.booking.BookingStatus</include>
 										<include>com.roomkeeper.booking.CancellationPolicy</include>
 										<include>com.roomkeeper.booking.Guest</include>
+										<include>com.roomkeeper.booking.WaitlistEntry</include>
+										<include>com.roomkeeper.booking.WaitlistStatus</include>
 										<include>com.roomkeeper.common.Stays</include>
 										<include>com.roomkeeper.hotel.Hotel</include>
 										<include>com.roomkeeper.hotel.HotelReport</include>
@@ -275,6 +277,8 @@
 						<param>com.roomkeeper.booking.BookingStatus</param>
 						<param>com.roomkeeper.booking.CancellationPolicy</param>
 						<param>com.roomkeeper.booking.Guest</param>
+						<param>com.roomkeeper.booking.WaitlistEntry</param>
+						<param>com.roomkeeper.booking.WaitlistStatus</param>
 						<param>com.roomkeeper.common.Stays</param>
 						<param>com.roomkeeper.hotel.Hotel</param>
 						<param>com.roomkeeper.hotel.HotelReport</param>

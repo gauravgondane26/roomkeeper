@@ -12,6 +12,7 @@ import com.roomkeeper.booking.Booking;
 import com.roomkeeper.booking.BookingNotFoundException;
 import com.roomkeeper.booking.BookingRepository;
 import com.roomkeeper.booking.BookingStatus;
+import com.roomkeeper.booking.WaitlistOffers;
 import com.roomkeeper.booking.CancellationPolicy;
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.ProblemType;
@@ -48,15 +49,18 @@ public class CancellationService {
 
 	private final ApplicationEventPublisher events;
 
+	private final WaitlistOffers waitlist;
+
 	private final Clock clock;
 
 	public CancellationService(BookingRepository bookings, PaymentRepository payments, InventoryRepository inventory,
-			OutboxWriter outbox, ApplicationEventPublisher events, Clock clock) {
+			OutboxWriter outbox, ApplicationEventPublisher events, WaitlistOffers waitlist, Clock clock) {
 		this.bookings = bookings;
 		this.payments = payments;
 		this.inventory = inventory;
 		this.outbox = outbox;
 		this.events = events;
+		this.waitlist = waitlist;
 		this.clock = clock;
 	}
 
@@ -89,6 +93,8 @@ public class CancellationService {
 		nights.forEach(night -> night.unbook(booking.getRoomsCount()));
 		booking.cancel();
 		payment.refundDue(refund);
+		// Before anyone else can take them: to the guests waiting, if one's stay now fits
+		waitlist.offerFreedRooms(room);
 
 		events.publishEvent(
 				InventoryChangedEvent.sale(hotel.getId(), hotel.getCity(), booking.getCheckIn(), lastNight, reopened));

@@ -21,7 +21,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Gives back the rooms of holds that ran out unpaid: the nights' reserved_count goes down
- * and the booking becomes EXPIRED. Each booking is released in its own transaction, so one
+ * and the booking becomes EXPIRED, or they're held for a guest on the waitlist. Each booking is released in its own transaction, so one
  * that fails doesn't keep the others' rooms off sale.
  */
 @Service
@@ -40,16 +40,19 @@ class HoldReleaser {
 
 	private final BusinessMetrics metrics;
 
+	private final WaitlistOffers waitlist;
+
 	private final TransactionTemplate transaction;
 
 	private final Clock clock;
 
 	HoldReleaser(BookingRepository bookings, InventoryRepository inventory, ApplicationEventPublisher events,
-			BusinessMetrics metrics, PlatformTransactionManager transactions, Clock clock) {
+			BusinessMetrics metrics, WaitlistOffers waitlist, PlatformTransactionManager transactions, Clock clock) {
 		this.bookings = bookings;
 		this.inventory = inventory;
 		this.events = events;
 		this.metrics = metrics;
+		this.waitlist = waitlist;
 		this.transaction = new TransactionTemplate(transactions);
 		this.clock = clock;
 	}
@@ -100,6 +103,8 @@ class HoldReleaser {
 		boolean reopened = Inventory.anySoldOut(nights);
 		nights.forEach(night -> night.release(booking.getRoomsCount()));
 		booking.expire();
+		// Before anyone else can take them: to the guests waiting, if one's stay now fits
+		waitlist.offerFreedRooms(room);
 
 		Hotel hotel = room.getHotel();
 		events.publishEvent(

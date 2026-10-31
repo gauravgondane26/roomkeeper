@@ -8,21 +8,14 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 
-import com.roomkeeper.common.Stays;
 import com.roomkeeper.common.error.ApiException;
-import com.roomkeeper.common.error.InvalidFieldException;
 import com.roomkeeper.common.error.ProblemType;
 import com.roomkeeper.common.metrics.BusinessMetrics;
-import com.roomkeeper.hotel.Hotel;
 import com.roomkeeper.hotel.HotelService;
 import com.roomkeeper.hotel.Room;
 import com.roomkeeper.hotel.RoomRepository;
 import com.roomkeeper.inventory.Inventory;
-import com.roomkeeper.inventory.InventoryChangedEvent;
 import com.roomkeeper.inventory.InventoryRepository;
-import com.roomkeeper.pricing.PriceQuote;
-import com.roomkeeper.pricing.PricingChain;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -49,13 +42,11 @@ public class BookingService {
 
 	private final InventoryRepository inventory;
 
-	private final PricingChain pricing;
+	private final Holds holds;
 
 	private final BookingMapper mapper;
 
 	private final BookingProperties properties;
-
-	private final ApplicationEventPublisher events;
 
 	private final BusinessMetrics metrics;
 
@@ -63,19 +54,17 @@ public class BookingService {
 
 	private final Clock clock;
 
-	public BookingService(BookingRepository bookings, RoomRepository rooms, HotelService hotels, GuestService guests,
-			InventoryRepository inventory, PricingChain pricing, BookingMapper mapper, BookingProperties properties,
-			ApplicationEventPublisher events, BusinessMetrics metrics, PlatformTransactionManager transactions,
-			Clock clock) {
+	BookingService(BookingRepository bookings, RoomRepository rooms, HotelService hotels, GuestService guests,
+			InventoryRepository inventory, Holds holds, BookingMapper mapper, BookingProperties properties,
+			BusinessMetrics metrics, PlatformTransactionManager transactions, Clock clock) {
 		this.bookings = bookings;
 		this.rooms = rooms;
 		this.hotels = hotels;
 		this.guests = guests;
 		this.inventory = inventory;
-		this.pricing = pricing;
+		this.holds = holds;
 		this.mapper = mapper;
 		this.properties = properties;
-		this.events = events;
 		this.metrics = metrics;
 		this.transaction = new TransactionTemplate(transactions);
 		this.clock = clock;
@@ -120,8 +109,7 @@ public class BookingService {
 		Room room = rooms.findById(request.roomId())
 			.filter(found -> found.getHotel().isActive())
 			.orElseThrow(() -> new ApiException(ProblemType.NOT_FOUND, "Room " + request.roomId() + " not found"));
-		Hotel hotel = room.getHotel();
-		LocalDate lastNight = lastNightOf(request, hotel);
+		LocalDate lastNight = holds.lastNightOf(request.checkIn(), request.checkOut(), room.getHotel());
 		int count = request.rooms();
 
 		// Locked until commit, in date order like every other writer, so two requests for the last
@@ -131,18 +119,8 @@ public class BookingService {
 		if (!Inventory.canSellStay(nights, request.checkIn(), request.checkOut(), count)) {
 			throw new SoldOutException(room.getId(), count, request.checkIn(), request.checkOut());
 		}
-		// Priced before the hold, as the guest saw it
-		PriceQuote quote = pricing.quote(nights.stream().map(night -> night.toNight(room.getBasePrice())).toList(),
-				count);
-		nights.forEach(night -> night.hold(count));
-
-		Instant now = clock.instant();
-		Booking booking = bookings.save(new Booking(userId, room, request.checkIn(), request.checkOut(), count,
-				quote.total(), now.plus(properties.holdDuration()), now));
-		events.publishEvent(InventoryChangedEvent.sale(hotel.getId(), hotel.getCity(), request.checkIn(), lastNight,
-				Inventory.anySoldOut(nights)));
-		metrics.bookingCreated();
-		return mapper.toResponse(booking, now);
+		Booking booking = holds.hold(userId, room, request.checkIn(), request.checkOut(), count, nights);
+		return mapper.toResponse(booking, clock.instant());
 	}
 
 	/**
@@ -210,18 +188,6 @@ public class BookingService {
 	private Booking findOwned(long userId, long bookingId) {
 		return bookings.findByIdAndUserId(bookingId, userId)
 			.orElseThrow(() -> new BookingNotFoundException(bookingId));
-	}
-
-	/**
-	 * The stay's last night, after checking it starts no earlier than the hotel's today and
-	 * is 1 to {@value Stays#MAX_NIGHTS} nights.
-	 */
-	private LocalDate lastNightOf(BookingInitRequest request, Hotel hotel) {
-		if (request.checkIn().isBefore(hotel.today(clock))) {
-			throw new InvalidFieldException("checkIn", "must not be in the past");
-		}
-		Stays.nights(request.checkIn(), request.checkOut());
-		return request.checkOut().minusDays(1);
 	}
 
 }

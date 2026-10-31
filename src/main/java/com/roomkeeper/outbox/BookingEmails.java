@@ -34,7 +34,8 @@ class BookingEmails implements OutboxConsumer {
 
 	@Override
 	public Set<OutboxEventType> types() {
-		return EnumSet.of(OutboxEventType.BOOKING_CONFIRMED, OutboxEventType.BOOKING_CANCELLED);
+		return EnumSet.of(OutboxEventType.BOOKING_CONFIRMED, OutboxEventType.BOOKING_CANCELLED,
+				OutboxEventType.WAITLIST_OFFERED);
 	}
 
 	@Override
@@ -56,6 +57,14 @@ class BookingEmails implements OutboxConsumer {
 						booking.rooms() + " x " + booking.roomType() + " at " + booking.hotel() + ", "
 								+ booking.checkIn() + " to " + booking.checkOut() + ". A refund of " + booking.refund()
 								+ " " + booking.currency().toUpperCase() + " is on its way."));
+			}
+			case WAITLIST_OFFERED -> {
+				WaitlistOffered offer = json.readValue(event.getPayload(), WaitlistOffered.class);
+				sender.send(new Email(key, addressOf(offer.userId()), "Rooms are held for you at " + offer.hotel(),
+						offer.rooms() + " x " + offer.roomType() + ", " + offer.checkIn() + " to " + offer.checkOut()
+								+ ", came free while you were waiting. Booking " + offer.bookingId() + " holds them for you"
+								+ " until " + offer.holdExpiresAt() + " (UTC): add your guests and pay " + offer.amount()
+								+ " before then, or they go to the next guest waiting."));
 			}
 			default -> throw new IllegalArgumentException("Booking emails don't cover " + event.getType());
 		}

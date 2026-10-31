@@ -9,6 +9,9 @@ public enum OutboxEventType {
 	/** The guest cancelled a booking: they're told what comes back. */
 	BOOKING_CANCELLED,
 
+	/** Rooms freed up and were held for a guest on the waitlist: they're told to pay in time. */
+	WAITLIST_OFFERED,
+
 	/** A cancellation made a refund due: it's made through the payment provider. */
 	REFUND_DUE,
 
