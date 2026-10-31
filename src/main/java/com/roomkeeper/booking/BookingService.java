@@ -13,7 +13,6 @@ import com.roomkeeper.common.error.ProblemType;
 import com.roomkeeper.common.metrics.BusinessMetrics;
 import com.roomkeeper.hotel.HotelService;
 import com.roomkeeper.hotel.Room;
-import com.roomkeeper.hotel.RoomRepository;
 import com.roomkeeper.inventory.Inventory;
 import com.roomkeeper.inventory.InventoryRepository;
 import org.springframework.data.domain.Page;
@@ -34,8 +33,6 @@ public class BookingService {
 
 	private final BookingRepository bookings;
 
-	private final RoomRepository rooms;
-
 	private final HotelService hotels;
 
 	private final GuestService guests;
@@ -54,11 +51,10 @@ public class BookingService {
 
 	private final Clock clock;
 
-	BookingService(BookingRepository bookings, RoomRepository rooms, HotelService hotels, GuestService guests,
-			InventoryRepository inventory, Holds holds, BookingMapper mapper, BookingProperties properties,
-			BusinessMetrics metrics, PlatformTransactionManager transactions, Clock clock) {
+	BookingService(BookingRepository bookings, HotelService hotels, GuestService guests, InventoryRepository inventory,
+			Holds holds, BookingMapper mapper, BookingProperties properties, BusinessMetrics metrics,
+			PlatformTransactionManager transactions, Clock clock) {
 		this.bookings = bookings;
-		this.rooms = rooms;
 		this.hotels = hotels;
 		this.guests = guests;
 		this.inventory = inventory;
@@ -105,10 +101,7 @@ public class BookingService {
 	 * of the nights after it read them, and nothing it did is kept.
 	 */
 	private BookingResponse hold(long userId, BookingInitRequest request, boolean lock) {
-		// Hotels that aren't on sale don't exist as far as guests can tell
-		Room room = rooms.findById(request.roomId())
-			.filter(found -> found.getHotel().isActive())
-			.orElseThrow(() -> new ApiException(ProblemType.NOT_FOUND, "Room " + request.roomId() + " not found"));
+		Room room = holds.roomOnSale(request.roomId());
 		LocalDate lastNight = holds.lastNightOf(request.checkIn(), request.checkOut(), room.getHotel());
 		int count = request.rooms();
 

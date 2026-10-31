@@ -8,7 +8,6 @@ import java.util.List;
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.ProblemType;
 import com.roomkeeper.hotel.Room;
-import com.roomkeeper.hotel.RoomRepository;
 import com.roomkeeper.inventory.Inventory;
 import com.roomkeeper.inventory.InventoryRepository;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -24,18 +23,14 @@ public class WaitlistService {
 
 	private final WaitlistRepository entries;
 
-	private final RoomRepository rooms;
-
 	private final InventoryRepository inventory;
 
 	private final Holds holds;
 
 	private final Clock clock;
 
-	WaitlistService(WaitlistRepository entries, RoomRepository rooms, InventoryRepository inventory, Holds holds,
-			Clock clock) {
+	WaitlistService(WaitlistRepository entries, InventoryRepository inventory, Holds holds, Clock clock) {
 		this.entries = entries;
-		this.rooms = rooms;
 		this.inventory = inventory;
 		this.holds = holds;
 		this.clock = clock;
@@ -48,10 +43,7 @@ public class WaitlistService {
 	 */
 	@Transactional
 	public WaitlistEntryResponse join(long userId, WaitlistJoinRequest request) {
-		// Hotels that aren't on sale don't exist as far as guests can tell
-		Room room = rooms.findById(request.roomId())
-			.filter(found -> found.getHotel().isActive())
-			.orElseThrow(() -> new ApiException(ProblemType.NOT_FOUND, "Room " + request.roomId() + " not found"));
+		Room room = holds.roomOnSale(request.roomId());
 		LocalDate checkIn = request.checkIn();
 		LocalDate checkOut = request.checkOut();
 		LocalDate lastNight = holds.lastNightOf(checkIn, checkOut, room.getHotel());

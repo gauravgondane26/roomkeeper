@@ -6,10 +6,13 @@ import java.time.LocalDate;
 import java.util.List;
 
 import com.roomkeeper.common.Stays;
+import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.InvalidFieldException;
+import com.roomkeeper.common.error.ProblemType;
 import com.roomkeeper.common.metrics.BusinessMetrics;
 import com.roomkeeper.hotel.Hotel;
 import com.roomkeeper.hotel.Room;
+import com.roomkeeper.hotel.RoomRepository;
 import com.roomkeeper.inventory.Inventory;
 import com.roomkeeper.inventory.InventoryChangedEvent;
 import com.roomkeeper.pricing.PriceQuote;
@@ -20,12 +23,15 @@ import org.springframework.stereotype.Component;
 /**
  * Makes a hold on nights the caller has already checked and, unless the caller reads them
  * optimistically, locked: a guest's own hold, or rooms offered to a waiting guest. Either
- * way the same price and hold time.
+ * way the same price and hold time. Also the checks a guest's request goes through first,
+ * whether to hold rooms or to wait for them: the room is on sale, and the stay is valid.
  */
 @Component
 class Holds {
 
 	private final BookingRepository bookings;
+
+	private final RoomRepository rooms;
 
 	private final PricingChain pricing;
 
@@ -37,9 +43,10 @@ class Holds {
 
 	private final Clock clock;
 
-	Holds(BookingRepository bookings, PricingChain pricing, BookingProperties properties,
+	Holds(BookingRepository bookings, RoomRepository rooms, PricingChain pricing, BookingProperties properties,
 			ApplicationEventPublisher events, BusinessMetrics metrics, Clock clock) {
 		this.bookings = bookings;
+		this.rooms = rooms;
 		this.pricing = pricing;
 		this.properties = properties;
 		this.events = events;
@@ -65,6 +72,14 @@ class Holds {
 				Inventory.anySoldOut(nights)));
 		metrics.bookingCreated();
 		return booking;
+	}
+
+	/** The room type, if its hotel is on sale: 404 otherwise. */
+	Room roomOnSale(long roomId) {
+		// Hotels that aren't on sale don't exist as far as guests can tell
+		return rooms.findById(roomId)
+			.filter(found -> found.getHotel().isActive())
+			.orElseThrow(() -> new ApiException(ProblemType.NOT_FOUND, "Room " + roomId + " not found"));
 	}
 
 	/**

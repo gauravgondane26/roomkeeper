@@ -17,6 +17,8 @@ public final class LogSafe {
 			return null;
 		}
 		String cut = value.length() > MAX_LENGTH ? value.substring(0, MAX_LENGTH) + "..." : value;
+		// \p{Cntrl} covers \r and \n too; replacing them by name is what CodeQL's log-injection
+		// check recognizes as removing line breaks
 		return cut.replace('\r', '_').replace('\n', '_').replaceAll("\\p{Cntrl}", "_");
 	}
 
