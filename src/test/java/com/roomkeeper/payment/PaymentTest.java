@@ -78,6 +78,30 @@ class PaymentTest {
 	}
 
 	@Test
+	void allOfAPaymentCanBeDueBack() {
+		Payment payment = openSession();
+		payment.succeed("pi_1");
+
+		payment.refundDue(new BigDecimal("8000.00"));
+
+		assertThat(payment.getStatus()).isEqualTo(PaymentStatus.REFUND_PENDING);
+		assertThat(payment.getRefundedAmount()).isEqualByComparingTo("8000.00");
+	}
+
+	@Test
+	void keepsTheCheckoutSessionItWasOpenedFor() {
+		Payment payment = openSession();
+		payment.succeed("pi_1");
+
+		assertThat(payment.getBookingId()).isEqualTo(7L);
+		assertThat(payment.getProviderSessionId()).isEqualTo("cs_test_1");
+		assertThat(payment.getCheckoutUrl()).isEqualTo("https://checkout.stripe.test/c/pay/cs_test_1");
+		assertThat(payment.getAmount()).isEqualByComparingTo("8000.00");
+		assertThat(payment.getCurrency()).isEqualTo("inr");
+		assertThat(payment.getPaymentIntentId()).isEqualTo("pi_1");
+	}
+
+	@Test
 	void onlyAPaidPaymentCanHaveARefundDue() {
 		Payment open = openSession();
 		assertThatThrownBy(() -> open.refundDue(new BigDecimal("4000.00"))).isInstanceOf(IllegalStateException.class);

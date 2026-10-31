@@ -43,6 +43,19 @@ jobs:
       - name: Unit tests
         run: ./mvnw -B -ntp test
 
+      # PIT changes the domain classes in small ways and fails if the unit tests miss a
+      # change they run over, or if the share caught drops below the floor (pom.xml)
+      - name: Mutation tests on the domain
+        run: ./mvnw -B -ntp test-compile org.pitest:pitest-maven:mutationCoverage
+
+      - name: Upload mutation report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pit-report
+          path: target/pit-reports/
+          if-no-files-found: ignore
+
       # Testcontainers uses the Docker engine on GitHub-hosted runners.
       # Unit tests already ran; their coverage data is still in target/jacoco.exec,
       # so the report and the coverage floor cover both kinds of test.

@@ -23,6 +23,8 @@
 		<springdoc.version>3.1.1</springdoc.version>
 		<mapstruct.version>1.6.3</mapstruct.version>
 		<stripe.version>34.0.0</stripe.version>
+		<pitest.version>1.30.1</pitest.version>
+		<pitest-junit5.version>1.2.3</pitest-junit5.version>
 		<!-- CI runs unit tests in their own step, then `verify -DskipUnitTests` for the rest -->
 		<skipUnitTests>false</skipUnitTests>
 		<!-- verify fails below these: a little under the coverage when they were set, so
@@ -223,6 +225,7 @@
 										<include>com.roomkeeper.booking.BookingStatus</include>
 										<include>com.roomkeeper.booking.CancellationPolicy</include>
 										<include>com.roomkeeper.booking.Guest</include>
+										<include>com.roomkeeper.common.Stays</include>
 										<include>com.roomkeeper.hotel.Hotel</include>
 										<include>com.roomkeeper.hotel.HotelReport</include>
 										<include>com.roomkeeper.hotel.Room</include>
@@ -250,6 +253,60 @@
 						</configuration>
 					</execution>
 				</executions>
+			</plugin>
+			<!-- Mutation testing on the domain (the classes JaCoCo's domain rule holds to 100%):
+			     ./mvnw test-compile org.pitest:pitest-maven:mutationCoverage
+			     Changes the code in small ways (a < becomes <=, a return becomes null, ...) and
+			     fails if too many changes go unnoticed by the unit tests. Report in target/pit-reports -->
+			<plugin>
+				<groupId>org.pitest</groupId>
+				<artifactId>pitest-maven</artifactId>
+				<version>${pitest.version}</version>
+				<dependencies>
+					<dependency>
+						<groupId>org.pitest</groupId>
+						<artifactId>pitest-junit5-plugin</artifactId>
+						<version>${pitest-junit5.version}</version>
+					</dependency>
+				</dependencies>
+				<configuration>
+					<targetClasses>
+						<param>com.roomkeeper.booking.Booking</param>
+						<param>com.roomkeeper.booking.BookingStatus</param>
+						<param>com.roomkeeper.booking.CancellationPolicy</param>
+						<param>com.roomkeeper.booking.Guest</param>
+						<param>com.roomkeeper.common.Stays</param>
+						<param>com.roomkeeper.hotel.Hotel</param>
+						<param>com.roomkeeper.hotel.HotelReport</param>
+						<param>com.roomkeeper.hotel.Room</param>
+						<param>com.roomkeeper.inventory.Inventory</param>
+						<param>com.roomkeeper.outbox.OutboxEvent</param>
+						<param>com.roomkeeper.payment.Payment</param>
+						<param>com.roomkeeper.payment.PaymentStatus</param>
+						<param>com.roomkeeper.pricing.*</param>
+						<param>com.roomkeeper.user.User</param>
+					</targetClasses>
+					<!-- Unit tests only: an IT would start containers for every mutant -->
+					<targetTests>
+						<param>com.roomkeeper.*Test</param>
+					</targetTests>
+					<excludedTestClasses>
+						<param>com.roomkeeper.testsupport.*</param>
+					</excludedTestClasses>
+					<!-- Not ${argLine}: that carries the JaCoCo agent -->
+					<argLine>${test.jvm.args}</argLine>
+					<threads>4</threads>
+					<!-- Every mutant a unit test reaches must be caught. The rest are plain field
+					     reads (ids JPA sets, getters only mappers call), which the ITs cover; the
+					     score floor is a little under the 93% it was when set, like the coverage floors -->
+					<testStrengthThreshold>100</testStrengthThreshold>
+					<mutationThreshold>92</mutationThreshold>
+					<timestampedReports>false</timestampedReports>
+					<outputFormats>
+						<param>HTML</param>
+						<param>XML</param>
+					</outputFormats>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>

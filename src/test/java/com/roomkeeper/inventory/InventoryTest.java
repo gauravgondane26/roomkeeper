@@ -1,8 +1,10 @@
 package com.roomkeeper.inventory;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.roomkeeper.pricing.Night;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,6 +28,7 @@ class InventoryTest {
 	void aHandSetNightResetToTheRoomTypeFollowsItAgain() {
 		Inventory night = new Inventory(7L, LocalDate.parse("2026-03-10"), 5);
 		night.overrideTotalCount(2);
+		assertThat(night.isTotalOverridden()).isTrue();
 
 		night.resetToRoomTotal(5);
 
@@ -78,6 +81,8 @@ class InventoryTest {
 		assertThat(night.getAvailable()).isEqualTo(4);
 		assertThatThrownBy(() -> night.unbook(2)).as("more than are booked").isInstanceOf(IllegalStateException.class);
 		assertThat(night.getBookedCount()).isEqualTo(1);
+		night.unbook(1);
+		assertThat(night.getBookedCount()).as("every booked room").isZero();
 	}
 
 	@Test
@@ -97,9 +102,12 @@ class InventoryTest {
 		Inventory night = new Inventory(7L, LocalDate.parse("2026-03-10"), 2);
 		night.hold(1);
 
-		assertThatThrownBy(() -> night.book(2)).isInstanceOf(IllegalStateException.class);
+		assertThatThrownBy(() -> night.book(2)).isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("1 free")
+			.hasMessageNotContaining("closed");
 		night.markClosed(true);
-		assertThatThrownBy(() -> night.book(1)).isInstanceOf(IllegalStateException.class);
+		assertThatThrownBy(() -> night.book(1)).isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("closed");
 		assertThat(night.getBookedCount()).isZero();
 	}
 
@@ -125,6 +133,35 @@ class InventoryTest {
 		assertThatThrownBy(() -> night.release(2)).isInstanceOf(IllegalStateException.class);
 		assertThat(night.getReservedCount()).isOne();
 		assertThat(night.getAvailable()).isEqualTo(4);
+		night.release(1);
+		assertThat(night.getReservedCount()).as("every held room").isZero();
+	}
+
+	@Test
+	void aNightAsThePricingRulesSeeIt() {
+		Inventory night = new Inventory(7L, LocalDate.parse("2026-03-10"), 5);
+		night.hold(1);
+		night.book(2);
+		night.changeSurgeFactor(new BigDecimal("1.50"));
+
+		Night priced = night.toNight(new BigDecimal("4000.00"));
+
+		assertThat(priced).isEqualTo(new Night(LocalDate.parse("2026-03-10"), new BigDecimal("4000.00"),
+				new BigDecimal("1.50"), 5, 3));
+		assertThat(night.getDate()).isEqualTo(LocalDate.parse("2026-03-10"));
+		assertThat(night.getSurgeFactor()).isEqualByComparingTo("1.50");
+	}
+
+	@Test
+	void aNightCanBeClosedAndOpenedAgain() {
+		Inventory night = new Inventory(7L, LocalDate.parse("2026-03-10"), 5);
+		assertThat(night.isClosed()).isFalse();
+
+		night.markClosed(true);
+		assertThat(night.isClosed()).isTrue();
+
+		night.markClosed(false);
+		assertThat(night.isClosed()).isFalse();
 	}
 
 }

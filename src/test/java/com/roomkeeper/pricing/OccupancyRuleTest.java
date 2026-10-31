@@ -43,6 +43,14 @@ class OccupancyRuleTest {
 	}
 
 	@Test
+	void aThresholdOfOneRaisesThePriceOnlyWhenFull() {
+		OccupancyRule full = new OccupancyRule(BigDecimal.ONE, new BigDecimal("1.20"));
+
+		assertThat(full.apply(new BigDecimal("4000.00"), aNight().withSold(9, 10).build())).isEqualByComparingTo("4000.00");
+		assertThat(full.apply(new BigDecimal("4000.00"), aNight().withSold(10, 10).build())).isEqualByComparingTo("4800.00");
+	}
+
+	@Test
 	void rejectsAThresholdOutsideZeroToOneOrANonPositiveMultiplier() {
 		assertThatIllegalArgumentException().isThrownBy(() -> new OccupancyRule(new BigDecimal("1.5"), BigDecimal.ONE));
 		assertThatIllegalArgumentException().isThrownBy(() -> new OccupancyRule(BigDecimal.ZERO, BigDecimal.ONE));

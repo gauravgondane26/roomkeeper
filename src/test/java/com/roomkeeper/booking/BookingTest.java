@@ -7,13 +7,16 @@ import java.util.List;
 
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.InvalidFieldException;
+import com.roomkeeper.common.error.ProblemDetailsHandler.FieldViolation;
 import com.roomkeeper.common.error.ProblemType;
 import com.roomkeeper.hotel.Hotel;
 import com.roomkeeper.hotel.Room;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
 
 /** The rules a booking enforces on itself as it moves through its states. */
 class BookingTest {
@@ -208,6 +211,60 @@ class BookingTest {
 		assertThatThrownBy(() -> twoRooms().putGuests(List.of(), HELD_AT)).isInstanceOf(InvalidFieldException.class);
 	}
 
+	@Test
+	void saysHowManyGuestsFitInOneRoomOrMore() {
+		List<Guest> three = List.of(guest("A"), guest("B"), guest("C"));
+
+		assertThat(guestsViolation(oneRoom(), three)).isEqualTo("must name 1 to 2 guests: 1 room sleeping 2");
+		assertThat(guestsViolation(twoRooms(), List.of())).isEqualTo("must name 1 to 4 guests: 2 rooms sleeping 2");
+	}
+
+	@Test
+	void guestsAreKeptInIdOrderAsWhenLoaded() {
+		Booking booking = twoRooms();
+
+		booking.putGuests(List.of(guest(9L, "Vikram"), guest(3L, "Asha")), HELD_AT.plusSeconds(60));
+
+		assertThat(booking.getGuests()).extracting(Guest::getName).containsExactly("Asha", "Vikram");
+	}
+
+	@Test
+	void aHoldShowsAsExpiredOnceItRunsOutEvenBeforeTheJobRecordsIt() {
+		Booking booking = twoRooms();
+
+		assertThat(booking.statusAt(EXPIRES_AT.minusMillis(1))).isEqualTo(BookingStatus.RESERVED);
+		assertThat(booking.statusAt(EXPIRES_AT)).isEqualTo(BookingStatus.EXPIRED);
+		assertThat(booking.getStatus()).as("not changed, only shown").isEqualTo(BookingStatus.RESERVED);
+	}
+
+	@Test
+	void aConfirmedBookingShowsAsConfirmedAfterItsHoldTime() {
+		Booking booking = twoRooms();
+		booking.putGuests(List.of(guest("Asha")), HELD_AT.plusSeconds(60));
+		booking.startPayment(HELD_AT.plusSeconds(120));
+		booking.confirm();
+
+		assertThat(booking.statusAt(EXPIRES_AT.plusSeconds(3600))).isEqualTo(BookingStatus.CONFIRMED);
+	}
+
+	@Test
+	void keepsWhatItWasCreatedWith() {
+		Booking booking = twoRooms();
+
+		assertThat(booking.getUserId()).isEqualTo(7L);
+		assertThat(booking.getRoom()).isSameAs(room);
+		assertThat(booking.getCheckIn()).isEqualTo(LocalDate.parse("2026-03-10"));
+		assertThat(booking.getCheckOut()).isEqualTo(LocalDate.parse("2026-03-12"));
+		assertThat(booking.getRoomsCount()).isEqualTo(2);
+		assertThat(booking.getAmount()).isEqualByComparingTo("16000.00");
+		assertThat(booking.getHoldExpiresAt()).isEqualTo(EXPIRES_AT);
+	}
+
+	private Booking oneRoom() {
+		return new Booking(7L, room, LocalDate.parse("2026-03-10"), LocalDate.parse("2026-03-12"), 1,
+				new BigDecimal("8000.00"), EXPIRES_AT, HELD_AT);
+	}
+
 	private Booking twoRooms() {
 		return new Booking(7L, room, LocalDate.parse("2026-03-10"), LocalDate.parse("2026-03-12"), 2,
 				new BigDecimal("16000.00"), EXPIRES_AT, HELD_AT);
@@ -215,6 +272,21 @@ class BookingTest {
 
 	private static Guest guest(String name) {
 		return new Guest(7L, name, 30, Gender.OTHER);
+	}
+
+	/** A guest as loaded from the database, with its id. */
+	private static Guest guest(long id, String name) {
+		Guest guest = guest(name);
+		ReflectionTestUtils.setField(guest, "id", id);
+		return guest;
+	}
+
+	/** Why putting these guests on the booking was refused. */
+	private static String guestsViolation(Booking booking, List<Guest> guests) {
+		var thrown = catchThrowableOfType(InvalidFieldException.class, () -> booking.putGuests(guests, HELD_AT));
+		assertThat(thrown).as("expected an InvalidFieldException").isNotNull();
+		var errors = (List<?>) thrown.toProblemDetail().getProperties().get("errors");
+		return ((FieldViolation) errors.getFirst()).message();
 	}
 
 }

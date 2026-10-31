@@ -98,7 +98,7 @@ public class OutboxEvent {
 	/** A consumer failed on it: it's tried again next run, unless that was its last attempt. */
 	void recordFailure(String error, Instant at) {
 		attempts++;
-		lastError = error.length() > MAX_ERROR_LENGTH ? error.substring(0, MAX_ERROR_LENGTH) : error;
+		lastError = error.substring(0, Math.min(error.length(), MAX_ERROR_LENGTH));
 		if (attempts >= MAX_ATTEMPTS) {
 			failedAt = at;
 		}
