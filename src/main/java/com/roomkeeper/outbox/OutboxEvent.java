@@ -73,20 +73,12 @@ public class OutboxEvent {
 		return id;
 	}
 
-	public Long getAggregateId() {
-		return aggregateId;
-	}
-
 	public OutboxEventType getType() {
 		return type;
 	}
 
 	public String getPayload() {
 		return payload;
-	}
-
-	public Instant getCreatedAt() {
-		return createdAt;
 	}
 
 	public int getAttempts() {

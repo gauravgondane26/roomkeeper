@@ -1,5 +1,6 @@
 package com.roomkeeper.outbox;
 
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Map;
 
@@ -35,11 +36,11 @@ class OutboxSchemaIT extends AbstractDataTest {
 
 		OutboxEvent event = events.findById(id).orElseThrow();
 
-		assertThat(event.getAggregateId()).isEqualTo(42L);
 		assertThat(event.getType()).isEqualTo(OutboxEventType.BOOKING_CONFIRMED);
-		assertThat(event.getCreatedAt()).isEqualTo(NOW);
-		assertThat(jdbc.queryForMap("select published_at, attempts, last_error, failed_at from outbox_events where id = ?",
-				id))
+		assertThat(jdbc.queryForMap("select aggregate_id, created_at, published_at, attempts, last_error, failed_at"
+				+ " from outbox_events where id = ?", id))
+			.containsEntry("aggregate_id", 42L)
+			.containsEntry("created_at", Timestamp.from(NOW))
 			.containsEntry("published_at", null)
 			.containsEntry("attempts", 0)
 			.containsEntry("last_error", null)
