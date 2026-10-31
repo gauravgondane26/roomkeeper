@@ -2,13 +2,10 @@ package com.roomkeeper.booking;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Map;
 
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
 import com.roomkeeper.testsupport.MutableClock;
 import com.roomkeeper.testsupport.MutableClockConfig;
-import io.restassured.http.ContentType;
-import io.restassured.response.ValidatableResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,7 +48,7 @@ class HoldExpiryIT extends AbstractIntegrationTest {
 	@Test
 	void aHoldExpiresAfterTenMinutes() {
 		String guest = signUpAndLogIn(aUser().build());
-		long bookingId = hold(guest).statusCode(201).extract().jsonPath().getLong("id");
+		long bookingId = holdTuesdayAndWednesday(guest, roomId).statusCode(201).extract().jsonPath().getLong("id");
 
 		clock.setInstant(HELD_AT.plus(Duration.ofMinutes(10)).minusSeconds(1));
 		job.run();
@@ -66,14 +63,7 @@ class HoldExpiryIT extends AbstractIntegrationTest {
 		assertThat(reservedOnTuesday()).isZero();
 		api(guest).when().get("/api/v1/bookings/{id}/status", bookingId).then().body("status", equalTo("EXPIRED"));
 		// The room is back on sale
-		hold(signUpAndLogIn(aUser().build())).statusCode(201);
-	}
-
-	private ValidatableResponse hold(String guest) {
-		return idempotentApi(guest).contentType(ContentType.JSON)
-			.body(Map.of("roomId", roomId, "checkIn", "2026-03-10", "checkOut", "2026-03-12", "rooms", 1))
-			.when().post("/api/v1/bookings/init")
-			.then();
+		holdTuesdayAndWednesday(signUpAndLogIn(aUser().build()), roomId).statusCode(201);
 	}
 
 	/** The status recorded in the database, not the one the API works out from the clock. */

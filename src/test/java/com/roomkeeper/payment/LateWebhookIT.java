@@ -15,7 +15,6 @@ import com.roomkeeper.testsupport.FakePaymentGateway;
 import com.roomkeeper.testsupport.MutableClock;
 import com.roomkeeper.testsupport.MutableClockConfig;
 import com.roomkeeper.testsupport.RaceTest;
-import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -216,12 +215,9 @@ class LateWebhookIT extends AbstractIntegrationTest {
 		assertThat(nights()).hasSize(2).allSatisfy(night -> assertThat(night).containsEntry("booked_count", 0));
 	}
 
-	/** Holds the room for Tuesday and Wednesday nights. */
+	/** Holds the room for Tuesday and Wednesday nights; returns the booking's id. */
 	private long hold(String token) {
-		return idempotentApi(token).contentType(ContentType.JSON)
-			.body(Map.of("roomId", roomId, "checkIn", "2026-03-10", "checkOut", "2026-03-12", "rooms", 1))
-			.when().post("/api/v1/bookings/init")
-			.then().statusCode(201).extract().jsonPath().getLong("id");
+		return holdTuesdayAndWednesday(token, roomId).statusCode(201).extract().jsonPath().getLong("id");
 	}
 
 	private String bookingStatus() {

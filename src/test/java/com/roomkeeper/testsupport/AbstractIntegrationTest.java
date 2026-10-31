@@ -214,6 +214,17 @@ public abstract class AbstractIntegrationTest {
 				booked, reserved, roomId, LocalDate.parse(night));
 	}
 
+	/**
+	 * The user asks to hold one room of the type for Tuesday and Wednesday nights (10 and 11
+	 * March 2026), with a new Idempotency-Key; the caller checks the answer.
+	 */
+	protected ValidatableResponse holdTuesdayAndWednesday(String token, long roomId) {
+		return idempotentApi(token).contentType(ContentType.JSON)
+			.body(Map.of("roomId", roomId, "checkIn", "2026-03-10", "checkOut", "2026-03-12", "rooms", 1))
+			.when().post("/api/v1/bookings/init")
+			.then();
+	}
+
 	/** Saves a guest ("Asha") for the user and puts her on their booking. */
 	protected void putAGuestOn(String token, long bookingId) {
 		long asha = api(token).contentType(ContentType.JSON).body(Map.of("name", "Asha", "age", 30, "gender", "FEMALE"))

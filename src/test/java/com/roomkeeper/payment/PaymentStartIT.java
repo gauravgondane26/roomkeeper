@@ -5,7 +5,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
@@ -13,7 +12,6 @@ import com.roomkeeper.testsupport.FakePaymentGateway;
 import com.roomkeeper.testsupport.MutableClock;
 import com.roomkeeper.testsupport.MutableClockConfig;
 import com.roomkeeper.testsupport.RaceTest;
-import io.restassured.http.ContentType;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
 import io.restassured.response.ValidatableResponse;
@@ -67,7 +65,7 @@ class PaymentStartIT extends AbstractIntegrationTest {
 		guest = signUpAndLogIn(aUser().build());
 		roomId = firstRoomOf(manager,
 				activeHotel(manager, aHotel().named("Seaside Inn").build(), aRoom().ofType("Deluxe").build()));
-		JsonPath booking = hold().extract().jsonPath();
+		JsonPath booking = holdTuesdayAndWednesday(guest, roomId).statusCode(201).extract().jsonPath();
 		bookingId = booking.getLong("id");
 		amount = booking.get("amount");
 		putAGuestOn(guest, bookingId);
@@ -124,7 +122,7 @@ class PaymentStartIT extends AbstractIntegrationTest {
 
 	@Test
 	void theGuestsGoOnBeforePaying() {
-		long withoutGuests = hold().extract().jsonPath().getLong("id");
+		long withoutGuests = holdTuesdayAndWednesday(guest, roomId).statusCode(201).extract().jsonPath().getLong("id");
 
 		idempotentApi(guest).when().post("/api/v1/bookings/{id}/payments", withoutGuests)
 			.then()
@@ -188,12 +186,6 @@ class PaymentStartIT extends AbstractIntegrationTest {
 		api().accept("text/html").when().get("/payments/cancelled.html").then().statusCode(200);
 	}
 
-	private ValidatableResponse hold() {
-		return idempotentApi(guest).contentType(ContentType.JSON)
-			.body(Map.of("roomId", roomId, "checkIn", "2026-03-10", "checkOut", "2026-03-12", "rooms", 1))
-			.when().post("/api/v1/bookings/init")
-			.then().statusCode(201);
-	}
 
 	private ValidatableResponse pay(String idempotencyKey) {
 		return api(guest).header("Idempotency-Key", idempotencyKey)

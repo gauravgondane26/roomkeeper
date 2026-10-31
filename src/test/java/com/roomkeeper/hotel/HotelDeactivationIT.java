@@ -65,12 +65,12 @@ class HotelDeactivationIT extends AbstractIntegrationTest {
 
 		search().body("totalHotels", equalTo(0));
 		api().when().get("/api/v1/hotels/{id}/info", hotelId).then().statusCode(404);
-		hold().statusCode(404);
+		holdTuesdayAndWednesday(guest, roomId).statusCode(404);
 	}
 
 	@Test
 	void bookingsItAlreadyHasCarryOn() {
-		long bookingId = hold().statusCode(201).extract().jsonPath().getLong("id");
+		long bookingId = holdTuesdayAndWednesday(guest, roomId).statusCode(201).extract().jsonPath().getLong("id");
 		long asha = api(guest).contentType(ContentType.JSON).body(Map.of("name", "Asha", "age", 30, "gender", "FEMALE"))
 			.when().post("/api/v1/users/guests").then().statusCode(201).extract().jsonPath().getLong("id");
 
@@ -84,7 +84,7 @@ class HotelDeactivationIT extends AbstractIntegrationTest {
 
 	@Test
 	void itsHoldsStillExpire() {
-		long bookingId = hold().statusCode(201).extract().jsonPath().getLong("id");
+		long bookingId = holdTuesdayAndWednesday(guest, roomId).statusCode(201).extract().jsonPath().getLong("id");
 		deactivate(manager).statusCode(200);
 
 		clock.advance(Duration.ofMinutes(10));
@@ -102,7 +102,7 @@ class HotelDeactivationIT extends AbstractIntegrationTest {
 		api(manager).when().patch("/api/v1/admin/hotels/{id}/activate", hotelId).then().statusCode(200);
 
 		search().body("totalHotels", equalTo(1));
-		hold().statusCode(201);
+		holdTuesdayAndWednesday(guest, roomId).statusCode(201);
 	}
 
 	@Test
@@ -120,13 +120,6 @@ class HotelDeactivationIT extends AbstractIntegrationTest {
 
 	private ValidatableResponse deactivate(String token) {
 		return api(token).when().patch("/api/v1/admin/hotels/{id}/deactivate", hotelId).then();
-	}
-
-	private ValidatableResponse hold() {
-		return idempotentApi(guest).contentType(ContentType.JSON)
-			.body(Map.of("roomId", roomId, "checkIn", "2026-03-10", "checkOut", "2026-03-12", "rooms", 1))
-			.when().post("/api/v1/bookings/init")
-			.then();
 	}
 
 	private ValidatableResponse search() {
