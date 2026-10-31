@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import com.roomkeeper.common.LogSafe;
 import com.roomkeeper.common.error.ProblemDetailsWriter;
 import com.roomkeeper.common.error.ProblemType;
 import jakarta.servlet.FilterChain;
@@ -106,7 +107,7 @@ public class IdempotencyFilter extends OncePerRequestFilter {
 			claim = store.claim(userId, key, fingerprint);
 		}
 		catch (DataAccessException ex) {
-			log.warn("Idempotency keys unavailable; refusing {} {}", request.getMethod(), request.getRequestURI(), ex);
+			log.warn("Idempotency keys unavailable; refusing {} {}", request.getMethod(), LogSafe.of(request.getRequestURI()), ex);
 			problemWriter.write(request, response, ProblemType.SERVICE_UNAVAILABLE
 				.problem("Can't check the " + HEADER + " right now; try again shortly"));
 			return;
@@ -152,7 +153,7 @@ public class IdempotencyFilter extends OncePerRequestFilter {
 		}
 		catch (DataAccessException ex) {
 			// The response stands; the key's lease lapses, and a retry after that runs again
-			log.warn("Couldn't record the outcome of a request with {} {}", HEADER, key, ex);
+			log.warn("Couldn't record the outcome of a request with {} {}", HEADER, LogSafe.of(key), ex);
 		}
 	}
 
