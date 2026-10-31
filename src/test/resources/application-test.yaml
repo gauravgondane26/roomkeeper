@@ -3,6 +3,11 @@
 spring:
   main:
     banner-mode: off
+  # Every cached test context keeps its own pool; by default each holds 10 connections even
+  # when idle. Keep 2 idle and grow to the usual 10 under load (the race tests need them)
+  datasource:
+    hikari:
+      minimum-idle: 2
 
 roomkeeper:
   auth:

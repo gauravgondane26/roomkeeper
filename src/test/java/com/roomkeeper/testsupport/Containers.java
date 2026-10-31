@@ -12,7 +12,14 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
  */
 public final class Containers {
 
-	public static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:18-alpine");
+	/**
+	 * Every cached Spring test context keeps its own connection pool, so the suite needs more
+	 * connections than Postgres's default 100 allows once there are ten or so contexts (it
+	 * reached 11 and CI failed with "too many clients"). fsync stays off, as Testcontainers
+	 * sets it by default: test data needn't survive a crash.
+	 */
+	public static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:18-alpine")
+		.withCommand("postgres", "-c", "fsync=off", "-c", "max_connections=200");
 
 	public static final GenericContainer<?> REDIS = new GenericContainer<>("redis:8-alpine").withExposedPorts(6379);
 
