@@ -3,12 +3,12 @@ package com.roomkeeper.booking;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 
+import com.roomkeeper.common.Stays;
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.InvalidFieldException;
 import com.roomkeeper.common.error.ProblemType;
@@ -36,8 +36,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 /** A guest's bookings: holding rooms for a stay, and what happens to the hold after. */
 @Service
 public class BookingService {
-
-	static final int MAX_NIGHTS = 30;
 
 	static final int DEFAULT_PAGE_SIZE = 20;
 
@@ -214,18 +212,15 @@ public class BookingService {
 			.orElseThrow(() -> new BookingNotFoundException(bookingId));
 	}
 
-	/** The stay's last night, after checking the stay is 1 to {@value #MAX_NIGHTS} nights from the hotel's today. */
+	/**
+	 * The stay's last night, after checking it starts no earlier than the hotel's today and
+	 * is 1 to {@value Stays#MAX_NIGHTS} nights.
+	 */
 	private LocalDate lastNightOf(BookingInitRequest request, Hotel hotel) {
 		if (request.checkIn().isBefore(hotel.today(clock))) {
 			throw new InvalidFieldException("checkIn", "must not be in the past");
 		}
-		long nights = ChronoUnit.DAYS.between(request.checkIn(), request.checkOut());
-		if (nights < 1) {
-			throw new InvalidFieldException("checkOut", "must be after checkIn");
-		}
-		if (nights > MAX_NIGHTS) {
-			throw new InvalidFieldException("checkOut", "must be at most " + MAX_NIGHTS + " nights after checkIn");
-		}
+		Stays.nights(request.checkIn(), request.checkOut());
 		return request.checkOut().minusDays(1);
 	}
 
