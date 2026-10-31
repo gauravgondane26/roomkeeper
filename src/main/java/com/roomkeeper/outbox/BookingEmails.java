@@ -28,6 +28,11 @@ class BookingEmails implements OutboxConsumer {
 	}
 
 	@Override
+	public String name() {
+		return "booking-emails";
+	}
+
+	@Override
 	public Set<OutboxEventType> types() {
 		return EnumSet.of(OutboxEventType.BOOKING_CONFIRMED, OutboxEventType.BOOKING_CANCELLED);
 	}

@@ -29,6 +29,11 @@ class AccountEmails implements OutboxConsumer {
 	}
 
 	@Override
+	public String name() {
+		return "account-emails";
+	}
+
+	@Override
 	public Set<OutboxEventType> types() {
 		return EnumSet.of(OutboxEventType.ACCOUNT_CREATED, OutboxEventType.SIGNUP_FOR_EXISTING_ACCOUNT);
 	}

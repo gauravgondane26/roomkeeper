@@ -27,6 +27,41 @@ class BusinessMetricsTest {
 		assertThat(count("roomkeeper.holds.expired")).isZero();
 		assertThat(count("roomkeeper.webhooks.duplicates.ignored")).isZero();
 		assertThat(count("roomkeeper.repricing.dropped")).isZero();
+		assertThat(count("roomkeeper.outbox.sent")).isZero();
+		assertThat(count("roomkeeper.outbox.published")).isZero();
+		assertThat(count("roomkeeper.outbox.claimed")).isZero();
+		assertThat(count("roomkeeper.outbox.resent")).isZero();
+	}
+
+	@Test
+	void countsWhatTheOutboxSendsPublishesClaimsAndResends() {
+		metrics.outboxSent();
+		metrics.outboxSent();
+		metrics.outboxPublished();
+		metrics.outboxClaimed(3);
+		metrics.outboxResent(5);
+
+		assertThat(count("roomkeeper.outbox.sent")).isEqualTo(2);
+		assertThat(count("roomkeeper.outbox.published")).isOne();
+		assertThat(count("roomkeeper.outbox.claimed")).isEqualTo(3);
+		assertThat(count("roomkeeper.outbox.resent")).isEqualTo(5);
+	}
+
+	@Test
+	void gaugesEachOutboxStreamAndReadsNothingWhileRedisIsDown() {
+		metrics.outboxStream("refunds", () -> 2, () -> 40);
+		metrics.outboxStream("booking-emails", () -> {
+			throw new IllegalStateException("Redis command timed out");
+		}, () -> 7);
+
+		assertThat(gauge("roomkeeper.outbox.stream.pending", "refunds")).isEqualTo(2);
+		assertThat(gauge("roomkeeper.outbox.stream.length", "refunds")).isEqualTo(40);
+		assertThat(gauge("roomkeeper.outbox.stream.pending", "booking-emails")).isNaN();
+		assertThat(gauge("roomkeeper.outbox.stream.length", "booking-emails")).isEqualTo(7);
+	}
+
+	private double gauge(String name, String consumer) {
+		return registry.get(name).tag("consumer", consumer).gauge().value();
 	}
 
 	@Test

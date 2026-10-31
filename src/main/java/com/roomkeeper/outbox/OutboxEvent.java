@@ -46,6 +46,9 @@ public class OutboxEvent {
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
+	@Column(name = "sent_at")
+	private Instant sentAt;
+
 	@Column(name = "published_at")
 	private Instant publishedAt;
 
@@ -90,14 +93,31 @@ public class OutboxEvent {
 		return failedAt != null;
 	}
 
-	/** Its consumers have taken it. */
+	/** Its consumer has acted on it. */
+	public boolean isPublished() {
+		return publishedAt != null;
+	}
+
+	/** Its consumer's stream has it: put there now, or again after the stream lost it. */
+	void markSent(Instant at) {
+		if (isPublished() || isParked()) {
+			throw new IllegalStateException("Outbox event " + id + " is published or parked; it isn't sent again");
+		}
+		sentAt = at;
+	}
+
+	/** Records that its consumer acted on it. */
 	void markPublished(Instant at) {
 		publishedAt = at;
 	}
 
-	/** A consumer failed on it: it's tried again next run, unless that was its last attempt. */
+	/**
+	 * Its consumer failed on it: it's tried again, unless that was its last attempt. A reader
+	 * had it, so the stream still holds it, and the wait before it's resent starts again.
+	 */
 	void recordFailure(String error, Instant at) {
 		attempts++;
+		sentAt = at;
 		lastError = error.substring(0, Math.min(error.length(), MAX_ERROR_LENGTH));
 		if (attempts >= MAX_ATTEMPTS) {
 			failedAt = at;

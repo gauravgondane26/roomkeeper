@@ -28,7 +28,10 @@ class PrometheusScrapeIT extends AbstractIntegrationTest {
 				"roomkeeper_rate_limit_rejections_total{route=\"login\"}",
 				"roomkeeper_rate_limit_rejections_total{route=\"signup\"}",
 				"roomkeeper_rate_limit_rejections_total{route=\"refresh\"}", "hikaricp_connections_active{",
-				"hikaricp_connections_pending{");
+				"hikaricp_connections_pending{", "roomkeeper_outbox_sent_total ", "roomkeeper_outbox_published_total ",
+				"roomkeeper_outbox_claimed_total ", "roomkeeper_outbox_resent_total ",
+				"roomkeeper_outbox_stream_pending{consumer=\"refunds\"}",
+				"roomkeeper_outbox_stream_length{consumer=\"booking-emails\"}");
 		assertThat(scrape).containsPattern("cache_gets_total\\{[^}]*cache=\"search\"[^}]*result=\"hit\"")
 			.containsPattern("cache_gets_total\\{[^}]*cache=\"hotel\"[^}]*result=\"miss\"")
 			// Latency buckets, for percentiles across instances

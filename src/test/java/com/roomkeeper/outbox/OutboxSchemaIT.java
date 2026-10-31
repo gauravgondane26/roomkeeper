@@ -37,10 +37,11 @@ class OutboxSchemaIT extends AbstractDataTest {
 		OutboxEvent event = events.findById(id).orElseThrow();
 
 		assertThat(event.getType()).isEqualTo(OutboxEventType.BOOKING_CONFIRMED);
-		assertThat(jdbc.queryForMap("select aggregate_id, created_at, published_at, attempts, last_error, failed_at"
-				+ " from outbox_events where id = ?", id))
+		assertThat(jdbc.queryForMap("select aggregate_id, created_at, sent_at, published_at, attempts, last_error,"
+				+ " failed_at from outbox_events where id = ?", id))
 			.containsEntry("aggregate_id", 42L)
 			.containsEntry("created_at", Timestamp.from(NOW))
+			.containsEntry("sent_at", null)
 			.containsEntry("published_at", null)
 			.containsEntry("attempts", 0)
 			.containsEntry("last_error", null)
@@ -48,6 +49,20 @@ class OutboxSchemaIT extends AbstractDataTest {
 		// Stored as JSON, not text, so its fields can be queried
 		assertThat(jdbc.queryForObject("select payload ->> 'amount' from outbox_events where id = ?", String.class, id))
 			.isEqualTo("8000.00");
+	}
+
+	@Test
+	void recordsWhenAnEventWasSentAndAFailureMovesThatOn() {
+		OutboxEvent event = events.save(new OutboxEvent(42L, OutboxEventType.BOOKING_CONFIRMED, "{}", NOW));
+		event.markSent(NOW.plusSeconds(1));
+		entityManager.flush();
+		assertThat(sentAt(event.getId())).isEqualTo(Timestamp.from(NOW.plusSeconds(1)));
+
+		// A reader had it, so the stream still holds it: the wait before resending starts again
+		event.recordFailure("IllegalStateException: down", NOW.plusSeconds(40));
+		entityManager.flush();
+
+		assertThat(sentAt(event.getId())).isEqualTo(Timestamp.from(NOW.plusSeconds(40)));
 	}
 
 	@Test
@@ -74,6 +89,10 @@ class OutboxSchemaIT extends AbstractDataTest {
 		assertThatThrownBy(() -> insertEvent(Map.of("attempts", "-1")))
 			.isInstanceOf(DataIntegrityViolationException.class)
 			.hasMessageContaining("outbox_events_attempts_check");
+	}
+
+	private Timestamp sentAt(long id) {
+		return jdbc.queryForObject("select sent_at from outbox_events where id = ?", Timestamp.class, id);
 	}
 
 	/** Inserts an event with plain SQL, with these columns set to these SQL expressions. */

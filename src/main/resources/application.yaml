@@ -92,9 +92,17 @@ roomkeeper:
   inventory:
     # Hourly, at five past: each hotel's newest night opens within an hour of its midnight
     roll-cron: "0 5 * * * *"
+  # Events reach their consumers through a Redis stream each; Postgres resends what Redis
+  # loses (docs/outbox-streams.md)
   outbox:
-    # How often the publisher sends waiting events (emails); its lock's lease is 4s
-    publish-interval: 5s
+    # Safety net: a commit wakes the relay at once; this catches what a wake missed
+    relay-interval: 30s
+    # Under spring.data.redis.timeout, or idle reads would time out (checked at startup)
+    read-block: 500ms
+    claim-idle: 30s
+    resend-after: 2m
+    max-stream-length: 10000
+    live-delivery: true
   cache:
     hotel-info-ttl: 10m
     search-ttl: 60s

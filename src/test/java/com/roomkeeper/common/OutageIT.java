@@ -27,9 +27,8 @@ import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.testcontainers.DockerClientFactory;
-import org.testcontainers.containers.GenericContainer;
 
+import static com.roomkeeper.testsupport.Containers.whilePaused;
 import static com.roomkeeper.testsupport.HotelBuilder.aHotel;
 import static com.roomkeeper.testsupport.RoomBuilder.aRoom;
 import static com.roomkeeper.testsupport.UserBuilder.aUser;
@@ -195,17 +194,6 @@ class OutageIT extends AbstractIntegrationTest {
 			.httpClient(HttpClientConfig.httpClientConfig()
 				.setParam("http.socket.timeout", (int) DATABASE_PATIENCE * 2)
 				.setParam("http.connection.timeout", (int) PATIENCE)));
-	}
-
-	private static void whilePaused(GenericContainer<?> container, Runnable checks) {
-		var docker = DockerClientFactory.instance().client();
-		docker.pauseContainerCmd(container.getContainerId()).exec();
-		try {
-			checks.run();
-		}
-		finally {
-			docker.unpauseContainerCmd(container.getContainerId()).exec();
-		}
 	}
 
 }

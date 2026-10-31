@@ -16,7 +16,7 @@ Java 25, Spring Boot 4, Postgres, Redis. Design: docs/Hotel Booking Backend Proj
 - Unit tests are `*Test` (Surefire). Tests that need containers or the full app are `*IT` (Failsafe).
 
 ## Rules
-- Postgres is the source of truth for inventory and bookings. Redis is for speed and protection only.
+- Postgres is the source of truth for inventory and bookings. Redis is for speed and protection only, and may carry outbox events, which Postgres resends if Redis loses them.
 - Inject `Clock`; never call `now()` directly.
 - Integration tests use Testcontainers. No H2.
 - No `@Transactional` on concurrency tests.

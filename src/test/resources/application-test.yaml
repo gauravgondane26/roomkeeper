@@ -17,6 +17,11 @@ roomkeeper:
   jobs:
     enabled: false
 
+  # ...and deliver outbox events themselves (AbstractIntegrationTest.deliverOutbox);
+  # OutboxStreamLiveIT turns this on
+  outbox:
+    live-delivery: false
+
   # Tests pay through FakePaymentGateway, not Stripe, and sign webhooks with this test-only secret
   payments:
     stripe:

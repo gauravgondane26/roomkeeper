@@ -1,5 +1,6 @@
 package com.roomkeeper.testsupport;
 
+import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.lifecycle.Startables;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -20,6 +21,22 @@ public final class Containers {
 	}
 
 	private Containers() {
+	}
+
+	/**
+	 * Runs the checks with the container paused: it stops answering, as in a network
+	 * partition, then is always resumed. Test classes run one at a time, so no other test
+	 * sees the outage.
+	 */
+	public static void whilePaused(GenericContainer<?> container, Runnable checks) {
+		var docker = DockerClientFactory.instance().client();
+		docker.pauseContainerCmd(container.getContainerId()).exec();
+		try {
+			checks.run();
+		}
+		finally {
+			docker.unpauseContainerCmd(container.getContainerId()).exec();
+		}
 	}
 
 }

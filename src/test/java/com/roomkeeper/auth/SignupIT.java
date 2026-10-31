@@ -8,7 +8,6 @@ import java.util.concurrent.Callable;
 
 import com.roomkeeper.outbox.Email;
 import com.roomkeeper.outbox.FakeEmailSender;
-import com.roomkeeper.outbox.OutboxPublisher;
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
 import com.roomkeeper.testsupport.RaceTest;
 import com.roomkeeper.testsupport.TestUser;
@@ -39,9 +38,6 @@ class SignupIT extends AbstractIntegrationTest {
 
 	@Autowired
 	JdbcTemplate jdbc;
-
-	@Autowired
-	OutboxPublisher publisher;
 
 	@Autowired
 	FakeEmailSender emails;
@@ -105,7 +101,7 @@ class SignupIT extends AbstractIntegrationTest {
 		signUp(owner.signupRequest()).statusCode(202);
 		signUp(owner.signupRequest()).statusCode(202);
 
-		publisher.run();
+		deliverOutbox();
 
 		assertThat(emails.sentTo(owner.email())).extracting(Email::subject)
 			.containsExactly("Welcome to RoomKeeper", "Someone tried to sign up with your email");

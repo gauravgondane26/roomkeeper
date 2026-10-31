@@ -1,6 +1,9 @@
 package com.roomkeeper.common.metrics;
 
+import java.util.function.Supplier;
+
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -27,6 +30,14 @@ public class BusinessMetrics {
 
 	private final Counter optimisticRetries;
 
+	private final Counter outboxSent;
+
+	private final Counter outboxPublished;
+
+	private final Counter outboxClaimed;
+
+	private final Counter outboxResent;
+
 	public BusinessMetrics(MeterRegistry registry) {
 		this.registry = registry;
 		this.optimisticRetries = Counter.builder("roomkeeper.bookings.optimistic.retries")
@@ -45,6 +56,62 @@ public class BusinessMetrics {
 		this.repricingDropped = Counter.builder("roomkeeper.repricing.dropped")
 			.description("Cheapest-price recomputes dropped because the repricing queue was full")
 			.register(registry);
+		this.outboxSent = Counter.builder("roomkeeper.outbox.sent")
+			.description("Outbox events added to their consumer's Redis stream, resends included")
+			.register(registry);
+		this.outboxPublished = Counter.builder("roomkeeper.outbox.published")
+			.description("Outbox events their consumer acted on")
+			.register(registry);
+		this.outboxClaimed = Counter.builder("roomkeeper.outbox.claimed")
+			.description("Stream entries taken over after sitting unacknowledged (a failed delivery, or a dead reader)")
+			.register(registry);
+		this.outboxResent = Counter.builder("roomkeeper.outbox.resent")
+			.description("Outbox events sent again because their stream didn't deliver them in time")
+			.register(registry);
+	}
+
+	/** An outbox event was added to its stream. Counted straight away: its sending committed first. */
+	public void outboxSent() {
+		outboxSent.increment();
+	}
+
+	/** An outbox event's consumer acted on it, and that committed. */
+	public void outboxPublished() {
+		outboxPublished.increment();
+	}
+
+	/** Readers took over this many stream entries left unacknowledged. */
+	public void outboxClaimed(int entries) {
+		outboxClaimed.increment(entries);
+	}
+
+	/** This many outbox events were marked to be sent again. */
+	public void outboxResent(int events) {
+		outboxResent.increment(events);
+	}
+
+	/**
+	 * Gauges one consumer's stream: entries read and not yet acknowledged, and entries kept.
+	 * Each is read from Redis when scraped, and reads as no value (NaN) while Redis fails.
+	 */
+	public void outboxStream(String consumer, Supplier<Number> pending, Supplier<Number> length) {
+		Gauge.builder("roomkeeper.outbox.stream.pending", () -> orNaN(pending))
+			.description("Entries of the consumer's outbox stream read and not yet acknowledged")
+			.tag("consumer", consumer)
+			.register(registry);
+		Gauge.builder("roomkeeper.outbox.stream.length", () -> orNaN(length))
+			.description("Entries kept in the consumer's outbox stream")
+			.tag("consumer", consumer)
+			.register(registry);
+	}
+
+	private static Number orNaN(Supplier<Number> value) {
+		try {
+			return value.get();
+		}
+		catch (RuntimeException ex) {
+			return Double.NaN;
+		}
 	}
 
 	/** A guest held rooms: a new booking, not a retried request answered with an earlier one. */

@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import com.roomkeeper.outbox.OutboxRelay;
+import com.roomkeeper.outbox.OutboxStreamReaders;
 import io.restassured.config.JsonConfig;
 import io.restassured.config.RestAssuredConfig;
 import io.restassured.http.ContentType;
@@ -61,6 +63,12 @@ public abstract class AbstractIntegrationTest {
 
 	@Autowired
 	private FakePaymentGateway paymentGateway;
+
+	@Autowired
+	private OutboxRelay outboxRelay;
+
+	@Autowired
+	private OutboxStreamReaders outboxReaders;
 
 	@Value("${roomkeeper.admin.email}")
 	private String adminEmail;
@@ -237,6 +245,18 @@ public abstract class AbstractIntegrationTest {
 		String sessionId = startPaying(token, bookingId);
 		deliverWebhook(StripeWebhooks.checkoutCompleted("evt_paid_" + bookingId, sessionId, paymentIntentId))
 			.statusCode(200);
+	}
+
+	/**
+	 * Delivers outbox events once, as the app's own threads would (they're off in tests): the
+	 * relay sends unsent events to their streams, entries a failed delivery left are taken
+	 * again (without waiting claim-idle), then each reader handles its new entries. An event
+	 * whose consumer fails is tried again on the next call.
+	 */
+	protected void deliverOutbox() {
+		outboxRelay.relayWaiting();
+		outboxReaders.claimIdle(Duration.ZERO);
+		outboxReaders.readOnce();
 	}
 
 	/** How many outbox events of the type there are about the booking or user. */

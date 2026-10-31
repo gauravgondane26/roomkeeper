@@ -10,7 +10,6 @@ import java.util.UUID;
 
 import com.roomkeeper.outbox.Email;
 import com.roomkeeper.outbox.FakeEmailSender;
-import com.roomkeeper.outbox.OutboxPublisher;
 import com.roomkeeper.testsupport.AbstractIntegrationTest;
 import com.roomkeeper.testsupport.FakePaymentGateway;
 import com.roomkeeper.testsupport.MutableClock;
@@ -53,9 +52,6 @@ class CancellationIT extends AbstractIntegrationTest {
 
 	@Autowired
 	FakePaymentGateway stripe;
-
-	@Autowired
-	OutboxPublisher publisher;
 
 	@Autowired
 	FakeEmailSender emails;
@@ -106,12 +102,12 @@ class CancellationIT extends AbstractIntegrationTest {
 
 		assertThat(nightsBooked()).as("the rooms are back on sale").containsOnly(0);
 
-		publisher.run();
-		// As if that run had refunded and then died before its commit
-		jdbc.update("update outbox_events set published_at = null where type = 'REFUND_DUE' and aggregate_id = ?",
-				bookingId);
-		publisher.run();
-		publisher.run();
+		deliverOutbox();
+		// As if that run had refunded and then died before its commit, and the event were sent again
+		jdbc.update("update outbox_events set published_at = null, sent_at = null"
+				+ " where type = 'REFUND_DUE' and aggregate_id = ?", bookingId);
+		deliverOutbox();
+		deliverOutbox();
 
 		assertThat(stripe.refundsOf(paymentIntentId)).isOne();
 		assertThat(jdbc.queryForMap("select status, refunded_amount from payments where booking_id = ? "
@@ -130,7 +126,7 @@ class CancellationIT extends AbstractIntegrationTest {
 			.body("refund", comparesEqualTo(new BigDecimal(paid)))
 			.body("currency", equalTo("inr"))
 			.body("refundStatus", equalTo("PENDING"));
-		publisher.run();
+		deliverOutbox();
 
 		cancel().statusCode(200).body("refundStatus", equalTo("REFUNDED"));
 	}
@@ -141,7 +137,7 @@ class CancellationIT extends AbstractIntegrationTest {
 		guest = logIn(guestUser);
 
 		cancel().statusCode(200).body("status", equalTo("CANCELLED"));
-		publisher.run();
+		deliverOutbox();
 
 		assertThat(stripe.refundedAmountOf(paymentIntentId))
 			.isEqualByComparingTo(jdbc.queryForObject("select amount / 2 from bookings where id = ?",
@@ -183,7 +179,7 @@ class CancellationIT extends AbstractIntegrationTest {
 		assertThat(nightsBooked()).containsOnly(2);
 
 		cancel().statusCode(200).body("status", equalTo("CANCELLED"));
-		publisher.run();
+		deliverOutbox();
 
 		assertThat(stripe.refundsOf(paymentIntentId)).isOne();
 		assertThat(nightsBooked()).containsOnly(0);
@@ -202,12 +198,12 @@ class CancellationIT extends AbstractIntegrationTest {
 		cancel().statusCode(200);
 		stripe.failNextRefund();
 
-		publisher.run();
+		deliverOutbox();
 
 		assertThat(paymentStatus()).isEqualTo("REFUND_PENDING");
 		assertThat(stripe.refundsOf(paymentIntentId)).isZero();
 
-		publisher.run();
+		deliverOutbox();
 
 		assertThat(paymentStatus()).isEqualTo("REFUNDED");
 		assertThat(stripe.refundsOf(paymentIntentId)).isOne();
@@ -217,7 +213,7 @@ class CancellationIT extends AbstractIntegrationTest {
 	void theGuestIsEmailedAboutTheCancellation() {
 		cancel().statusCode(200);
 
-		publisher.run();
+		deliverOutbox();
 
 		assertThat(emails.sentTo(guestUser.email())).extracting(Email::subject)
 			.contains("Your booking " + bookingId + " is cancelled");

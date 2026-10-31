@@ -37,6 +37,11 @@ class CancellationRefunds implements OutboxConsumer {
 	}
 
 	@Override
+	public String name() {
+		return "refunds";
+	}
+
+	@Override
 	public Set<OutboxEventType> types() {
 		return EnumSet.of(OutboxEventType.REFUND_DUE);
 	}
