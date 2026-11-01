@@ -79,6 +79,13 @@ class AdminAccountBootstrapTest {
 	}
 
 	@Test
+	void refusesAnAdminPasswordShorterThan15Characters() {
+		assertThatIllegalStateException()
+			.isThrownBy(() -> bootstrap("admin@example.com", "fourteen-chars").ensureAdmin());
+		assertThatNoException().isThrownBy(() -> bootstrap("admin@example.com", "fifteen-chars-x").ensureAdmin());
+	}
+
+	@Test
 	void refusesAnUnusableConfiguredPassword() {
 		assertThatIllegalStateException().isThrownBy(() -> bootstrap("admin@example.com", "short").ensureAdmin());
 		assertThatIllegalStateException().isThrownBy(() -> bootstrap("admin@example.com", "é".repeat(40)).ensureAdmin());

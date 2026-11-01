@@ -136,6 +136,24 @@ class SignupIT extends AbstractIntegrationTest {
 	}
 
 	@Test
+	void rejectsAPasswordShorterThan15Characters() {
+		// Current NIST guidance for a password that's the only factor (SP 800-63B-4)
+		signUp(aUser().withPassword("fourteen-chars").build().signupRequest())
+			.statusCode(400)
+			.body("type", equalTo("urn:roomkeeper:problem:validation"))
+			.body("errors.field", contains("password"));
+	}
+
+	@Test
+	void acceptsAPasswordOfExactly15Characters() {
+		TestUser user = aUser().withPassword("fifteen-chars-x").build();
+
+		signUp(user.signupRequest()).statusCode(202);
+
+		attemptLogin(user).statusCode(200);
+	}
+
+	@Test
 	void rejectsAPasswordOverBcryptsLimitOf72Bytes() {
 		// 72 characters but 144 bytes: BCrypt can't hash it, so it must be a 400, not a 500
 		String password = "é".repeat(72);
