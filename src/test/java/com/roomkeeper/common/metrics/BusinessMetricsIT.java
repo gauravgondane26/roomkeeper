@@ -109,11 +109,13 @@ class BusinessMetricsIT extends AbstractIntegrationTest {
 	void rateLimitRejectionsAreCountedByRoute() {
 		double before = count("roomkeeper.rate.limit.rejections", "route", "login");
 
-		// Setting up already used some of this minute's attempts
+		// Setting up already used some of this minute's attempts. A different email each time,
+		// so no account reaches its own failed-login limit first
 		int rejected = 0;
 		for (int i = 0; i < 12; i++) {
 			int status = api().contentType(ContentType.JSON)
-				.body(Map.of("email", "nobody@example.com", "password", "wrong-password"))
+				.body(Map.of("email", "nobody-" + i + "-" + System.nanoTime() + "@example.com", "password",
+						"wrong-password"))
 				.when().post("/api/v1/auth/login")
 				.then().extract().statusCode();
 			if (status == 429) {

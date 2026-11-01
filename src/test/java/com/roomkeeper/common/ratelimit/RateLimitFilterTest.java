@@ -5,8 +5,11 @@ import java.time.Duration;
 import com.roomkeeper.common.error.ProblemDetailsWriter;
 import com.roomkeeper.common.metrics.BusinessMetrics;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.RedisConnectionFailureException;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -33,12 +36,32 @@ class RateLimitFilterTest {
 
 	private static final RateLimitProperties.Rule FAILED_LOGINS = new RateLimitProperties.Rule(5, Duration.ofMinutes(15));
 
+	private static final RateLimitProperties.Rule HOLDS = new RateLimitProperties.Rule(20, Duration.ofMinutes(1));
+
 	private final RateLimiter rateLimiter = mock(RateLimiter.class);
 
 	private final RateLimitFilter filter = new RateLimitFilter(rateLimiter,
-			new RateLimitProperties(LOGIN, SIGNUP, REFRESH, SEARCH, FAILED_LOGINS),
+			new RateLimitProperties(LOGIN, SIGNUP, REFRESH, SEARCH, FAILED_LOGINS, HOLDS),
 			new ProblemDetailsWriter(JsonMapper.builder().build()),
 			new BusinessMetrics(new SimpleMeterRegistry()));
+
+	@AfterEach
+	void clearSignIn() {
+		SecurityContextHolder.clearContext();
+	}
+
+	@Test
+	void holdsAreLimitedPerSignedInGuestNotPerIp() throws Exception {
+		when(rateLimiter.tryAcquire(anyString(), any())).thenReturn(new RateLimiter.Decision(true, Duration.ZERO));
+		SecurityContextHolder.getContext()
+			.setAuthentication(new TestingAuthenticationToken("42", null, "ROLE_GUEST"));
+		var request = new MockHttpServletRequest("POST", "/api/v1/bookings/init");
+		request.setRemoteAddr("203.0.113.7");
+
+		filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+
+		verify(rateLimiter).tryAcquire(eq("rl:holds:user:42"), eq(HOLDS));
+	}
 
 	@Test
 	void failsOpenWhenRedisIsDown() throws Exception {

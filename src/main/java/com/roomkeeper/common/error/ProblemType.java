@@ -39,6 +39,7 @@ public enum ProblemType {
 	HOTEL_NOT_APPROVED("hotel-not-approved", HttpStatus.CONFLICT, "Hotel not approved"),
 	SOLD_OUT("sold-out", HttpStatus.CONFLICT, "Sold out"),
 	HOLD_EXPIRED("hold-expired", HttpStatus.CONFLICT, "Hold expired"),
+	TOO_MANY_HOLDS("too-many-holds", HttpStatus.CONFLICT, "Too many holds"),
 	BOOKING_STATE("booking-state", HttpStatus.CONFLICT, "Not allowed in the booking's status"),
 	CANCELLATION_CLOSED("cancellation-closed", HttpStatus.CONFLICT, "Cancellation closed"),
 	HAS_BOOKINGS("has-bookings", HttpStatus.CONFLICT, "Has bookings"),

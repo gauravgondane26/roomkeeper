@@ -77,7 +77,7 @@ class ForwardedClientIpIT extends AbstractIntegrationTest {
 
 		private ValidatableResponse login(String forwardedFor) {
 			return api().header("X-Forwarded-For", forwardedFor).contentType(ContentType.JSON)
-				.body(Map.of("email", "nobody@example.com", "password", "wrong-password"))
+				.body(Map.of("email", anotherEmail(), "password", "wrong-password"))
 				.when().post("/api/v1/auth/login")
 				.then();
 		}
@@ -86,9 +86,14 @@ class ForwardedClientIpIT extends AbstractIntegrationTest {
 
 	private ValidatableResponse login(String forwardedFor) {
 		return api().header("X-Forwarded-For", forwardedFor).contentType(ContentType.JSON)
-			.body(Map.of("email", "nobody@example.com", "password", "wrong-password"))
+			.body(Map.of("email", anotherEmail(), "password", "wrong-password"))
 			.when().post("/api/v1/auth/login")
 			.then();
+	}
+
+	/** A new email each time, so only the per-client limit is reached, not an account's own. */
+	private static String anotherEmail() {
+		return "nobody-" + System.nanoTime() + "@example.com";
 	}
 
 }

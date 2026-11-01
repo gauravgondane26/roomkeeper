@@ -30,6 +30,10 @@ services:
       API_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
       # Searches a minute per client IP; raise it for a load test that searches harder
       ROOMKEEPER_RATELIMITS_SEARCH_CAPACITY: ${SEARCH_RATE_LIMIT:-300}
+      # Unpaid holds a guest may have at once, and holds a guest may ask for a minute; the
+      # load tests' few guests hold thousands of times, so they raise both
+      ROOMKEEPER_BOOKING_MAXHOLDS: ${MAX_HOLDS_PER_GUEST:-3}
+      ROOMKEEPER_RATELIMITS_HOLDS_CAPACITY: ${HOLD_RATE_LIMIT:-20}
       # Proxies whose X-Forwarded-For is believed (an IP regex); none by default
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
       # How holds keep two guests off one room: pessimistic, or optimistic for the locking

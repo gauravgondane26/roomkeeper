@@ -17,11 +17,13 @@ import org.springframework.validation.annotation.Validated;
  * @param search GET /api/v1/hotels/search
  * @param failedLogins wrong passwords per account (email), whatever the IP: only failures
  * take from it, and once it's empty every login to the account waits
+ * @param holds POST /api/v1/bookings/init, per signed-in guest rather than per IP
  */
 @Validated
 @ConfigurationProperties("roomkeeper.rate-limits")
 public record RateLimitProperties(@NotNull @Valid Rule login, @NotNull @Valid Rule signup,
-		@NotNull @Valid Rule refresh, @NotNull @Valid Rule search, @NotNull @Valid Rule failedLogins) {
+		@NotNull @Valid Rule refresh, @NotNull @Valid Rule search, @NotNull @Valid Rule failedLogins,
+		@NotNull @Valid Rule holds) {
 
 	/** Up to {@code capacity} requests at once, refilling to full over {@code period}. */
 	public record Rule(@Min(1) int capacity, @NotNull Duration period) {

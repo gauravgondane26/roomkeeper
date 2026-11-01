@@ -104,6 +104,7 @@ public class BookingService {
 		Room room = holds.roomOnSale(request.roomId());
 		LocalDate lastNight = holds.lastNightOf(request.checkIn(), request.checkOut(), room.getHotel());
 		int count = request.rooms();
+		requireFewerHoldsThanAllowed(userId);
 
 		// Locked until commit, in date order like every other writer, so two requests for the last
 		// room can't both see it free, and two overlapping stays can't deadlock each other
@@ -114,6 +115,21 @@ public class BookingService {
 		}
 		Booking booking = holds.hold(userId, room, request.checkIn(), request.checkOut(), count, nights);
 		return mapper.toResponse(booking, clock.instant());
+	}
+
+	/**
+	 * Refuses a hold past the guest's allowance of unpaid holds, so one account can't keep a
+	 * hotel's rooms held and the hotel looking sold out. The guest's holds take turns on a
+	 * lock first (before any night is locked, so no deadlock), so holds sent together can't
+	 * each count the others as not there yet. Rooms offered from the waitlist don't count
+	 * against this: the guest asked for them earlier, while the stay was sold out.
+	 */
+	private void requireFewerHoldsThanAllowed(long userId) {
+		bookings.lockHoldsOf(userId);
+		if (bookings.countHoldsOf(userId, BookingStatus.holds(), clock.instant()) >= properties.maxHolds()) {
+			throw new ApiException(ProblemType.TOO_MANY_HOLDS, "You already hold " + properties.maxHolds()
+					+ " stays that aren't paid for; pay for one or let it run out before holding another");
+		}
 	}
 
 	/**

@@ -3,7 +3,9 @@
 [`loadtest/booking.js`](../loadtest/booking.js) drives the booking endpoint with [k6](https://k6.io), run in Docker against the Compose stack, while the RoomKeeper dashboard in Grafana watches the app:
 
 ```bash
-docker compose --profile metrics up -d --build --wait
+# A guest may normally hold 3 stays at once and ask for 20 holds a minute; the test's three
+# guests hold thousands of times, so start the app with both limits raised
+MAX_HOLDS_PER_GUEST=1000000 HOLD_RATE_LIMIT=1000000 docker compose --profile metrics up -d --build --wait
 docker compose --profile loadtest run --rm k6
 # Harder: holds and searches per second, and how long
 docker compose --profile loadtest run --rm -e SPREAD_RATE=600 -e BROWSE_RATE=200 -e DURATION=1m k6

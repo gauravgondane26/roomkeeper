@@ -17,7 +17,9 @@
 // threads stop at 200. MODE picks what they send:
 //   info   a hotel's details, served from the Redis cache: no database, quick, many at once
 //   holds  holds on nights spread over 270 days, so they don't contend for rows: each needs a
-//          database connection, and the pool has 10
+//          database connection, and the pool has 10. Start the app with
+//          MAX_HOLDS_PER_GUEST=1000000 HOLD_RATE_LIMIT=1000000 for this mode: a guest may
+//          normally hold 3 stays at once and ask for 20 holds a minute
 // Reported: answers by outcome (200/201, 503 to retry, anything else), latency, and from the
 // management port the JVM's peak thread count and connection waits that timed out.
 // THREADS only labels the output; the app's mode is what VIRTUAL_THREADS started it with.

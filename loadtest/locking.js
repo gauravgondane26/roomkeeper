@@ -6,6 +6,10 @@
 //   BOOKING_LOCKING=optimistic docker compose up -d --wait app
 //   docker compose --profile loadtest run --rm -e LOCKING=optimistic -e RATE=100 k6 run /loadtest/locking.js
 //
+// Start the app with MAX_HOLDS_PER_GUEST=1000000 HOLD_RATE_LIMIT=1000000 set as well: a guest
+// may normally hold 3 stays at once and ask for 20 holds a minute, and this run's three
+// guests hold thousands of times.
+//
 // Every hold is for one of HOT_NIGHTS nights (default 3) of one room type, at RATE holds a
 // second (default 100) for DURATION (default 30s), so holds keep colliding on the same rows.
 // The room type has more rooms than the run can sell, so what's measured is the contention,

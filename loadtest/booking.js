@@ -1,7 +1,10 @@
 // Load test for the booking endpoint, run with k6 in Docker against the Compose stack:
 //
-//   docker compose --profile metrics up -d --build --wait
+//   MAX_HOLDS_PER_GUEST=1000000 HOLD_RATE_LIMIT=1000000 docker compose --profile metrics up -d --build --wait
 //   docker compose --profile loadtest run --rm k6
+//
+// A guest may normally hold 3 stays at once and ask for 20 holds a minute; the test's three
+// guests hold thousands of times, hence the two raised limits.
 //
 // and watched on the RoomKeeper dashboard (http://localhost:3000). Three scenarios run
 // together for two minutes (DURATION):

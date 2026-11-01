@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -68,7 +69,9 @@ class RepricingBurstIT extends AbstractIntegrationTest {
 
 	@RaceTest
 	void aBurstOfBookingsQueuesAFewRecomputesAndEndsAtTheRightPrice() throws Exception {
-		String guest = signUpAndLogIn(aUser().build());
+		// Three guests, as one may hold only 3 stays at once
+		List<String> guests = List.of(signUpAndLogIn(aUser().build()), signUpAndLogIn(aUser().build()),
+				signUpAndLogIn(aUser().build()));
 		ThreadPoolExecutor pool = repricing.getThreadPoolExecutor();
 		long scheduledBefore = pool.getTaskCount();
 
@@ -80,7 +83,7 @@ class RepricingBurstIT extends AbstractIntegrationTest {
 				lock.execute();
 			}
 			for (int i = 0; i < BOOKINGS; i++) {
-				idempotentApi(guest).contentType(ContentType.JSON)
+				idempotentApi(guests.get(i % guests.size())).contentType(ContentType.JSON)
 					.body(Map.of("roomId", roomId, "checkIn", TUESDAY, "checkOut", "2026-03-11", "rooms", 1))
 					.when().post("/api/v1/bookings/init")
 					.then().statusCode(201);

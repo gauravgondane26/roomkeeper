@@ -135,7 +135,8 @@ class HotelMinPriceUpdater {
 	/** Re-prices the hotel's nights from {@code from} to {@code until} (null for no end). */
 	private void recompute(long hotelId, LocalDate from, LocalDate until) {
 		// One recalculation per hotel at a time; the lock is released when the transaction ends.
-		// The key is the hotel id: nothing else in the app takes advisory locks.
+		// The key is the hotel id, in the single-key form; holds lock in the two-key form
+		// (BookingRepository.lockHoldsOf), a separate key space.
 		jdbc.sql("select pg_advisory_xact_lock(:hotelId)").param("hotelId", hotelId).query().singleRow();
 		// Changes made through JPA may still be pending; the query below must see them
 		entityManager.flush();

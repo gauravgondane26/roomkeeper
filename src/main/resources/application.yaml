@@ -76,6 +76,11 @@ roomkeeper:
     failed-logins:
       capacity: 5
       period: 15m
+    # Holds asked for, per signed-in guest: with the cap on holds (booking.max-holds) it
+    # stops one account from keeping a hotel's rooms held. Load tests raise both
+    holds:
+      capacity: 20
+      period: 1m
   pricing:
     occupancy:
       # 20% more once 80% of a room type is booked or held that night
@@ -96,6 +101,8 @@ roomkeeper:
     # benchmark the two: docs/locking-benchmark.md
     locking: ${BOOKING_LOCKING:pessimistic}
     optimistic-attempts: 5
+    # Unpaid holds a guest may have at once
+    max-holds: 3
     # How often the expiry job looks for holds that have run out
     expiry-interval: 1m
   inventory:

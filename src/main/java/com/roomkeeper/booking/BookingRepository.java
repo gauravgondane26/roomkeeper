@@ -43,6 +43,20 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 	@Query("select b from Booking b where b.id = :id")
 	Optional<Booking> lockById(Long id);
 
+	/**
+	 * Holds the user's hold-making lock until the transaction ends, so two holds by one
+	 * user take turns and both see the other when counting. A Postgres advisory lock in the
+	 * two-key form, {@code (1, user id)}: a key space apart from the hotel recompute's
+	 * single-key locks. Ids past 2^31 wrap, which at worst makes two users take turns.
+	 */
+	@Query(value = "select count(*) from pg_advisory_xact_lock(1, cast(:userId % 2147483647 as integer))",
+			nativeQuery = true)
+	long lockHoldsOf(long userId);
+
+	/** The user's bookings in one of {@code statuses} whose hold hasn't run out at {@code now}. */
+	@Query("select count(b) from Booking b where b.userId = :userId and b.status in :statuses and b.holdExpiresAt > :now")
+	long countHoldsOf(long userId, Collection<BookingStatus> statuses, Instant now);
+
 	/** Bookings in one of {@code statuses} whose hold ran out by {@code now}, oldest first. */
 	@Query("select b.id from Booking b where b.status in :statuses and b.holdExpiresAt <= :now order by b.holdExpiresAt")
 	List<Long> findIdsHeldUntil(Collection<BookingStatus> statuses, Instant now, Limit limit);

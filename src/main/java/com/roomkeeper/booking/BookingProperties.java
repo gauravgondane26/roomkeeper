@@ -13,9 +13,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * them; {@code optimistic} reads them unlocked and starts over if another hold changed them
  * first. The optimistic way is kept to benchmark against (docs/locking-benchmark.md)
  * @param optimisticAttempts how many times an optimistic hold tries before answering 503
+ * @param maxHolds how many unpaid holds a guest may have at once (default 3), so one
+ * account can't keep a hotel's rooms held; load tests raise it
  */
 @ConfigurationProperties("roomkeeper.booking")
-public record BookingProperties(Duration holdDuration, Locking locking, Integer optimisticAttempts) {
+public record BookingProperties(Duration holdDuration, Locking locking, Integer optimisticAttempts,
+		Integer maxHolds) {
 
 	public enum Locking {
 		PESSIMISTIC, OPTIMISTIC
@@ -24,6 +27,7 @@ public record BookingProperties(Duration holdDuration, Locking locking, Integer 
 	public BookingProperties {
 		locking = locking != null ? locking : Locking.PESSIMISTIC;
 		optimisticAttempts = optimisticAttempts != null ? optimisticAttempts : 5;
+		maxHolds = maxHolds != null ? maxHolds : 3;
 	}
 
 }
