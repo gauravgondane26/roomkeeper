@@ -121,6 +121,10 @@ roomkeeper:
       # Test-mode keys only; without a secret key, payments answer 503 and everything else works
       secret-key: ${STRIPE_SECRET_KEY:}
       webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  # Bodies over these are refused with 413 before anything reads them into memory
+  request-size:
+    max-body: 64KB
+    max-webhook-body: 1MB
   idempotency:
     # A retry within a day gets the first response back
     ttl: 24h

@@ -6,6 +6,7 @@ import java.sql.SQLRecoverableException;
 import java.sql.SQLTransientConnectionException;
 import java.util.List;
 
+import com.roomkeeper.common.web.RequestTooLargeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessResourceFailureException;
@@ -14,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -109,6 +111,19 @@ public class ProblemDetailsHandler extends ResponseEntityExceptionHandler {
 		ProblemDetail problem = ProblemType.VALIDATION.problem("One or more fields are invalid");
 		problem.setProperty("errors", errors);
 		return handleExceptionInternal(ex, problem, headers, status, request);
+	}
+
+	/** A body cut off at its size limit while being read is too large, not malformed. */
+	@Override
+	protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex,
+			HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+		for (Throwable cause = ex.getCause(); cause != null; cause = cause.getCause()) {
+			if (cause instanceof RequestTooLargeException tooLarge) {
+				return handleExceptionInternal(ex, ProblemType.PAYLOAD_TOO_LARGE.problem(tooLarge.getMessage()), headers,
+						HttpStatus.CONTENT_TOO_LARGE, request);
+			}
+		}
+		return super.handleHttpMessageNotReadable(ex, headers, status, request);
 	}
 
 	@Override
