@@ -9,6 +9,14 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.header.HeaderWriter;
+import org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 /**
  * Stateless API security: no sessions, no cookies, no CSRF (clients send bearer tokens,
@@ -17,10 +25,33 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration(proxyBeanMethods = false)
 public class SecurityConfig {
 
+	/** The API answers JSON: a browser may load nothing for it and frame it nowhere. */
+	private static final String API_POLICY = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+
+	/** Stripe's return pages style themselves inline and run no scripts. */
+	private static final String PAGES_POLICY = "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; "
+			+ "base-uri 'none'; form-action 'none'";
+
+	/** Swagger UI loads its own scripts and styles and calls the API from the same origin. */
+	private static final String SWAGGER_POLICY = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
+			+ "frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+
 	@Bean
 	SecurityFilterChain apiSecurity(HttpSecurity http, ProblemDetailsSecurityHandler problemHandler,
 			JwtAuthenticationConverter jwtAuthenticationConverter) {
+		RequestMatcher swaggerUi = new OrRequestMatcher(path("/swagger-ui/**"), path("/swagger-ui.html"));
+		RequestMatcher pages = path("/payments/**");
 		return http
+			// Spring Security's defaults (nosniff, frame DENY, no-store) plus what a browser may load,
+			// and no referrer, so URLs with ids or Stripe session ids aren't passed on
+			.headers(headers -> headers
+				.addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(swaggerUi, policy(SWAGGER_POLICY)))
+				.addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(pages, policy(PAGES_POLICY)))
+				.addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(
+						new NegatedRequestMatcher(new OrRequestMatcher(swaggerUi, pages)), policy(API_POLICY)))
+				.referrerPolicy(referrer -> referrer.policy(ReferrerPolicy.NO_REFERRER))
+				.addHeaderWriter(new StaticHeadersWriter("Permissions-Policy",
+						"camera=(), microphone=(), geolocation=(), payment=()")))
 			.csrf(csrf -> csrf.disable())
 			.httpBasic(basic -> basic.disable())
 			.formLogin(form -> form.disable())
@@ -61,6 +92,14 @@ public class SecurityConfig {
 				.authenticationEntryPoint(problemHandler)
 				.accessDeniedHandler(problemHandler))
 			.build();
+	}
+
+	private static RequestMatcher path(String pattern) {
+		return PathPatternRequestMatcher.withDefaults().matcher(pattern);
+	}
+
+	private static HeaderWriter policy(String contentSecurityPolicy) {
+		return new StaticHeadersWriter("Content-Security-Policy", contentSecurityPolicy);
 	}
 
 	/** Hashes are stored with an algorithm prefix ({bcrypt}...), so the algorithm can change later. */
