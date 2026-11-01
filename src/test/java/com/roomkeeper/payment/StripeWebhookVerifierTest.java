@@ -7,6 +7,8 @@ import java.time.ZoneOffset;
 
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.ProblemType;
+import com.roomkeeper.common.security.SecurityEvents;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -69,7 +71,8 @@ class StripeWebhookVerifierTest {
 	private static StripeWebhookVerifier verifier(String secret) {
 		PaymentProperties properties = new PaymentProperties("inr", "https://roomkeeper.test/complete",
 				"https://roomkeeper.test/cancelled", new PaymentProperties.Stripe("sk_test_x", secret));
-		return new StripeWebhookVerifier(properties, JsonMapper.builder().build(), Clock.fixed(NOW, ZoneOffset.UTC));
+		return new StripeWebhookVerifier(properties, JsonMapper.builder().build(),
+				new SecurityEvents(new SimpleMeterRegistry()), Clock.fixed(NOW, ZoneOffset.UTC));
 	}
 
 	private static void assertInvalid(org.assertj.core.api.ThrowableAssert.ThrowingCallable verify) {

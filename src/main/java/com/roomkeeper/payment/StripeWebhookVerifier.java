@@ -5,6 +5,7 @@ import java.time.Clock;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.ProblemType;
+import com.roomkeeper.common.security.SecurityEvents;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.net.Webhook;
 import org.springframework.stereotype.Component;
@@ -31,9 +32,12 @@ class StripeWebhookVerifier {
 
 	private final Clock clock;
 
-	StripeWebhookVerifier(PaymentProperties properties, JsonMapper json, Clock clock) {
+	private final SecurityEvents securityEvents;
+
+	StripeWebhookVerifier(PaymentProperties properties, JsonMapper json, SecurityEvents securityEvents, Clock clock) {
 		this.properties = properties;
 		this.json = json;
+		this.securityEvents = securityEvents;
 		this.clock = clock;
 	}
 
@@ -64,7 +68,9 @@ class StripeWebhookVerifier {
 		}
 	}
 
-	private static ApiException invalid(String detail) {
+	/** Refuses the delivery, and records it: forged or replayed deliveries are worth noticing. */
+	private ApiException invalid(String detail) {
+		securityEvents.webhookRejected(detail);
 		return new ApiException(ProblemType.INVALID_WEBHOOK_SIGNATURE, detail);
 	}
 

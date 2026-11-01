@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.ProblemType;
+import com.roomkeeper.common.security.SecurityEvents;
 import com.roomkeeper.outbox.OutboxWriter;
 import com.roomkeeper.testsupport.MutableClock;
 import com.roomkeeper.user.Role;
@@ -47,7 +48,7 @@ class AuthServiceRedisDownTest {
 	private final AuthService authService = new AuthService(users, mock(OutboxWriter.class),
 			mock(TransactionTemplate.class), passwordEncoder,
 			new AccessTokenService(JwtConfig.encoder(JwtConfig.secretKey(SECRET)), properties, clock), refreshTokens,
-			mock(FailedLogins.class), properties, clock);
+			mock(FailedLogins.class), mock(SecurityEvents.class), properties, clock);
 
 	private final RedisConnectionFailureException redisDown = new RedisConnectionFailureException("Redis is down");
 

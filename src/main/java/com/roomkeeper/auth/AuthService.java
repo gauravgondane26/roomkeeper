@@ -5,6 +5,7 @@ import java.util.function.Supplier;
 
 import com.roomkeeper.common.error.ApiException;
 import com.roomkeeper.common.error.ProblemType;
+import com.roomkeeper.common.security.SecurityEvents;
 import com.roomkeeper.outbox.AccountCreated;
 import com.roomkeeper.outbox.OutboxWriter;
 import com.roomkeeper.outbox.SignupForExistingAccount;
@@ -40,6 +41,8 @@ public class AuthService {
 
 	private final FailedLogins failedLogins;
 
+	private final SecurityEvents securityEvents;
+
 	private final AuthProperties properties;
 
 	private final Clock clock;
@@ -52,7 +55,7 @@ public class AuthService {
 
 	public AuthService(UserRepository users, OutboxWriter outbox, TransactionTemplate transaction,
 			PasswordEncoder passwordEncoder, AccessTokenService accessTokens, RefreshTokenStore refreshTokens,
-			FailedLogins failedLogins, AuthProperties properties, Clock clock) {
+			FailedLogins failedLogins, SecurityEvents securityEvents, AuthProperties properties, Clock clock) {
 		this.users = users;
 		this.outbox = outbox;
 		this.transaction = transaction;
@@ -60,6 +63,7 @@ public class AuthService {
 		this.accessTokens = accessTokens;
 		this.refreshTokens = refreshTokens;
 		this.failedLogins = failedLogins;
+		this.securityEvents = securityEvents;
 		this.properties = properties;
 		this.clock = clock;
 		this.dummyPasswordHash = passwordEncoder.encode("dummy-password-for-unknown-emails");
@@ -107,10 +111,12 @@ public class AuthService {
 		if (user == null) {
 			passwordEncoder.matches(request.password(), dummyPasswordHash);
 			failedLogins.recordFailure(email);
+			securityEvents.loginFailed(null);
 			throw new InvalidCredentialsException();
 		}
 		if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
 			failedLogins.recordFailure(email);
+			securityEvents.loginFailed(user.getId());
 			throw new InvalidCredentialsException();
 		}
 		return issueTokens(user);

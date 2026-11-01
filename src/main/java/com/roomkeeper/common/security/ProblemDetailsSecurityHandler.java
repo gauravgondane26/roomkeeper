@@ -7,7 +7,9 @@ import com.roomkeeper.common.error.ProblemType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
@@ -22,8 +24,11 @@ public class ProblemDetailsSecurityHandler implements AuthenticationEntryPoint, 
 
 	private final ProblemDetailsWriter writer;
 
-	public ProblemDetailsSecurityHandler(ProblemDetailsWriter writer) {
+	private final SecurityEvents securityEvents;
+
+	public ProblemDetailsSecurityHandler(ProblemDetailsWriter writer, SecurityEvents securityEvents) {
 		this.writer = writer;
+		this.securityEvents = securityEvents;
 	}
 
 	@Override
@@ -37,6 +42,10 @@ public class ProblemDetailsSecurityHandler implements AuthenticationEntryPoint, 
 	@Override
 	public void handle(HttpServletRequest request, HttpServletResponse response,
 			AccessDeniedException accessDeniedException) throws IOException {
+		// A role check: a guest on an admin route, say. Ownership checks are recorded by ProblemDetailsHandler
+		Authentication user = SecurityContextHolder.getContext().getAuthentication();
+		securityEvents.accessDenied(user != null ? user.getName() : "anonymous", request.getMethod(),
+				request.getRequestURI());
 		writer.write(request, response, ProblemType.FORBIDDEN.problem("You don't have access to this resource"));
 	}
 

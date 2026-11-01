@@ -1,14 +1,18 @@
 package com.roomkeeper.common.error;
 
 import java.net.URI;
+import java.security.Principal;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
 import java.sql.SQLTransientConnectionException;
 import java.util.List;
 
+import com.roomkeeper.common.security.SecurityEvents;
 import com.roomkeeper.common.web.RequestTooLargeException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -45,8 +49,21 @@ public class ProblemDetailsHandler extends ResponseEntityExceptionHandler {
 	public record FieldViolation(String field, String message) {
 	}
 
+	/** Optional, so web slice tests run without it. */
+	private final ObjectProvider<SecurityEvents> securityEvents;
+
+	public ProblemDetailsHandler(ObjectProvider<SecurityEvents> securityEvents) {
+		this.securityEvents = securityEvents;
+	}
+
 	@ExceptionHandler(ApiException.class)
-	ProblemDetail handleApiException(ApiException ex) {
+	ProblemDetail handleApiException(ApiException ex, HttpServletRequest request) {
+		if (ex.type() == ProblemType.FORBIDDEN) {
+			// An ownership check: someone reaching for a hotel that isn't theirs, say
+			Principal user = request.getUserPrincipal();
+			securityEvents.ifAvailable(events -> events.accessDenied(user != null ? user.getName() : "anonymous",
+					request.getMethod(), request.getRequestURI()));
+		}
 		return ex.toProblemDetail();
 	}
 
