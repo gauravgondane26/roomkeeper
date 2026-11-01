@@ -10,21 +10,21 @@ import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.io.ClassPathResource;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
- * Prod's Redis holds idempotency records and rate-limit buckets, so it must ask for a
- * password: prod won't start without REDIS_PASSWORD rather than connect without one. TLS is
- * a switch (REDIS_SSL) for a managed Redis that offers it.
+ * How prod reads its Redis settings from the environment. That a password is there at all
+ * is checked at startup (ProductionRedisCheck), since it may come in a URL instead. TLS is a
+ * switch (REDIS_SSL) for a managed Redis that offers it.
  */
 class ProdRedisConfigTest {
 
 	@Test
-	void prodNeedsARedisPassword() throws IOException {
+	void hostAndPasswordAreEmptyUnlessGiven() throws IOException {
 		StandardEnvironment prod = prodWith(Map.of());
 
-		assertThatIllegalArgumentException().isThrownBy(() -> prod.getProperty("spring.data.redis.password"))
-			.withMessageContaining("REDIS_PASSWORD");
+		assertThat(prod.getProperty("spring.data.redis.host")).isEmpty();
+		assertThat(prod.getProperty("spring.data.redis.password")).isEmpty();
+		assertThat(prod.getProperty("spring.data.redis.port")).isEqualTo("6379");
 	}
 
 	@Test

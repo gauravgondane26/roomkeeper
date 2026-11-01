@@ -6,6 +6,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 /**
  * Records what an attack looks like: a failed login, a webhook delivery that isn't Stripe's,
@@ -35,23 +37,33 @@ public class SecurityEvents {
 	public void loginFailed(Long userId) {
 		loginFailures.increment();
 		if (userId != null) {
-			log.warn("Failed login for user {}", userId);
+			log.warn("Failed login for user {} from {}", userId, clientIp());
 		}
 		else {
-			log.warn("Failed login for an email with no account");
+			log.warn("Failed login for an email with no account from {}", clientIp());
 		}
 	}
 
 	/** A payment webhook delivery refused before it was applied: a bad or missing signature. */
 	public void webhookRejected(String reason) {
 		webhookRejections.increment();
-		log.warn("Refused a payment webhook delivery: {}", reason);
+		log.warn("Refused a payment webhook delivery from {}: {}", clientIp(), reason);
 	}
 
 	/** A signed-in user was refused (403) what they asked for. */
 	public void accessDenied(String user, String method, String path) {
 		accessDenials.increment();
-		log.warn("Access denied to user {}: {} {}", LogSafe.of(user), method, LogSafe.of(path));
+		log.warn("Access denied to user {} from {}: {} {}", LogSafe.of(user), clientIp(), method, LogSafe.of(path));
+	}
+
+	/**
+	 * The client's address as the app resolved it: the connection's, or behind a trusted
+	 * proxy (TRUSTED_PROXIES) the one that proxy forwarded. A proxy's own address here means
+	 * the proxy isn't trusted, and every client shares one rate-limit bucket.
+	 */
+	private static String clientIp() {
+		return RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes request
+				? LogSafe.of(request.getRequest().getRemoteAddr()) : "unknown";
 	}
 
 	private static Counter counter(MeterRegistry registry, String event) {

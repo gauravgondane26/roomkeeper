@@ -7,11 +7,12 @@ spring:
     password: ${DATABASE_PASSWORD}
   data:
     redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
-      # Required: Redis holds idempotency records and rate-limit buckets, which anyone who
-      # could reach it unauthenticated could delete
-      password: ${REDIS_PASSWORD}
+      # REDIS_HOST with REDIS_PASSWORD, or SPRING_DATA_REDIS_URL (one URL with the password,
+      # which takes precedence): either way prod won't start without a password
+      # (ProductionRedisCheck), as Redis holds idempotency records and rate-limit buckets
+      host: ${REDIS_HOST:}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
       # TLS, for a managed Redis that offers it
       ssl:
         enabled: ${REDIS_SSL:false}

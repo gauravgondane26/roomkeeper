@@ -24,6 +24,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(OutputCaptureExtension.class)
 class SecurityEventsIT extends AbstractIntegrationTest {
 
+	/** The tests call from this machine, over IPv4 or IPv6. */
+	private static final String LOCAL = "(127\\.0\\.0\\.1|0:0:0:0:0:0:0:1)";
+
 	@Autowired
 	MeterRegistry meters;
 
@@ -36,7 +39,8 @@ class SecurityEventsIT extends AbstractIntegrationTest {
 		login(user.email(), "a-wrong-guess-to-find").statusCode(401);
 
 		assertThat(events("login_failed") - before).isEqualTo(1);
-		assertThat(output.getOut()).contains("Failed login for user " + userId).doesNotContain("a-wrong-guess-to-find");
+		assertThat(output.getOut()).containsPattern("Failed login for user " + userId + " from " + LOCAL)
+			.doesNotContain("a-wrong-guess-to-find");
 	}
 
 	@Test
@@ -47,7 +51,8 @@ class SecurityEventsIT extends AbstractIntegrationTest {
 		login(nobody, "whatever-password").statusCode(401);
 
 		assertThat(events("login_failed") - before).isEqualTo(1);
-		assertThat(output.getOut()).contains("Failed login for an email with no account").doesNotContain(nobody);
+		assertThat(output.getOut()).containsPattern("Failed login for an email with no account from " + LOCAL)
+			.doesNotContain(nobody);
 	}
 
 	@Test
@@ -59,7 +64,7 @@ class SecurityEventsIT extends AbstractIntegrationTest {
 			.then().statusCode(400);
 
 		assertThat(events("webhook_rejected") - before).isEqualTo(1);
-		assertThat(output.getOut()).contains("Refused a payment webhook delivery");
+		assertThat(output.getOut()).containsPattern("Refused a payment webhook delivery from " + LOCAL);
 	}
 
 	@Test
@@ -72,7 +77,7 @@ class SecurityEventsIT extends AbstractIntegrationTest {
 		api(token).when().get("/api/v1/admin/hotels").then().statusCode(403);
 
 		assertThat(events("access_denied") - before).isEqualTo(1);
-		assertThat(output.getOut()).contains("Access denied to user " + guestId + ": GET /api/v1/admin/hotels");
+		assertThat(output.getOut()).containsPattern("Access denied to user " + guestId + " from " + LOCAL + ": GET /api/v1/admin/hotels");
 	}
 
 	@Test
@@ -86,7 +91,8 @@ class SecurityEventsIT extends AbstractIntegrationTest {
 		api(token).when().get("/api/v1/admin/hotels/{id}", hotelId).then().statusCode(403);
 
 		assertThat(events("access_denied") - before).isEqualTo(1);
-		assertThat(output.getOut()).contains("Access denied to user " + otherId + ": GET /api/v1/admin/hotels/" + hotelId);
+		assertThat(output.getOut())
+			.containsPattern("Access denied to user " + otherId + " from " + LOCAL + ": GET /api/v1/admin/hotels/" + hotelId);
 	}
 
 	private double events(String event) {
