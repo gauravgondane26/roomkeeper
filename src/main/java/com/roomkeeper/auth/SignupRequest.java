@@ -1,6 +1,7 @@
 package com.roomkeeper.auth;
 
 import com.roomkeeper.common.validation.MaxUtf8Bytes;
+import com.roomkeeper.common.validation.NoControlCharacters;
 import com.roomkeeper.user.PasswordPolicy;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -15,6 +16,6 @@ public record SignupRequest(
 		@NotBlank @Email @Size(max = 320) String email,
 		@NotBlank @Size(min = PasswordPolicy.MIN_CHARACTERS) @MaxUtf8Bytes(PasswordPolicy.MAX_UTF8_BYTES)
 		String password,
-		@NotBlank @Size(max = 100) String name,
+		@NotBlank @Size(max = 100) @NoControlCharacters String name,
 		SignupRole role) {
 }

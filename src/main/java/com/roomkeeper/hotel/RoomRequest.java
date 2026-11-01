@@ -2,6 +2,7 @@ package com.roomkeeper.hotel;
 
 import java.math.BigDecimal;
 
+import com.roomkeeper.common.validation.NoControlCharacters;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Max;
@@ -15,7 +16,7 @@ import jakarta.validation.constraints.Size;
  * this type the hotel has; {@code basePrice} is the price of one room for one night.
  */
 public record RoomRequest(
-		@NotBlank @Size(max = 100) String type,
+		@NotBlank @Size(max = 100) @NoControlCharacters String type,
 		@NotNull @DecimalMin("0.01") @Digits(integer = 8, fraction = 2) BigDecimal basePrice,
 		@NotNull @Min(1) @Max(20) Integer capacity,
 		@NotNull @Min(0) @Max(10_000) Integer totalCount) {

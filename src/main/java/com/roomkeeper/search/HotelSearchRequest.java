@@ -2,6 +2,7 @@ package com.roomkeeper.search;
 
 import java.time.LocalDate;
 
+import com.roomkeeper.common.validation.NoControlCharacters;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -15,7 +16,7 @@ import org.springframework.format.annotation.DateTimeFormat;
  * default to the first 20 hotels.
  */
 public record HotelSearchRequest(
-		@NotBlank @Size(max = 100) String city,
+		@NotBlank @Size(max = 100) @NoControlCharacters String city,
 		@NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
 		@NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut,
 		@Min(1) @Max(10) Integer rooms,

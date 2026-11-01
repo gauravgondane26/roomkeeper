@@ -174,6 +174,7 @@
           "name" : {
             "maxLength" : 100,
             "minLength" : 0,
+            "pattern" : "\\P{Cntrl}*",
             "type" : "string"
           }
         },
@@ -296,6 +297,7 @@
             "items" : {
               "maxLength" : 50,
               "minLength" : 0,
+              "pattern" : "\\P{Cntrl}*",
               "type" : "string"
             },
             "maxItems" : 30,
@@ -305,11 +307,13 @@
           "city" : {
             "maxLength" : 100,
             "minLength" : 0,
+            "pattern" : "\\P{Cntrl}*",
             "type" : "string"
           },
           "name" : {
             "maxLength" : 200,
             "minLength" : 0,
+            "pattern" : "\\P{Cntrl}*",
             "type" : "string"
           },
           "timeZone" : {
@@ -650,6 +654,7 @@
           "type" : {
             "maxLength" : 100,
             "minLength" : 0,
+            "pattern" : "\\P{Cntrl}*",
             "type" : "string"
           }
         },
@@ -694,6 +699,7 @@
           "name" : {
             "maxLength" : 100,
             "minLength" : 0,
+            "pattern" : "\\P{Cntrl}*",
             "type" : "string"
           },
           "password" : {
@@ -1699,6 +1705,7 @@
           "schema" : {
             "maxLength" : 100,
             "minLength" : 0,
+            "pattern" : "\\P{Cntrl}*",
             "type" : "string"
           }
         }, {

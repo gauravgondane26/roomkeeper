@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.roomkeeper.common.LogSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -41,7 +42,9 @@ public class FakeEmailSender implements EmailSender {
 			return;
 		}
 		sent.put(email.idempotencyKey(), new Sent(email, 1));
-		log.info("Email to {} ({}): {}", email.to(), email.idempotencyKey(), email.subject());
+		// Subjects carry names hotels chose; validation refuses line breaks in them, and this
+		// keeps any that got in earlier from starting a log line of their own
+		log.info("Email to {} ({}): {}", email.to(), email.idempotencyKey(), LogSafe.of(email.subject()));
 	}
 
 	/** The emails sent to the address, oldest first. */
