@@ -1,0 +1,63 @@
+# Render Blueprint: the app on a free web service built from the Dockerfile, Redis on a free
+# Key Value instance. Postgres is on Neon's free tier (Render's free Postgres is deleted
+# after 30 days). The steps, and why each setting is here: docs/deploy.md
+#
+# Secrets are never in this file: the database settings and the Redis URL are asked for
+# when the Blueprint is applied (sync: false), and the JWT secret and admin password are
+# random values Render generates once and keeps.
+services:
+  - type: web
+    name: roomkeeper
+    runtime: docker
+    plan: free
+    region: singapore
+    # Up once Postgres answers; Render waits for it before switching traffic to a new deploy
+    healthCheckPath: /readyz
+    # A push to main deploys only once its CI checks have passed
+    autoDeployTrigger: checksPass
+    envVars:
+      # Render sends traffic to this port; Actuator stays on 8081, which isn't exposed
+      - key: PORT
+        value: "8080"
+      # Neon's direct (not -pooler) endpoint: jdbc:postgresql://HOST/DB?sslmode=require
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_USERNAME
+        sync: false
+      - key: DATABASE_PASSWORD
+        sync: false
+      # The Key Value instance's internal URL once internal authentication is on, so it
+      # carries the password: prod won't start without one (ProductionRedisCheck)
+      - key: SPRING_DATA_REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      # The first admin, who approves hotels; the password is in the Render dashboard
+      - key: ADMIN_EMAIL
+        value: admin@roomkeeper.local
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      # Swagger UI at /, as the live API's client
+      - key: API_DOCS_ENABLED
+        value: "true"
+      # Render's proxy reaches the app from a private address and puts the client's in
+      # X-Forwarded-For; trusting private addresses lets the rate limits see each client
+      - key: TRUSTED_PROXIES
+        value: '10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3}'
+      # The free instance has 512 MB and 0.1 CPU: a heap that leaves room for the rest of the
+      # JVM, the serial collector (no GC threads to feed), and the quick-start JIT
+      - key: JAVA_TOOL_OPTIONS
+        value: "-XX:MaxRAMPercentage=55 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xss512k -XX:ReservedCodeCacheSize=48m"
+      # Fewer request threads than Tomcat's 200, each with its own stack
+      - key: SERVER_TOMCAT_THREADS_MAX
+        value: "40"
+
+  - type: keyvalue
+    name: roomkeeper-redis
+    plan: free
+    region: singapore
+    # No connections from outside Render; the app connects over the private network
+    ipAllowList: []
+    # As in Compose: when full, evict the keys closest to expiring (cached searches,
+    # rate-limit buckets) and keep refresh tokens and idempotency keys
+    maxmemoryPolicy: volatile-ttl

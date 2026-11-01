@@ -10,6 +10,7 @@ A hotel booking backend in Java 25 and Spring Boot, built test-first. It focuses
 - [Roadmap](docs/roadmap.md): the build plan broken into tasks
 - [Query plans](docs/query-plans.md): `EXPLAIN ANALYZE` of hotel search over a million inventory rows (about 1 ms) and the indexes it uses
 - [Load test](docs/load-test.md): k6 against the booking endpoint, up to about 1,800 requests a second, and what the dashboard showed
+- [Deploying](docs/deploy.md): the free-tier setup on Render and Neon (`render.yaml`), and what the free tiers mean for the app
 
 ## The hard problems
 
@@ -254,7 +255,7 @@ CI runs on every push to `main` and every pull request. It first checks that no 
 | --- | --- | --- |
 | `local` (default) | Running on a developer machine | The Compose services |
 | `test` | The test suite | Testcontainers |
-| `prod` | The Docker image | Environment variables only: `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` (required), `REDIS_SSL=true` for TLS to a Redis that offers it, `JWT_SECRET` (base64, 32+ bytes; the app won't start with a secret committed to this repository); optionally `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` (test mode), without which payments answer 503; `API_DOCS_ENABLED=true` to publish the API docs and Swagger UI; `TRUSTED_PROXIES` behind a reverse proxy |
+| `prod` | The Docker image | Environment variables only: `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` (required), or instead `SPRING_DATA_REDIS_URL` carrying the password, `REDIS_SSL=true` for TLS to a Redis that offers it, `JWT_SECRET` (base64, 32+ bytes; the app won't start with a secret committed to this repository); optionally `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` (test mode), without which payments answer 503; `API_DOCS_ENABLED=true` to publish the API docs and Swagger UI; `TRUSTED_PROXIES` behind a reverse proxy |
 
 Compose takes its secrets only from `.env`: `JWT_SECRET`, `POSTGRES_PASSWORD`, `ADMIN_PASSWORD`, `GRAFANA_ADMIN_PASSWORD`, and the optional Stripe keys. A missing one stops Compose with "run scripts/init-env.sh" rather than falling back to a default. The local profile imports `.env` too, for the Postgres password. A Postgres volume keeps the password it was created with: after changing `POSTGRES_PASSWORD`, recreate the volume (`docker compose down -v`, which deletes local data) or change the password inside the database (`scripts/init-env.sh` shows how).
 
