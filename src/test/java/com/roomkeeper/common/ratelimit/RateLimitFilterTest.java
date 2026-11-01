@@ -31,10 +31,13 @@ class RateLimitFilterTest {
 
 	private static final RateLimitProperties.Rule SEARCH = new RateLimitProperties.Rule(300, Duration.ofMinutes(1));
 
+	private static final RateLimitProperties.Rule FAILED_LOGINS = new RateLimitProperties.Rule(5, Duration.ofMinutes(15));
+
 	private final RateLimiter rateLimiter = mock(RateLimiter.class);
 
 	private final RateLimitFilter filter = new RateLimitFilter(rateLimiter,
-			new RateLimitProperties(LOGIN, SIGNUP, REFRESH, SEARCH), new ProblemDetailsWriter(JsonMapper.builder().build()),
+			new RateLimitProperties(LOGIN, SIGNUP, REFRESH, SEARCH, FAILED_LOGINS),
+			new ProblemDetailsWriter(JsonMapper.builder().build()),
 			new BusinessMetrics(new SimpleMeterRegistry()));
 
 	@Test

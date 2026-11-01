@@ -72,6 +72,10 @@ roomkeeper:
     search:
       capacity: 300
       period: 1m
+    # Per account, not per IP, so a password can't be guessed from many addresses at once
+    failed-logins:
+      capacity: 5
+      period: 15m
   pricing:
     occupancy:
       # 20% more once 80% of a room type is booked or held that night

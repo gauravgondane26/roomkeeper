@@ -38,6 +38,8 @@ public class AuthService {
 
 	private final RefreshTokenStore refreshTokens;
 
+	private final FailedLogins failedLogins;
+
 	private final AuthProperties properties;
 
 	private final Clock clock;
@@ -50,13 +52,14 @@ public class AuthService {
 
 	public AuthService(UserRepository users, OutboxWriter outbox, TransactionTemplate transaction,
 			PasswordEncoder passwordEncoder, AccessTokenService accessTokens, RefreshTokenStore refreshTokens,
-			AuthProperties properties, Clock clock) {
+			FailedLogins failedLogins, AuthProperties properties, Clock clock) {
 		this.users = users;
 		this.outbox = outbox;
 		this.transaction = transaction;
 		this.passwordEncoder = passwordEncoder;
 		this.accessTokens = accessTokens;
 		this.refreshTokens = refreshTokens;
+		this.failedLogins = failedLogins;
 		this.properties = properties;
 		this.clock = clock;
 		this.dummyPasswordHash = passwordEncoder.encode("dummy-password-for-unknown-emails");
@@ -92,14 +95,22 @@ public class AuthService {
 		}
 	}
 
+	/**
+	 * Tokens for the right password. Wrong passwords count against the account
+	 * ({@link FailedLogins}), and after too many the account waits, whichever IP asks.
+	 */
 	@Transactional(readOnly = true)
 	public TokenResponse login(LoginRequest request) {
-		User user = users.findByEmail(Emails.normalize(request.email())).orElse(null);
+		String email = Emails.normalize(request.email());
+		failedLogins.checkAllowed(email);
+		User user = users.findByEmail(email).orElse(null);
 		if (user == null) {
 			passwordEncoder.matches(request.password(), dummyPasswordHash);
+			failedLogins.recordFailure(email);
 			throw new InvalidCredentialsException();
 		}
 		if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+			failedLogins.recordFailure(email);
 			throw new InvalidCredentialsException();
 		}
 		return issueTokens(user);

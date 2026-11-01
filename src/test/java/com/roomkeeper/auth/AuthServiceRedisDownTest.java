@@ -42,11 +42,12 @@ class AuthServiceRedisDownTest {
 
 	private final RefreshTokenStore refreshTokens = mock(RefreshTokenStore.class);
 
-	// Signup isn't exercised here, so it needs no outbox or transactions
+	// Signup isn't exercised here, so it needs no outbox or transactions; the failed-login
+	// limit carries on without Redis by itself (LoginAccountLimitIT), so it's stubbed here
 	private final AuthService authService = new AuthService(users, mock(OutboxWriter.class),
 			mock(TransactionTemplate.class), passwordEncoder,
 			new AccessTokenService(JwtConfig.encoder(JwtConfig.secretKey(SECRET)), properties, clock), refreshTokens,
-			properties, clock);
+			mock(FailedLogins.class), properties, clock);
 
 	private final RedisConnectionFailureException redisDown = new RedisConnectionFailureException("Redis is down");
 

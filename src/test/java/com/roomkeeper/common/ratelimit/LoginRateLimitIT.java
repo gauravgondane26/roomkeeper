@@ -31,9 +31,7 @@ class LoginRateLimitIT extends AbstractIntegrationTest {
 		TestUser user = aUser().build();
 		signUp(user);
 
-		for (int attempt = 1; attempt <= 10; attempt++) {
-			logIn(user.email(), "wrong-password").statusCode(401);
-		}
+		guessTenOtherAccounts();
 
 		// Even the right password: the limit is on attempts, not failures
 		logIn(user.email(), user.password())
@@ -46,9 +44,7 @@ class LoginRateLimitIT extends AbstractIntegrationTest {
 	void attemptsAreAllowedAgainAsTheBucketRefills() {
 		TestUser user = aUser().build();
 		signUp(user);
-		for (int attempt = 1; attempt <= 10; attempt++) {
-			logIn(user.email(), "wrong-password").statusCode(401);
-		}
+		guessTenOtherAccounts();
 		logIn(user.email(), user.password()).statusCode(429);
 
 		// 10 per minute refills one attempt every 6 seconds
@@ -68,6 +64,17 @@ class LoginRateLimitIT extends AbstractIntegrationTest {
 		api().contentType(ContentType.JSON).body(user.signupRequest())
 			.when().post("/api/v1/auth/signup")
 			.then().statusCode(202);
+	}
+
+	/**
+	 * Ten wrong passwords from this client, each for a different email: a spray across
+	 * accounts, so only the per-client limit is reached, not any account's own
+	 * (LoginAccountLimitIT).
+	 */
+	private void guessTenOtherAccounts() {
+		for (int attempt = 1; attempt <= 10; attempt++) {
+			logIn("sprayed-" + attempt + "-" + System.nanoTime() + "@example.com", "wrong-password").statusCode(401);
+		}
 	}
 
 	private ValidatableResponse logIn(String email, String password) {

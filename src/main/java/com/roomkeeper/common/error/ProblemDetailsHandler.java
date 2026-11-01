@@ -50,6 +50,13 @@ public class ProblemDetailsHandler extends ResponseEntityExceptionHandler {
 		return ex.toProblemDetail();
 	}
 
+	@ExceptionHandler(RateLimitedException.class)
+	ResponseEntity<ProblemDetail> handleRateLimited(RateLimitedException ex) {
+		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+			.header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.retryAfterSeconds()))
+			.body(ex.toProblemDetail());
+	}
+
 	/**
 	 * Postgres can't be reached, or every pooled connection is busy for longer than the pool
 	 * waits: nothing is wrong with the request, so the client is told to try again shortly.
