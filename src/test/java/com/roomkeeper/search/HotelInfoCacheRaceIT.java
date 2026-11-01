@@ -1,6 +1,7 @@
 package com.roomkeeper.search;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -63,24 +64,27 @@ class HotelInfoCacheRaceIT extends AbstractIntegrationTest {
 		}).when(mapper).toInfo(any(), any());
 
 		try (var pool = Executors.newSingleThreadExecutor()) {
-			Future<String> slowRead = pool.submit(() -> info());
+			Future<List<String>> slowRead = pool.submit(() -> amenities());
 			assertThat(loaded.await(10, TimeUnit.SECONDS)).isTrue();
 
-			api(manager).contentType(ContentType.JSON).body(aHotel().named("Seaside Resort").build())
+			// Amenities: a change that keeps the hotel on sale (a new name or city sends it back for review)
+			api(manager).contentType(ContentType.JSON)
+				.body(aHotel().named("Seaside Inn").withAmenities("wifi", "pool", "spa").build())
 				.when().put("/api/v1/admin/hotels/{id}", hotelId)
 				.then().statusCode(200);
 			release.countDown();
 
-			assertThat(slowRead.get(10, TimeUnit.SECONDS)).as("it started before the change").isEqualTo("Seaside Inn");
+			assertThat(slowRead.get(10, TimeUnit.SECONDS)).as("it started before the change")
+				.containsExactly("wifi", "pool");
 		}
 		// Its cache write lands after it answered
 		await().atMost(Duration.ofSeconds(5)).until(this::cachedInfoKeys, keys -> !keys.isEmpty());
 
-		assertThat(info()).isEqualTo("Seaside Resort");
+		assertThat(amenities()).containsExactly("wifi", "pool", "spa");
 	}
 
-	private String info() {
-		return api().when().get("/api/v1/hotels/{id}/info", hotelId).then().statusCode(200).extract().path("name");
+	private List<String> amenities() {
+		return api().when().get("/api/v1/hotels/{id}/info", hotelId).then().statusCode(200).extract().path("amenities");
 	}
 
 	private Set<String> cachedInfoKeys() {

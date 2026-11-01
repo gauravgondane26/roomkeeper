@@ -82,14 +82,16 @@ class CachingIT extends AbstractIntegrationTest {
 
 	@Test
 	void editingTheHotelEvictsItsInfo() {
-		info().body("name", equalTo("Seaside Inn"));
+		info().body("amenities", contains("wifi", "pool"));
 		awaitCached("hotel:*:" + hotelId + ":v*");
 
-		api(manager).contentType(ContentType.JSON).body(aHotel().named("Seaside Resort").inCity(city).build())
+		// Amenities: a change that keeps the hotel on sale (a new name or city sends it back for review)
+		api(manager).contentType(ContentType.JSON)
+			.body(aHotel().named("Seaside Inn").inCity(city).withAmenities("wifi", "pool", "spa").build())
 			.when().put("/api/v1/admin/hotels/{id}", hotelId)
 			.then().statusCode(200);
 
-		info().body("name", equalTo("Seaside Resort"));
+		info().body("amenities", contains("wifi", "pool", "spa"));
 	}
 
 	@Test
