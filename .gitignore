@@ -28,3 +28,6 @@ Thumbs.db
 
 # Claude cleanup reports (local only)
 /CLAUDE CLEANUP/
+
+# Claude security audit reports (local only: a map of the project's weaknesses)
+/CLAUDE SECURITY/
