@@ -91,11 +91,12 @@ class HotelApprovalIT extends AbstractIntegrationTest {
 				.body("rejectionReason", nullValue());
 	}
 
+	/** Renaming or moving it sends it back for review instead (ApprovedHotelChangesIT). */
 	@Test
-	void editingAnApprovedHotelKeepsItApproved() {
+	void editingAnApprovedHotelsAmenitiesKeepsItApproved() {
 		moderate("approve", Map.of());
 
-		api(manager).contentType(ContentType.JSON).body(aHotel().named("Seaside Resort").build())
+		api(manager).contentType(ContentType.JSON).body(aHotel().named("Seaside Inn").withAmenities("wifi", "spa").build())
 			.when().put("/api/v1/admin/hotels/{id}", hotelId)
 			.then()
 				.statusCode(200)

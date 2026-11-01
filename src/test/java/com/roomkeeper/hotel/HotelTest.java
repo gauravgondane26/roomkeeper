@@ -92,15 +92,56 @@ class HotelTest {
 	}
 
 	@Test
-	void editingAnApprovedHotelKeepsItApproved() {
+	void anApprovedHotelsTimeZoneAndAmenitiesChangeWithoutAReview() {
 		Hotel hotel = hotel("Asia/Kolkata");
 		hotel.approve(ADMIN, CREATED_AT);
+		hotel.activate();
 
 		hotel.changeDetails("Seaside Inn", "Goa", "UTC", List.of());
 
 		assertThat(hotel.getApprovalStatus()).isEqualTo(ApprovalStatus.APPROVED);
+		assertThat(hotel.isActive()).isTrue();
+		assertThat(hotel.getReviewedBy()).isEqualTo(ADMIN);
 		assertThat(hotel.getTimeZone()).isEqualTo("UTC");
 		assertThat(hotel.getAmenities()).isEmpty();
+	}
+
+	@Test
+	void renamingAnApprovedHotelSendsItBackForReviewOffSale() {
+		Hotel hotel = hotel("Asia/Kolkata");
+		hotel.approve(ADMIN, CREATED_AT);
+		hotel.activate();
+
+		hotel.changeDetails("Grand Palace Hotel", "Goa", "Asia/Kolkata", List.of("wifi", "pool"));
+
+		assertThat(hotel.getApprovalStatus()).isEqualTo(ApprovalStatus.PENDING);
+		assertThat(hotel.isActive()).as("off sale until approved again").isFalse();
+		assertThat(hotel.getReviewedBy()).isNull();
+		assertThat(hotel.getReviewedAt()).isNull();
+		assertThat(hotel.getName()).isEqualTo("Grand Palace Hotel");
+	}
+
+	@Test
+	void movingAnApprovedHotelSendsItBackForReviewOffSale() {
+		Hotel hotel = hotel("Asia/Kolkata");
+		hotel.approve(ADMIN, CREATED_AT);
+		hotel.activate();
+
+		hotel.changeDetails("Seaside Inn", "Mumbai", "Asia/Kolkata", List.of("wifi", "pool"));
+
+		assertThat(hotel.getApprovalStatus()).isEqualTo(ApprovalStatus.PENDING);
+		assertThat(hotel.isActive()).isFalse();
+		assertThat(hotel.getCity()).isEqualTo("Mumbai");
+	}
+
+	@Test
+	void renamingAHotelStillWaitingForReviewLeavesItWaiting() {
+		Hotel hotel = hotel("Asia/Kolkata");
+
+		hotel.changeDetails("Grand Palace Hotel", "Goa", "Asia/Kolkata", List.of("wifi", "pool"));
+
+		assertThat(hotel.getApprovalStatus()).isEqualTo(ApprovalStatus.PENDING);
+		assertThat(hotel.getName()).isEqualTo("Grand Palace Hotel");
 	}
 
 	private static Hotel hotel(String timeZone) {

@@ -104,8 +104,14 @@ public class Hotel {
 		return List.copyOf(amenities);
 	}
 
-	/** Edits the details. A rejected hotel goes back for review with the changes. */
+	/**
+	 * Edits the details. A rejected hotel goes back for review with the changes. So does an
+	 * approved one whose name or city changes, off sale meanwhile: the admin approved the
+	 * hotel as it was described, and it mustn't turn into a different listing unreviewed.
+	 * Its time zone and amenities can change freely.
+	 */
 	public void changeDetails(String name, String city, String timeZone, List<String> amenities) {
+		boolean redescribed = !this.name.equals(name) || !this.city.equals(city);
 		this.name = name;
 		this.city = city;
 		this.timeZone = timeZone;
@@ -113,6 +119,12 @@ public class Hotel {
 		if (approvalStatus == ApprovalStatus.REJECTED) {
 			approvalStatus = ApprovalStatus.PENDING;
 			rejectionReason = null;
+		}
+		else if (approvalStatus == ApprovalStatus.APPROVED && redescribed) {
+			approvalStatus = ApprovalStatus.PENDING;
+			reviewedBy = null;
+			reviewedAt = null;
+			active = false;
 		}
 	}
 
