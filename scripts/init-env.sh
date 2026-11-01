@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Creates .env for Docker Compose, or adds what it's missing: a random JWT secret, Postgres
-# password, admin password and Grafana admin password. A value already set is never changed,
+# password, Redis password, admin password and Grafana admin password. A value already set is never changed,
 # and no value is ever printed, only the names of the ones added. Run it once before the
 # first `docker compose up`; running it again changes nothing.
 #
@@ -32,5 +32,6 @@ add() {
 
 add JWT_SECRET "$(base64_secret)"
 add POSTGRES_PASSWORD "$(hex_password)"
+add REDIS_PASSWORD "$(hex_password)"
 add ADMIN_PASSWORD "$(hex_password)"
 add GRAFANA_ADMIN_PASSWORD "$(hex_password)"

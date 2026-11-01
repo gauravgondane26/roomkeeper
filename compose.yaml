@@ -21,6 +21,7 @@ services:
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?run scripts/init-env.sh to create .env}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?run scripts/init-env.sh to create .env}
       # The prod profile refuses the development secret committed to the repository
       JWT_SECRET: ${JWT_SECRET:?run scripts/init-env.sh to create .env}
       # The first admin, created at startup; approves hotels
@@ -172,8 +173,13 @@ services:
   redis:
     image: redis:8-alpine
     # Full, Redis evicts the keys closest to expiring (cached searches, rate-limit buckets)
-    # and keeps refresh tokens and idempotency keys; without a policy it would refuse writes
-    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "volatile-ttl"]
+    # and keeps refresh tokens and idempotency keys; without a policy it would refuse writes.
+    # It asks for a password, as prod's must
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "volatile-ttl",
+      "--requirepass", "${REDIS_PASSWORD:?run scripts/init-env.sh to create .env}"]
+    environment:
+      # redis-cli (the health check, docker compose exec) reads the password from here
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?run scripts/init-env.sh to create .env}
     ports:
       - "127.0.0.1:${REDIS_PORT:-16379}:6379"
     healthcheck:
