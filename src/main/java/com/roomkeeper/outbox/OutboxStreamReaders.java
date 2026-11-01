@@ -104,10 +104,16 @@ public class OutboxStreamReaders implements SmartLifecycle {
 
 	private void loop(OutboxStreamReader reader) {
 		Instant lastClaim = clock.instant();
-		RedisConnectionUtils.bindConnection(connections);
+		boolean connected = false;
 		try {
 			while (running) {
 				try {
+					// Connecting can fail too (Redis still starting, a slow first connection): it's
+					// retried like any other failure, so the reader's thread never dies of it
+					if (!connected) {
+						RedisConnectionUtils.bindConnection(connections);
+						connected = true;
+					}
 					reader.readNew(properties.readBlock());
 					if (!clock.instant().isBefore(lastClaim.plus(properties.claimIdle()))) {
 						reader.claimIdle(properties.claimIdle());
@@ -119,10 +125,10 @@ public class OutboxStreamReaders implements SmartLifecycle {
 						return;
 					}
 					log.warn("Outbox reader of {} failed; trying again in {}", reader.stream(), BACKOFF, ex);
-					// A fresh connection, in case that one broke
+					// A fresh connection next time round, in case that one broke
 					RedisConnectionUtils.unbindConnection(connections);
+					connected = false;
 					Thread.sleep(BACKOFF);
-					RedisConnectionUtils.bindConnection(connections);
 				}
 			}
 		}
