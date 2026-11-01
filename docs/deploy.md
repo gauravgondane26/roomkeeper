@@ -27,7 +27,7 @@ After that, every push to `main` deploys once its CI checks pass (`autoDeployTri
 
 ## Checking the client IP
 
-The rate limits count per client IP, which the app takes from `X-Forwarded-For` only when the request comes from a proxy matching `TRUSTED_PROXIES`. The Blueprint trusts private addresses, where Render's proxy should connect from. To confirm, log in once with a wrong password and look in the service's **Logs** for `Failed login for … from …`. It should show your own public IP. A private address (`10.…`) there would mean Render's proxy isn't matched, and every client would share one bucket: widen `TRUSTED_PROXIES` to match it.
+The rate limits count per client IP, which the app takes from `X-Forwarded-For` only when the request comes from a proxy matching `TRUSTED_PROXIES`. Render's proxy reaches the app over loopback: the first live deploy, which trusted only private addresses, logged every client as `0:0:0:0:0:0:0:1`, so all of them shared one bucket. The Blueprint now trusts loopback, which only processes inside the container can use, as well as private addresses. To confirm, log in once with a wrong password and look in the service's **Logs** for `Failed login for … from …`. It should show your own public IP. A loopback or private address there means Render's proxy isn't matched: widen `TRUSTED_PROXIES` to match it.
 
 ## Adding Stripe (test mode)
 
