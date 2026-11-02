@@ -4,8 +4,8 @@ RoomKeeper runs live on free tiers: the app on a [Render](https://render.com) fr
 
 ## What the free tiers mean
 
-- **The app sleeps.** A free web service spins down after 15 minutes without requests and takes about a minute to wake, plus about two more for the JVM to start on 0.1 CPU. The first request after a quiet spell is slow; the rest aren't. While it sleeps, the scheduled jobs (hold expiry, inventory roll, outbox safety net) don't run; they catch up when it wakes.
-- **512 MB of memory.** `JAVA_TOOL_OPTIONS` in the Blueprint sizes the JVM for it (about 330 MB used at rest, 360 MB after the smoke test, in a rehearsal at the same limits), and Tomcat keeps at most 40 request threads.
+- **The app sleeps.** A free web service spins down after 15 minutes without requests and takes about a minute to wake, plus about another for the app to start on 0.1 CPU. The first request after a quiet spell is slow; the rest aren't. The image starts from an AOT cache that its build records (see the Dockerfile), which halved the start: in a rehearsal at the free instance's limits (0.1 CPU, 512 MB), ready in 60 seconds instead of 109. While it sleeps, the scheduled jobs (hold expiry, inventory roll, outbox safety net) don't run; they catch up when it wakes.
+- **512 MB of memory.** `JAVA_TOOL_OPTIONS` in the Blueprint sizes the JVM for it (about 270 MB used at rest, 306 MB after the smoke test, in a rehearsal at the same limits), and Tomcat keeps at most 40 request threads.
 - **Redis isn't persisted.** A restart empties it: signed-in users log in again, rate limits start over, and cached searches are rebuilt. Outbox events aren't lost: Postgres resends whatever Redis dropped (see [outbox streams](outbox-streams.md)).
 - **Neon scales to zero** after 5 minutes without queries; the next query wakes it in about a second. The free plan gives 1 GB of storage and 100 compute-hours a month, plenty for an app that sleeps.
 - **No payments yet.** Without Stripe keys, paying answers 503 and everything else works. See "Adding Stripe" below.
