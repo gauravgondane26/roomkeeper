@@ -98,7 +98,7 @@ services:
       retries: 10
 
   grafana:
-    image: grafana/grafana:13.2.4
+    image: grafana/grafana:13.3.0
     profiles: [metrics]
     environment:
       # Anyone who can reach localhost:3000 may view; changing things needs the admin login
