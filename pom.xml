@@ -19,10 +19,10 @@
 		<argLine></argLine>
 		<test.jvm.args>-Duser.timezone=UTC</test.jvm.args>
 		<rest-assured.version>6.3.0</rest-assured.version>
-		<jacoco.version>0.8.15</jacoco.version>
-		<springdoc.version>3.1.1</springdoc.version>
+		<jacoco.version>0.8.16</jacoco.version>
+		<springdoc.version>3.2.0</springdoc.version>
 		<mapstruct.version>1.6.3</mapstruct.version>
-		<stripe.version>34.0.0</stripe.version>
+		<stripe.version>34.1.0</stripe.version>
 		<pitest.version>1.30.1</pitest.version>
 		<pitest-junit5.version>1.2.3</pitest-junit5.version>
 		<!-- CI runs unit tests in their own step, then `verify -DskipUnitTests` for the rest -->
