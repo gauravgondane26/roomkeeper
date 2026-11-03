@@ -61,7 +61,7 @@ services:
   # It uses STRIPE_SECRET_KEY (sk_test_ only), so there's no `stripe login`. Put the
   # signing secret it prints (docker compose logs stripe) in STRIPE_WEBHOOK_SECRET.
   stripe:
-    image: stripe/stripe-cli:v1.55.2
+    image: stripe/stripe-cli:v1.55.6
     profiles: [stripe]
     command:
       - listen
