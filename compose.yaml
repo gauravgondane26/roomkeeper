@@ -126,7 +126,7 @@ services:
   # Load test against the running stack (see loadtest/booking.js):
   #   docker compose --profile loadtest run --rm k6
   k6:
-    image: grafana/k6:2.2.0
+    image: grafana/k6:2.3.0
     profiles: [loadtest]
     command: ["run", "/loadtest/booking.js"]
     volumes:
