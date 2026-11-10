@@ -142,7 +142,7 @@ services:
   # Vulnerability scan of the app image; run it through scripts/scan-image.sh, which saves
   # the image to target/ first. Its database is kept in a volume between runs.
   grype:
-    image: anchore/grype:v0.121.0
+    image: anchore/grype:v0.121.2
     profiles: [scan]
     command: ["docker-archive:/scan/roomkeeper-image.tar", "--config", "/scan/.grype.yaml"]
     volumes:
