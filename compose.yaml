@@ -79,7 +79,7 @@ services:
   # (8081, not published); Grafana shows the RoomKeeper dashboard at http://localhost:3000,
   # no login needed to view it. Both listen on localhost only.
   prometheus:
-    image: prom/prometheus:v3.15.0
+    image: prom/prometheus:v3.16.0
     profiles: [metrics]
     command:
       - --config.file=/etc/prometheus/prometheus.yml
